@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>书签分类历史版本</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      min-height: 100vh;
+      padding: 32px;
+      color: #1d1d1f;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    /* 头部区域 */
+    .header {
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 24px;
+      padding: 32px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 10px 40px rgba(31, 38, 135, 0.3);
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .logo {
+      width: 56px;
+      height: 56px;
+      margin-right: 20px;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease;
+    }
+
+    .logo:hover {
+      transform: scale(1.05);
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1d1d1f;
+      letter-spacing: -0.5px;
+    }
+
+    /* 区块样式 */
+    .section {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+      transition: all 0.3s ease;
+      position: relative;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    }
+
+    .section:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(31, 38, 135, 0.45);
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: #1d1d1f;
+      letter-spacing: -0.3px;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1d1d1f;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-right: 12px;
+      margin-bottom: 8px;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    #back-to-analyze {
+      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+      color: white;
+      border: none;
+    }
+
+    #back-to-analyze:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ff3b30 0%, #ff6b6b 100%);
+      color: white;
+      border: none;
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #dc3545 0%, #e55a5a 100%);
+      box-shadow: 0 6px 20px rgba(255, 59, 48, 0.3);
+    }
+
+    /* 状态消息 */
+    .status {
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1d1d1f;
+    }
+
+    /* 历史列表 */
+    .history-list {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .history-item {
+      padding: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .history-item:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateX(4px);
+    }
+
+    .history-info {
+      flex-grow: 1;
+    }
+
+    .history-date {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 6px;
+      color: #1d1d1f;
+    }
+
+    .history-desc {
+      color: #6e6e73;
+      font-size: 14px;
+      font-weight: 400;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .history-action-btn {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      color: #007aff;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 8px 12px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .history-action-btn:hover {
+      background: rgba(0, 122, 255, 0.1);
+      border-color: rgba(0, 122, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .no-history {
+      padding: 60px 40px;
+      text-align: center;
+      color: #8e8e93;
+      font-size: 16px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+    }
+
+    /* 比较容器 */
+    .compare-container {
+      display: none;
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      margin-top: 24px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+    }
+
+    .compare-header {
+      display: flex;
+      background: rgba(255, 255, 255, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 20px 24px;
+      align-items: center;
+    }
+
+    .compare-title {
+      flex-grow: 1;
+      font-weight: 600;
+      font-size: 18px;
+      color: #1d1d1f;
+    }
+
+    .compare-content {
+      display: flex;
+    }
+
+    .compare-column {
+      flex: 1;
+      padding: 24px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .compare-column:first-child {
+      border-right: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .compare-column h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1d1d1f;
+    }
+
+    .compare-category {
+      margin-bottom: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .compare-added {
+      background: rgba(52, 209, 88, 0.2);
+      border-color: rgba(52, 209, 88, 0.4);
+    }
+
+    .compare-removed {
+      background: rgba(255, 59, 48, 0.2);
+      border-color: rgba(255, 59, 48, 0.4);
+    }
+
+    .compare-unchanged {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .compare-category-name {
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #1d1d1f;
+    }
+
+    .compare-bookmark-count {
+      font-size: 12px;
+      color: #8e8e93;
+      font-weight: 500;
+    }
+
+    /* 工具类 */
+    .hidden {
+      display: none !important;
+    }
+
+    /* 动画效果 */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      body {
+        padding: 16px;
+      }
+
+      .header {
+        padding: 24px;
+        border-radius: 20px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .logo {
+        width: 48px;
+        height: 48px;
+      }
+
+      .section {
+        padding: 24px;
+        border-radius: 16px;
+      }
+
+      .history-item {
+        padding: 20px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+
+      .history-actions {
+        align-self: stretch;
+        justify-content: flex-end;
+      }
+
+      .compare-content {
+        flex-direction: column;
+      }
+
+      .compare-column:first-child {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="images/icon.png" alt="书签助手" class="logo">
+      <h1>📚 书签分类历史版本</h1>
+    </div>
+
+    <div class="section">
+      <div class="status" id="status">查看和管理您的书签分类历史版本，追踪每次分析的变化。</div>
+      <button id="back-to-analyze" class="btn">🔙 返回分析页面</button>
+      <button id="delete-all-history" class="btn btn-danger">🗑️ 清空历史记录</button>
+    </div>
+
+    <div class="section">
+      <h2>🕐 历史版本</h2>
+      <div id="history-list" class="history-list">
+        <div class="no-history">暂无历史版本记录</div>
+      </div>
+    </div>
+
+    <div id="compare-container" class="compare-container">
+      <div class="compare-header">
+        <div class="compare-title">🔄 版本比较</div>
+        <button id="close-compare" class="history-action-btn">❌ 关闭</button>
+      </div>
+      <div class="compare-content">
+        <div id="compare-old" class="compare-column">
+          <h3>📋 旧版本</h3>
+          <div id="compare-old-content"></div>
+        </div>
+        <div id="compare-new" class="compare-column">
+          <h3>✨ 新版本</h3>
+          <div id="compare-new-content"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="history.js"></script>
+</body>
+</html> 

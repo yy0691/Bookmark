@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>书签助手</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      width: 380px;
+      min-height: 240px;
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      color: #1d1d1f;
+      line-height: 1.5;
+      overflow: hidden;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 24px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      margin-right: 12px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s ease;
+    }
+
+    .logo:hover {
+      transform: scale(1.05);
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1d1d1f;
+      letter-spacing: -0.3px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 14px 20px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #1d1d1f;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+      color: white;
+      border: none;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(142, 142, 147, 0.3);
+      color: #1d1d1f;
+      border: 1px solid rgba(142, 142, 147, 0.4);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(142, 142, 147, 0.4);
+    }
+
+    .api-status {
+      margin-top: auto;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      font-size: 12px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .api-connected {
+      color: #30d158;
+    }
+
+    .api-not-connected {
+      color: #ff3b30;
+    }
+
+    .footer {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(29, 29, 31, 0.6);
+      font-weight: 500;
+    }
+
+    /* 动画效果 */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .container {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .btn {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .btn:nth-child(2) {
+      animation-delay: 0.1s;
+    }
+
+    .api-status {
+      animation: fadeIn 0.5s ease-out;
+      animation-delay: 0.2s;
+      animation-fill-mode: backwards;
+    }
+
+    /* 响应式调整 */
+    @media (max-height: 300px) {
+      .container {
+        padding: 16px;
+      }
+      
+      .header {
+        margin-bottom: 16px;
+      }
+      
+      .btn {
+        padding: 10px 16px;
+        font-size: 14px;
+        margin-bottom: 8px;
+      }
+      
+      .api-status {
+        margin-top: 12px;
+        padding: 8px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="images/icon.png" alt="书签助手" class="logo">
+      <h1>书签助手</h1>
+    </div>
+
+    <button id="analyze-bookmarks" class="btn btn-primary">
+      🔍 分析并整理书签
+    </button>
+    <button id="setup-api" class="btn btn-secondary">
+      ⚙️ 设置API
+    </button>
+    
+    <div class="api-status">
+      API状态: <span id="api-status" class="api-not-connected">检查中...</span>
+    </div>
+    
+    <div class="footer">
+      AI辅助书签整理工具
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html> 

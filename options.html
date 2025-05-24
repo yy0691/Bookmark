@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>书签助手 - 设置</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      min-height: 100vh;
+      padding: 32px;
+      color: #1d1d1f;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* 头部区域 */
+    .header {
+      background: rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 24px;
+      padding: 32px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 10px 40px rgba(31, 38, 135, 0.3);
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .logo {
+      width: 56px;
+      height: 56px;
+      margin-right: 20px;
+      border-radius: 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease;
+    }
+
+    .logo:hover {
+      transform: scale(1.05);
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1d1d1f;
+      letter-spacing: -0.5px;
+    }
+
+    /* 区块样式 */
+    .section {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+      transition: all 0.3s ease;
+      position: relative;
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    }
+
+    .section:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(31, 38, 135, 0.45);
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1d1d1f;
+      letter-spacing: -0.3px;
+    }
+
+    p {
+      font-size: 15px;
+      color: #6e6e73;
+      margin-bottom: 24px;
+      font-weight: 400;
+    }
+
+    /* 表单样式 */
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      color: #1d1d1f;
+    }
+
+    input[type="text"], input[type="password"], select {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #1d1d1f;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    input[type="text"]:focus, input[type="password"]:focus, select:focus {
+      outline: none;
+      border-color: #007aff;
+      background: rgba(255, 255, 255, 0.6);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+      transform: translateY(-1px);
+    }
+
+    input[type="text"]::placeholder, input[type="password"]::placeholder {
+      color: rgba(29, 29, 31, 0.5);
+      font-weight: 400;
+    }
+
+    /* 按钮样式 */
+    button {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1d1d1f;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-right: 12px;
+      margin-bottom: 8px;
+      font-family: inherit;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    #save-settings, #save-category-settings {
+      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+      color: white;
+      border: none;
+    }
+
+    #save-settings:hover, #save-category-settings:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
+      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+    }
+
+    #test-api, #test-custom-api {
+      background: linear-gradient(135deg, #30d158 0%, #00c896 100%);
+      color: white;
+      border: none;
+    }
+
+    #test-api:hover, #test-custom-api:hover {
+      background: linear-gradient(135deg, #28a745 0%, #00a67a 100%);
+      box-shadow: 0 6px 20px rgba(48, 209, 88, 0.3);
+    }
+
+    /* 状态消息 */
+    .status {
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+      font-weight: 500;
+      font-size: 14px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .success {
+      background: rgba(52, 209, 88, 0.2);
+      border: 1px solid rgba(52, 209, 88, 0.4);
+      color: #1e6b3e;
+    }
+
+    .error {
+      background: rgba(255, 59, 48, 0.2);
+      border: 1px solid rgba(255, 59, 48, 0.4);
+      color: #8b1a10;
+    }
+
+    /* 信息文本 */
+    .api-info {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #6e6e73;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 12px 16px;
+      border-radius: 10px;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+
+    .api-link {
+      color: #007aff;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .api-link:hover {
+      text-decoration: underline;
+    }
+
+    .info-text {
+      font-size: 12px;
+      color: #8e8e93;
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* 调试面板 */
+    .debug-panel {
+      margin-top: 24px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      display: none;
+    }
+
+    .debug-panel h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1d1d1f;
+    }
+
+    .debug-panel pre {
+      max-height: 200px;
+      overflow: auto;
+      background: rgba(255, 255, 255, 0.4);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      margin: 8px 0;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+      color: #1d1d1f;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .toggle-debug {
+      font-size: 13px;
+      color: #007aff;
+      text-decoration: none;
+      cursor: pointer;
+      margin-top: 16px;
+      display: inline-block;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-debug:hover {
+      text-decoration: underline;
+      color: #0056b3;
+    }
+
+    /* 自定义API区域 */
+    .api-section {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .form-description {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #6e6e73;
+    }
+
+    .form-description ul {
+      margin: 8px 0;
+      padding-left: 20px;
+    }
+
+    .form-description code {
+      background: rgba(255, 255, 255, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 12px;
+      color: #1d1d1f;
+    }
+
+    /* 工具类 */
+    .hidden {
+      display: none !important;
+    }
+
+    /* 动画效果 */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      body {
+        padding: 16px;
+      }
+
+      .header {
+        padding: 24px;
+        border-radius: 20px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .logo {
+        width: 48px;
+        height: 48px;
+      }
+
+      .section {
+        padding: 24px;
+        border-radius: 16px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="images/icon.png" alt="书签助手" class="logo">
+      <h1>书签助手 - 设置</h1>
+    </div>
+
+    <div class="section">
+      <h2>🤖 API设置</h2>
+      <p>请选择AI服务提供商并配置API密钥以启用智能书签分类功能。</p>
+      
+      <div class="form-group">
+        <label for="api-provider">API提供商</label>
+        <select id="api-provider">
+          <option value="gemini">🔮 Google Gemini</option>
+          <option value="openai">🧠 OpenAI</option>
+          <option value="custom">🔧 自定义</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="api-key">API密钥</label>
+        <input type="password" id="api-key" placeholder="请输入API密钥">
+        <div class="api-info" id="api-gemini-info">
+          📎 获取Gemini API密钥：<a href="https://aistudio.google.com/apikey" target="_blank" class="api-link">Google AI Studio</a>
+        </div>
+        <div class="api-info hidden" id="api-openai-info">
+          📎 获取OpenAI API密钥：<a href="https://platform.openai.com/api-keys" target="_blank" class="api-link">OpenAI Platform</a>
+        </div>
+      </div>
+      
+      <div class="form-group" id="gemini-model-field">
+        <label for="gemini-model">Gemini 模型</label>
+        <select id="gemini-model">
+          <option value="gemini-pro">gemini-pro</option>
+          <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+          <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+        </select>
+        <div class="info-text">选择合适的模型版本，不同模型可能有不同的能力和计费标准</div>
+      </div>
+      
+      <div class="form-group hidden" id="openai-model-field">
+        <label for="openai-model">OpenAI 模型</label>
+        <select id="openai-model">
+          <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+          <option value="gpt-4">gpt-4</option>
+          <option value="gpt-4-turbo">gpt-4-turbo</option>
+        </select>
+        <div class="info-text">较高版本的模型通常效果更好，但费用也更高</div>
+      </div>
+      
+      <div class="form-group hidden" id="custom-model-field">
+        <label for="custom-model">自定义模型标识符</label>
+        <input type="text" id="custom-model" placeholder="请输入模型标识符">
+        <div class="info-text">输入您的API服务所需的模型标识符</div>
+      </div>
+
+      <div class="form-group hidden" id="custom-api-fields">
+        <label for="custom-api-url">自定义API端点URL</label>
+        <input type="text" id="custom-api-url" placeholder="请输入API端点URL">
+      </div>
+
+      <button id="save-settings">💾 保存设置</button>
+      <button id="test-api">🧪 测试API连接</button>
+      
+      <div id="status-message" class="status hidden"></div>
+      
+      <div class="toggle-debug" id="toggle-debug">🔍 显示调试信息</div>
+      
+      <div class="debug-panel" id="debug-panel">
+        <h3>🛠️ API调试信息</h3>
+        <div>
+          <strong>请求URL:</strong>
+          <pre id="debug-url"></pre>
+        </div>
+        <div>
+          <strong>请求数据:</strong>
+          <pre id="debug-request"></pre>
+        </div>
+        <div>
+          <strong>响应数据:</strong>
+          <pre id="debug-response"></pre>
+        </div>
+        <div>
+          <strong>错误信息:</strong>
+          <pre id="debug-error"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📚 分类设置</h2>
+      
+      <div class="form-group">
+        <label for="default-categories">默认分类（可选，用逗号分隔）</label>
+        <input type="text" id="default-categories" placeholder="技术,教育,购物,社交媒体,新闻,娱乐,工作,其他">
+        <div class="info-text">设置书签的默认分类标签，AI会优先使用这些分类</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="batch-size">每批处理书签数量</label>
+        <input type="text" id="batch-size" placeholder="50">
+        <div class="info-text">
+          当书签数量较多时，系统会自动分批处理。建议设置为30-100之间的值，过大可能导致API响应超时。
+        </div>
+      </div>
+      
+      <button id="save-category-settings">💾 保存分类设置</button>
+    </div>
+
+    <div id="custom-api-section" class="api-section" style="display:none;">
+      <div class="form-group">
+        <label for="custom-api-key">自定义API密钥</label>
+        <input type="password" id="custom-api-key" placeholder="输入您的自定义API密钥">
+      </div>
+      <div class="form-group">
+        <label for="custom-api-url">自定义API URL</label>
+        <input type="text" id="custom-api-url" placeholder="输入您的自定义API URL">
+      </div>
+      <div class="form-group">
+        <label for="custom-model">模型名称</label>
+        <input type="text" id="custom-model" placeholder="输入模型名称">
+      </div>
+      <button id="test-custom-api" class="test-button">🧪 测试自定义API连接</button>
+      <div class="form-description">
+        <p><strong>📋 自定义API格式说明：</strong></p>
+        <p>使用自定义API时，扩展会尝试以多种格式发送请求，支持如下字段：</p>
+        <ul>
+          <li><code>model</code>: 模型名称</li>
+          <li><code>prompt</code>: 提示文本</li>
+          <li><code>message</code>: 消息文本</li>
+          <li><code>messages</code>: OpenAI格式消息数组</li>
+          <li><code>content</code>: 内容文本</li>
+          <li><code>input</code>: 输入文本</li>
+        </ul>
+        <p>您的API至少需要处理其中一种格式。可以在调试面板查看完整的请求和响应详情。</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html> 

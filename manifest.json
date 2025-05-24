@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "书签助手 - AI分类整理",
+  "version": "1.0",
+  "description": "使用AI自动分类并整理浏览器书签",
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "tabs"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  }
+} 
