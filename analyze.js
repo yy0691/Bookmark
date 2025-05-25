@@ -16,76 +16,26 @@ let selectedBookmarks = new Set();
 let currentEditingItem = null;
 
 // 初始化分析页面
-document.addEventListener('DOMContentLoaded', () => {
-  // 初始化Web Worker
-  initializeWorker();
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('页面加载完成，开始初始化...');
   
-  // 获取API状态
+  // 检查 API 状态
   checkApiStatus();
   
-  // 添加按钮事件监听
-  document.getElementById('analyze-bookmarks').addEventListener('click', analyzeBookmarks);
-  document.getElementById('cancel-analyze').addEventListener('click', cancelAnalyze);
-  document.getElementById('organize-bookmarks').addEventListener('click', organizeBookmarks);
-  document.getElementById('export-bookmarks').addEventListener('click', exportBookmarks);
-  document.getElementById('setup-api').addEventListener('click', openOptions);
-  document.getElementById('view-history').addEventListener('click', openHistoryPage);
+  // 初始化事件监听器
+  initializeEventListeners();
   
-  // 添加新功能的事件监听器
-  document.getElementById('detect-duplicates').addEventListener('click', detectDuplicateBookmarks);
-  document.getElementById('detect-invalid').addEventListener('click', detectInvalidBookmarks);
-  document.getElementById('cleanup-bookmarks').addEventListener('click', cleanupBookmarks);
-  document.getElementById('manage-bookmarks').addEventListener('click', openBookmarkManager);
-  document.getElementById('import-bookmarks').addEventListener('click', importBookmarks);
-  document.getElementById('backup-bookmarks').addEventListener('click', backupBookmarks);
+  // 加载书签管理器相关功能
+  await loadBookmarkTree();
   
-  // 书签管理器相关事件监听器
-  document.getElementById('expand-all-folders').addEventListener('click', () => expandAllFolders(true));
-  document.getElementById('collapse-all-folders').addEventListener('click', () => expandAllFolders(false));
-  document.getElementById('create-folder').addEventListener('click', createNewFolder);
-  document.getElementById('refresh-manager').addEventListener('click', refreshBookmarkManager);
+  // 检查URL参数，自动执行相应操作
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = urlParams.get('action');
   
-  // 批量操作事件监听器
-  document.getElementById('batch-delete').addEventListener('click', batchDeleteItems);
-  document.getElementById('batch-rename').addEventListener('click', batchRenameItems);
-  document.getElementById('batch-move').addEventListener('click', batchMoveItems);
-  document.getElementById('batch-export').addEventListener('click', batchExportItems);
-  document.getElementById('select-all-bookmarks').addEventListener('click', () => selectAllBookmarks(true));
-  document.getElementById('deselect-all-bookmarks').addEventListener('click', () => selectAllBookmarks(false));
-  
-  // 模态框事件监听器
-  document.getElementById('modal-close').addEventListener('click', closeEditModal);
-  document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
-  document.getElementById('save-edit').addEventListener('click', saveBookmarkEdit);
-  document.getElementById('move-modal-close').addEventListener('click', closeMoveModal);
-  document.getElementById('cancel-move').addEventListener('click', closeMoveModal);
-  document.getElementById('confirm-move').addEventListener('click', confirmMoveItems);
-  
-  // 检测结果操作事件监听器
-  document.getElementById('remove-duplicates').addEventListener('click', removeDuplicateBookmarks);
-  document.getElementById('remove-invalid').addEventListener('click', removeInvalidBookmarks);
-  document.getElementById('remove-empty-folders').addEventListener('click', removeEmptyFolders);
-  document.getElementById('select-all-duplicates').addEventListener('click', () => selectAllDetectionItems('duplicates', true));
-  document.getElementById('deselect-all-duplicates').addEventListener('click', () => selectAllDetectionItems('duplicates', false));
-  document.getElementById('select-all-invalid').addEventListener('click', () => selectAllDetectionItems('invalid', true));
-  document.getElementById('deselect-all-invalid').addEventListener('click', () => selectAllDetectionItems('invalid', false));
-  document.getElementById('select-all-empty-folders').addEventListener('click', () => selectAllDetectionItems('empty-folders', true));
-  document.getElementById('deselect-all-empty-folders').addEventListener('click', () => selectAllDetectionItems('empty-folders', false));
-  
-  // 文件导入事件监听器
-  document.getElementById('bookmark-file-input').addEventListener('change', handleFileImport);
-  
-  // 添加日志控制按钮事件监听
-  document.getElementById('toggle-log').addEventListener('click', toggleLogVisibility);
-  document.getElementById('clear-log').addEventListener('click', clearLog);
-  
-  // 添加可视化切换事件
-  document.querySelectorAll('.viz-tab').forEach(tab => {
-    tab.addEventListener('click', switchVisualizationTab);
-  });
-  
-  // 添加窗口关闭事件，终止Worker
-  window.addEventListener('beforeunload', terminateWorker);
+  if (action) {
+    console.log('检测到URL参数，执行操作:', action);
+    await executeActionFromUrl(action);
+  }
 });
 
 // 初始化Web Worker
@@ -2905,34 +2855,44 @@ function analyzeBookmarkTree(nodes) {
     otherBookmarks: 0,
     mobileBookmarks: 0
   };
-  
+
   function analyzeNode(node, depth = 0) {
     stats.maxDepth = Math.max(stats.maxDepth, depth);
-    
+
     if (node.url) {
       // 这是一个书签
       stats.totalBookmarks++;
-      
+
       // 根据父节点ID统计分布
-      if (node.parentId === '1') {
+      // 注意：这里假设 '1', '2', '3' 是顶层文件夹的 ID
+      // 如果书签结构的 ID 不同，需要相应调整
+      if (node.parentId === '1') { // 通常是书签栏
         stats.bookmarkBar++;
-      } else if (node.parentId === '2') {
+      } else if (node.parentId === '2') { // 通常是其他书签
         stats.otherBookmarks++;
-      } else if (node.parentId === '3') {
+      } else if (node.parentId === '3') { // 通常是移动设备书签
         stats.mobileBookmarks++;
       }
     } else if (node.children) {
       // 这是一个文件夹
-      if (node.id !== '0') { // 排除根节点
+      if (node.id !== '0') { // 排除根节点本身，根节点的id通常是'0'
         stats.totalFolders++;
       }
-      
+
       // 递归分析子节点
       node.children.forEach(child => analyzeNode(child, depth + 1));
     }
   }
-  
-  nodes.forEach(node => analyzeNode(node));
+
+  // 如果 nodes 是通过 chrome.bookmarks.getTree 获取的完整树，
+  // 那么它是一个包含单个根节点的数组。
+  // 我们应该从这个根节点的子节点开始分析。
+  if (nodes && nodes.length > 0 && nodes[0].id === '0' && nodes[0].children) {
+    nodes[0].children.forEach(childNode => analyzeNode(childNode, 0)); // 从实际的顶层文件夹开始，深度为0
+  } else {
+    // 如果传入的已经是子节点列表，或者结构不同，则直接遍历
+    nodes.forEach(node => analyzeNode(node, 0));
+  }
   return stats;
 }
 
@@ -2954,10 +2914,17 @@ function renderBookmarkTree() {
   container.appendChild(statsPanel);
   
   // 渲染每个根节点
-  bookmarkTreeData.forEach(rootNode => {
-    const treeElement = createTreeNode(rootNode, 0);
-    container.appendChild(treeElement);
-  });
+  // bookmarkTreeData 是通过 chrome.bookmarks.getTree 获取的，
+  // 它是一个包含单个根节点 (id '0') 的数组。
+  // 我们需要渲染这个根节点的子节点。
+  if (bookmarkTreeData && bookmarkTreeData.length > 0 && bookmarkTreeData[0].children) {
+    bookmarkTreeData[0].children.forEach(actualRootNode => {
+      const treeElement = createTreeNode(actualRootNode, 0); // 实际的顶层文件夹，level 0
+      container.appendChild(treeElement);
+    });
+  } else {
+    addLogEntry('警告: 书签树数据格式不正确或为空，无法渲染。', 'warning');
+  }
   
   // 更新统计信息
   updateBookmarkStats();
@@ -2989,29 +2956,38 @@ function updateBookmarkStats() {
 
 // 展开第一级文件夹
 function expandFirstLevelFolders() {
-  // 找到所有第一级文件夹（书签栏、其他书签、移动设备书签等）
-  const firstLevelFolders = document.querySelectorAll('.tree-node[style*="margin-left: 0px"] .tree-expand-btn, .tree-node[style*="margin-left: 20px"] .tree-expand-btn');
-  
+  // 更准确地找到第一级文件夹（level 0 的文件夹）
+  const allTreeNodes = document.querySelectorAll('.tree-node');
   let expandedCount = 0;
-  firstLevelFolders.forEach(button => {
-    const nodeElement = button.closest('.tree-node');
-    const childrenContainer = nodeElement.querySelector('.tree-children');
-    
-    if (childrenContainer && childrenContainer.classList.contains('hidden')) {
-      childrenContainer.classList.remove('hidden');
-      button.textContent = '▼';
-      expandedCount++;
+  
+  allTreeNodes.forEach(node => {
+    const marginLeft = parseInt(node.style.marginLeft) || 0;
+    // 只处理第一级文件夹（marginLeft为0px）
+    if (marginLeft === 0) {
+      const expandButton = node.querySelector('.tree-expand-btn');
+      const childrenContainer = node.querySelector('.tree-children');
+      
+      if (expandButton && childrenContainer && childrenContainer.classList.contains('hidden')) {
+        childrenContainer.classList.remove('hidden');
+        expandButton.textContent = '▼';
+        expandedCount++;
+        
+        const nodeId = node.dataset.nodeId;
+        const titleElement = node.querySelector('.tree-title');
+        const folderName = titleElement ? titleElement.textContent : `节点-${nodeId}`;
+        addLogEntry(`展开文件夹: ${folderName}`, 'info');
+      }
     }
   });
   
-  addLogEntry(`自动展开了${expandedCount}个主要文件夹`, 'info');
+  addLogEntry(`自动展开了${expandedCount}个主要文件夹`, 'success');
 }
 
 // 创建树节点
 function createTreeNode(node, level) {
   const nodeElement = document.createElement('div');
   nodeElement.className = 'tree-node';
-  nodeElement.style.marginLeft = `${level * 20}px`;
+  nodeElement.style.marginLeft = `${level * 1}px`;
   nodeElement.dataset.nodeId = node.id;
   
   // 添加拖拽支持
@@ -3040,15 +3016,6 @@ function createTreeNode(node, level) {
       toggleNodeExpansion(nodeElement, expandButton);
     });
     nodeContent.appendChild(expandButton);
-    
-    // 添加文件夹书签数量显示
-    const bookmarkCount = countBookmarksInFolder(node);
-    if (bookmarkCount > 0) {
-      const countSpan = document.createElement('span');
-      countSpan.className = 'folder-count';
-      countSpan.textContent = ` (${bookmarkCount})`;
-      countSpan.title = `包含 ${bookmarkCount} 个书签`;
-    }
   } else {
     // 书签项的占位符
     const spacer = document.createElement('span');
@@ -3098,6 +3065,19 @@ function createTreeNode(node, level) {
   });
   
   titleContainer.appendChild(title);
+  
+  // 添加文件夹书签数量显示（放在标题后面）
+  if (!node.url && node.children) {
+    const bookmarkCount = countBookmarksInFolder(node);
+    if (bookmarkCount > 0) {
+      const countSpan = document.createElement('span');
+      countSpan.className = 'folder-count';
+      countSpan.textContent = `${bookmarkCount}`;
+      countSpan.title = `包含 ${bookmarkCount} 个书签`;
+      titleContainer.appendChild(countSpan);
+    }
+  }
+  
   nodeContent.appendChild(titleContainer);
   
   // 操作按钮
@@ -4601,4 +4581,118 @@ function cancelInlineEdit() {
   
   addLogEntry('取消重命名操作', 'info');
   currentEditingElement = null;
+}
+
+// 根据URL参数执行相应操作
+async function executeActionFromUrl(action) {
+  switch (action) {
+    case 'analyze':
+      // 切换到分析标签页并开始分析
+      switchVisualizationTab({ target: { dataset: { tab: 'analyze' } } });
+      setTimeout(analyzeBookmarks, 1000);
+      break;
+      
+    case 'organize':
+      // 切换到分析标签页并开始整理
+      switchVisualizationTab({ target: { dataset: { tab: 'analyze' } } });
+      setTimeout(organizeBookmarks, 1000);
+      break;
+      
+    case 'export':
+      // 切换到分析标签页并导出CSV
+      switchVisualizationTab({ target: { dataset: { tab: 'analyze' } } });
+      setTimeout(exportBookmarks, 1000);
+      break;
+      
+    case 'duplicates':
+      // 切换到检测标签页并检测重复书签
+      switchVisualizationTab({ target: { dataset: { tab: 'detection' } } });
+      setTimeout(detectDuplicateBookmarks, 1000);
+      break;
+      
+    case 'invalid':
+      // 切换到检测标签页并检测失效书签
+      switchVisualizationTab({ target: { dataset: { tab: 'detection' } } });
+      setTimeout(detectInvalidBookmarks, 1000);
+      break;
+      
+    case 'cleanup':
+      // 切换到检测标签页并清理书签
+      switchVisualizationTab({ target: { dataset: { tab: 'detection' } } });
+      setTimeout(cleanupBookmarks, 1000);
+      break;
+      
+    default:
+      console.log('未知的操作参数:', action);
+  }
+}
+
+// 初始化事件监听器
+function initializeEventListeners() {
+  // 初始化Web Worker
+  initializeWorker();
+  
+  // 添加按钮事件监听
+  document.getElementById('analyze-bookmarks').addEventListener('click', analyzeBookmarks);
+  document.getElementById('cancel-analyze').addEventListener('click', cancelAnalyze);
+  document.getElementById('organize-bookmarks').addEventListener('click', organizeBookmarks);
+  document.getElementById('export-bookmarks').addEventListener('click', exportBookmarks);
+  document.getElementById('setup-api').addEventListener('click', openOptions);
+  document.getElementById('view-history').addEventListener('click', openHistoryPage);
+  
+  // 添加新功能的事件监听器
+  document.getElementById('detect-duplicates').addEventListener('click', detectDuplicateBookmarks);
+  document.getElementById('detect-invalid').addEventListener('click', detectInvalidBookmarks);
+  document.getElementById('cleanup-bookmarks').addEventListener('click', cleanupBookmarks);
+  document.getElementById('manage-bookmarks').addEventListener('click', openBookmarkManager);
+  document.getElementById('import-bookmarks').addEventListener('click', importBookmarks);
+  document.getElementById('backup-bookmarks').addEventListener('click', backupBookmarks);
+  
+  // 书签管理器相关事件监听器
+  document.getElementById('expand-all-folders').addEventListener('click', () => expandAllFolders(true));
+  document.getElementById('collapse-all-folders').addEventListener('click', () => expandAllFolders(false));
+  document.getElementById('create-folder').addEventListener('click', createNewFolder);
+  document.getElementById('refresh-manager').addEventListener('click', refreshBookmarkManager);
+  
+  // 批量操作事件监听器
+  document.getElementById('batch-delete').addEventListener('click', batchDeleteItems);
+  document.getElementById('batch-rename').addEventListener('click', batchRenameItems);
+  document.getElementById('batch-move').addEventListener('click', batchMoveItems);
+  document.getElementById('batch-export').addEventListener('click', batchExportItems);
+  document.getElementById('select-all-bookmarks').addEventListener('click', () => selectAllBookmarks(true));
+  document.getElementById('deselect-all-bookmarks').addEventListener('click', () => selectAllBookmarks(false));
+  
+  // 模态框事件监听器
+  document.getElementById('modal-close').addEventListener('click', closeEditModal);
+  document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
+  document.getElementById('save-edit').addEventListener('click', saveBookmarkEdit);
+  document.getElementById('move-modal-close').addEventListener('click', closeMoveModal);
+  document.getElementById('cancel-move').addEventListener('click', closeMoveModal);
+  document.getElementById('confirm-move').addEventListener('click', confirmMoveItems);
+  
+  // 检测结果操作事件监听器
+  document.getElementById('remove-duplicates').addEventListener('click', removeDuplicateBookmarks);
+  document.getElementById('remove-invalid').addEventListener('click', removeInvalidBookmarks);
+  document.getElementById('remove-empty-folders').addEventListener('click', removeEmptyFolders);
+  document.getElementById('select-all-duplicates').addEventListener('click', () => selectAllDetectionItems('duplicates', true));
+  document.getElementById('deselect-all-duplicates').addEventListener('click', () => selectAllDetectionItems('duplicates', false));
+  document.getElementById('select-all-invalid').addEventListener('click', () => selectAllDetectionItems('invalid', true));
+  document.getElementById('deselect-all-invalid').addEventListener('click', () => selectAllDetectionItems('invalid', false));
+  document.getElementById('select-all-empty-folders').addEventListener('click', () => selectAllDetectionItems('empty-folders', true));
+  document.getElementById('deselect-all-empty-folders').addEventListener('click', () => selectAllDetectionItems('empty-folders', false));
+  
+  // 文件导入事件监听器
+  document.getElementById('bookmark-file-input').addEventListener('change', handleFileImport);
+  
+  // 添加日志控制按钮事件监听
+  document.getElementById('toggle-log').addEventListener('click', toggleLogVisibility);
+  document.getElementById('clear-log').addEventListener('click', clearLog);
+  
+  // 添加可视化切换事件
+  document.querySelectorAll('.viz-tab').forEach(tab => {
+    tab.addEventListener('click', switchVisualizationTab);
+  });
+  
+  // 添加窗口关闭事件，终止Worker
+  window.addEventListener('beforeunload', terminateWorker);
 }
