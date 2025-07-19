@@ -287,9 +287,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Settings Panel ---
     function openSettingsPanel() { 
+        console.log('打开设置面板');
+        console.log('设置面板元素:', settingsPanel);
+        console.log('设置面板当前类名:', settingsPanel.className);
+        
         settingsPanel.classList.add('is-visible');
         document.getElementById('overlay').classList.add('is-visible');
         document.body.style.overflow = 'hidden'; // 防止背景滚动
+        
+        console.log('设置面板添加is-visible后的类名:', settingsPanel.className);
+        console.log('设置面板计算样式:', window.getComputedStyle(settingsPanel));
     }
     function closeSettingsPanel() { 
         settingsPanel.classList.remove('is-visible');
