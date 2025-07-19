@@ -1,453 +1,580 @@
-/**
- * 可视化功能模块
- * 用于生成书签分类的各种可视化图表
- */
+document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
+    const body = document.body;
+    const bookmarkContainer = document.getElementById('bookmark-container');
+    const searchInput = document.getElementById('search-input');
+    const folderListContainer = document.getElementById('folder-list-container');
+    const sidebar = document.getElementById('folder-sidebar');
+    const resizer = document.getElementById('sidebar-resizer');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const iconModeBtn = document.getElementById('icon-mode-btn');
+    const listViewBtn = document.getElementById('list-view-btn');
+    const cardViewBtn = document.getElementById('card-view-btn');
+    const iconViewBtn = document.getElementById('icon-view-btn');
 
-// 生成饼图显示分类比例
-function generateCategoryPieChart() {
-  const ctx = document.getElementById('category-pie-chart').getContext('2d');
-  
-  // 准备数据
-  const categoryData = Object.entries(categories)
-    .map(([name, items]) => ({
-      category: name,
-      count: items.length
-    }))
-    .sort((a, b) => b.count - a.count);
-  
-  // 取前10个分类，其余归为"其他"
-  const topCategories = categoryData.slice(0, 10);
-  const otherCategories = categoryData.slice(10);
-  const otherCount = otherCategories.reduce((sum, cat) => sum + cat.count, 0);
-  
-  // 如果有"其他"分类，添加到数据中
-  if (otherCount > 0) {
-    topCategories.push({ category: '其他', count: otherCount });
-  }
-  
-  // 准备图表数据
-  const labels = topCategories.map(item => item.category);
-  const data = topCategories.map(item => item.count);
-  const backgroundColors = generateAppleColorPalette(labels.length);
-  
-  // 创建图表
-  new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: data,
-        backgroundColor: backgroundColors,
-        borderWidth: 0,
-        hoverBorderWidth: 2,
-        hoverBorderColor: 'rgba(255, 255, 255, 0.8)'
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'right',
-          labels: {
-            color: '#1d1d1f',
-            font: {
-              family: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Helvetica, Arial, sans-serif',
-              size: 12,
-              weight: '500'
-            },
-            padding: 16,
-            usePointStyle: true,
-            pointStyle: 'circle'
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          titleColor: '#1d1d1f',
-          bodyColor: '#1d1d1f',
-          borderColor: 'rgba(255, 255, 255, 0.8)',
-          borderWidth: 1,
-          cornerRadius: 12,
-          padding: 12,
-          titleFont: {
-            family: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Helvetica, Arial, sans-serif',
-            size: 14,
-            weight: '600'
-          },
-          bodyFont: {
-            family: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Helvetica, Arial, sans-serif',
-            size: 13,
-            weight: '500'
-          },
-          callbacks: {
-            label: function(context) {
-              const percent = ((context.raw / totalBookmarksCount) * 100).toFixed(1);
-              return `${context.label}: ${context.raw}个 (${percent}%)`;
+    // --- Settings Panel Elements ---
+    const settingsBtn = document.getElementById('theme-settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettingsPanelBtn = document.getElementById('close-settings-panel-btn');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    const bgUploadInput = document.getElementById('bg-upload-input');
+    const bgUploadBtn = document.getElementById('bg-upload-btn');
+    const clearBgBtn = document.getElementById('clear-bg-btn');
+    const analyzeBtn = document.getElementById('analyze-bookmarks-btn');
+    const analysisProgress = document.getElementById('analysis-progress');
+    const analysisProgressBar = document.getElementById('analysis-progress-bar');
+    const analysisStatus = document.getElementById('analysis-status');
+    const analysisLogContainer = document.getElementById('analysis-log-container');
+    const analysisLog = document.getElementById('analysis-log');
+    const importBtn = document.getElementById('import-bookmarks-btn');
+    const exportBackupBtn = document.getElementById('export-backup-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const apiProviderSelect = document.getElementById('api-provider');
+    const apiKeyInput = document.getElementById('api-key');
+    const geminiFields = document.getElementById('gemini-fields');
+    const openaiFields = document.getElementById('openai-fields');
+    const customApiFields = document.getElementById('custom-api-fields');
+    const saveApiSettingsBtn = document.getElementById('save-api-settings-btn');
+    const testApiBtn = document.getElementById('test-api-btn');
+    const apiStatusMessage = document.getElementById('api-status-message');
+
+    // --- State ---
+    let bookmarkTreeRoot = null;
+    let currentFolderNode = null;
+    let currentBookmarks = [];
+    let currentViewMode = 'card';
+    let analysisCategories = {};
+
+    // --- Initialization ---
+    function initialize() {
+        loadAndApplySettings();
+        chrome.bookmarks.getTree(tree => {
+            bookmarkTreeRoot = tree[0];
+            currentFolderNode = bookmarkTreeRoot;
+            renderFolderTree(bookmarkTreeRoot);
+            loadAndDisplayBookmarks(currentFolderNode);
+        });
+        initializeEventListeners();
+        setViewMode(currentViewMode);
+    }
+
+    function initializeEventListeners() {
+        // Main UI
+        searchInput.addEventListener('input', handleSearch);
+        toggleSidebarBtn.addEventListener('click', toggleSidebarCollapse);
+        iconModeBtn.addEventListener('click', toggleIconMode);
+        listViewBtn.addEventListener('click', () => setViewMode('list'));
+        cardViewBtn.addEventListener('click', () => setViewMode('card'));
+        iconViewBtn.addEventListener('click', () => setViewMode('icon'));
+        initResizer(sidebar, resizer);
+
+        // Settings Panel
+        settingsBtn.addEventListener('click', openSettingsPanel);
+        closeSettingsPanelBtn.addEventListener('click', closeSettingsPanel);
+        settingsPanel.addEventListener('click', (e) => {
+            if (e.target === settingsPanel) {
+                closeSettingsPanel();
             }
-          }
+        });
+        
+        // Tabs
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.dataset.tab;
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(`tab-${targetTab}`).classList.add('active');
+            });
+        });
+
+        // Appearance
+        themeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const theme = button.dataset.theme;
+                applyTheme(theme);
+                localStorage.setItem('selectedTheme', theme);
+            });
+        });
+        bgUploadBtn.addEventListener('click', () => bgUploadInput.click());
+        bgUploadInput.addEventListener('change', handleBackgroundUpload);
+        clearBgBtn.addEventListener('click', clearCustomBackground);
+
+        // Tools
+        analyzeBtn.addEventListener('click', analyzeBookmarks);
+        const organizeBtn = document.getElementById('organize-bookmarks-btn');
+        organizeBtn.addEventListener('click', organizeBookmarks);
+
+        // Data
+        importBtn.addEventListener('click', handleImport);
+        exportBackupBtn.addEventListener('click', handleExportBackup);
+        exportCsvBtn.addEventListener('click', handleExportCsv);
+
+        // API Settings
+        apiProviderSelect.addEventListener('change', toggleApiFields);
+        saveApiSettingsBtn.addEventListener('click', saveApiSettings);
+        testApiBtn.addEventListener('click', testApiConnection);
+    }
+
+    // --- Bookmark & Folder Logic ---
+    function loadAndDisplayBookmarks(node) {
+        currentBookmarks = flattenBookmarks(node);
+        displayBookmarks(currentBookmarks);
+        searchInput.value = '';
+    }
+
+    function displayBookmarks(bookmarks) {
+        bookmarkContainer.innerHTML = '';
+        if (bookmarks.length === 0) {
+            bookmarkContainer.innerHTML = '<p style="color: var(--text-secondary); text-align: center; width: 100%;">此文件夹为空或无匹配结果。</p>';
+            return;
         }
-      },
-      layout: {
-        padding: 20
-      }
+        bookmarks.forEach(bookmark => bookmarkContainer.appendChild(createBookmarkElement(bookmark)));
     }
-  });
-}
 
-// 生成树形图
-function generateCategoryTreeView() {
-  const container = document.getElementById('category-tree');
-  
-  // 清空容器
-  container.innerHTML = '';
-  
-  // 创建SVG容器
-  const width = container.clientWidth;
-  const height = container.clientHeight;
-  const margin = { top: 20, right: 120, bottom: 20, left: 60 };
-  
-  const svg = d3.select('#category-tree')
-    .append('svg')
-    .attr('width', width)
-    .attr('height', height)
-    .style('background', 'transparent')
-    .append('g')
-    .attr('transform', `translate(${margin.left},${margin.top})`);
-  
-  // 准备数据结构
-  const treeData = {
-    name: '📚 书签',
-    children: Object.entries(categories)
-      .sort((a, b) => b[1].length - a[1].length)
-      .slice(0, 15) // 限制顶级分类数量
-      .map(([category, items]) => ({
-        name: `${category} (${items.length})`,
-        children: items.slice(0, 5).map(item => ({ // 限制每个分类显示的书签数量
-          name: item.title || item.url,
-          url: item.url
-        }))
-      }))
-  };
-  
-  // 创建树形布局
-  const treeLayout = d3.tree()
-    .size([height - margin.top - margin.bottom, width - margin.left - margin.right]);
-  
-  // 创建根节点
-  const root = d3.hierarchy(treeData);
-  
-  // 计算节点位置
-  treeLayout(root);
-  
-  // 创建连接线
-  svg.selectAll('.link')
-    .data(root.links())
-    .enter()
-    .append('path')
-    .attr('class', 'link')
-    .attr('d', d3.linkHorizontal()
-      .x(d => d.y)
-      .y(d => d.x))
-    .attr('fill', 'none')
-    .attr('stroke', 'rgba(255, 255, 255, 0.4)')
-    .attr('stroke-width', 2)
-    .style('opacity', 0.8);
-  
-  // 创建节点
-  const node = svg.selectAll('.node')
-    .data(root.descendants())
-    .enter()
-    .append('g')
-    .attr('class', d => `node ${d.children ? 'node-internal' : 'node-leaf'}`)
-    .attr('transform', d => `translate(${d.y},${d.x})`);
-  
-  // 添加节点圆点
-  node.append('circle')
-    .attr('r', d => d.depth === 0 ? 8 : d.depth === 1 ? 6 : 4)
-    .attr('fill', d => {
-      if (d.depth === 0) return '#007aff';
-      if (d.depth === 1) return '#30d158';
-      return '#ff9500';
-    })
-    .attr('stroke', 'rgba(255, 255, 255, 0.8)')
-    .attr('stroke-width', 2)
-    .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))');
-  
-  // 添加节点文本
-  node.append('text')
-    .attr('dy', '.31em')
-    .attr('x', d => d.children ? -12 : 12)
-    .attr('text-anchor', d => d.children ? 'end' : 'start')
-    .text(d => d.data.name)
-    .style('font-size', d => d.depth === 0 ? '14px' : d.depth === 1 ? '12px' : '10px')
-    .style('font-family', '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Helvetica, Arial, sans-serif')
-    .style('font-weight', d => d.depth === 0 ? '600' : d.depth === 1 ? '500' : '400')
-    .style('fill', '#1d1d1f')
-    .style('text-shadow', '0 1px 2px rgba(255, 255, 255, 0.8)')
-    .each(function(d) {
-      // 限制文本长度
-      const textElement = d3.select(this);
-      const text = textElement.text();
-      if (text.length > 30) {
-        textElement.text(text.substring(0, 27) + '...');
-      }
-    });
-}
-
-// 生成标签云
-function generateTagCloud() {
-  const container = document.getElementById('category-tag-cloud');
-  
-  // 清空容器
-  container.innerHTML = '';
-  
-  // 准备数据
-  const categoryData = Object.entries(categories)
-    .map(([name, items]) => ({
-      category: name,
-      count: items.length
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 30); // 限制标签数量
-  
-  if (categoryData.length === 0) {
-    container.innerHTML = `
-      <div style="
-        text-align: center; 
-        color: #8e8e93; 
-        padding: 60px 20px;
-        font-size: 16px;
-        font-weight: 500;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        backdrop-filter: blur(10px);
-      ">暂无数据</div>
-    `;
-    return;
-  }
-  
-  // 计算字体大小范围（不使用D3.js）
-  const minCount = Math.min(...categoryData.map(d => d.count));
-  const maxCount = Math.max(...categoryData.map(d => d.count));
-  
-  // 简单的线性缩放函数
-  const calculateFontSize = (count) => {
-    if (minCount === maxCount) {
-      return 20; // 如果所有分类书签数量相同，使用固定字体大小
+    function createBookmarkElement(bookmark) {
+        const item = document.createElement('div');
+        item.className = 'bookmark-item';
+        const url = new URL(bookmark.url);
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+        item.innerHTML = `
+            <a href="${bookmark.url}" target="_blank" title="${bookmark.title}\n${bookmark.url}">
+                <img class="bookmark-favicon" src="${faviconUrl}" onerror="this.src='images/icon.png'">
+                <span class="bookmark-title">${bookmark.title || url.hostname}</span>
+            </a>`;
+        return item;
     }
-    
-    const minFont = 14;
-    const maxFont = 36;
-    const ratio = (count - minCount) / (maxCount - minCount);
-    return Math.round(minFont + ratio * (maxFont - minFont));
-  };
-  
-  // 苹果风格的颜色集合
-  const appleColors = [
-    '#007aff', '#5856d6', '#af52de', '#ff2d92', '#ff3b30',
-    '#ff9500', '#ffcc02', '#30d158', '#00c896', '#0ac8fa',
-    '#5ac8fa', '#007aff', '#5856d6', '#af52de'
-  ];
-  
-  // 创建标签
-  categoryData.forEach((item, index) => {
-    const tag = document.createElement('div');
-    tag.className = 'tag-cloud-tag';
-    tag.textContent = `${item.category} (${item.count})`;
-    
-    const fontSize = calculateFontSize(item.count);
-    const colorIndex = index % appleColors.length;
-    
-    // 设置样式
-    Object.assign(tag.style, {
-      fontSize: `${fontSize}px`,
-      background: `linear-gradient(135deg, ${appleColors[colorIndex]}20, ${appleColors[colorIndex]}30)`,
-      color: appleColors[colorIndex],
-      border: `1px solid ${appleColors[colorIndex]}40`,
-      fontWeight: fontSize > 24 ? '600' : '500',
-      padding: fontSize > 24 ? '12px 20px' : '8px 16px',
-      margin: '6px',
-      borderRadius: '20px',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      boxShadow: `0 4px 12px ${appleColors[colorIndex]}20`,
-      transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-      cursor: 'pointer',
-      userSelect: 'none',
-      display: 'inline-block'
-    });
-    
-    // 鼠标悬停效果
-    tag.addEventListener('mouseenter', () => {
-      Object.assign(tag.style, {
-        transform: 'scale(1.05) translateY(-2px)',
-        background: `linear-gradient(135deg, ${appleColors[colorIndex]}30, ${appleColors[colorIndex]}40)`,
-        boxShadow: `0 8px 24px ${appleColors[colorIndex]}30`,
-        color: appleColors[colorIndex]
-      });
-    });
-    
-    tag.addEventListener('mouseleave', () => {
-      Object.assign(tag.style, {
-        transform: 'scale(1) translateY(0)',
-        background: `linear-gradient(135deg, ${appleColors[colorIndex]}20, ${appleColors[colorIndex]}30)`,
-        boxShadow: `0 4px 12px ${appleColors[colorIndex]}20`,
-        color: appleColors[colorIndex]
-      });
-    });
-    
-    // 设置点击事件，点击时可过滤分类结果
-    tag.addEventListener('click', () => {
-      // 滚动到分类结果
-      document.getElementById('results').scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-      
-      // 添加高亮效果
-      const categoryElements = document.querySelectorAll('.category');
-      categoryElements.forEach(element => {
-        const categoryName = element.querySelector('.category-name').textContent;
-        if (categoryName.includes(item.category)) {
-          element.style.background = `linear-gradient(135deg, ${appleColors[colorIndex]}20, ${appleColors[colorIndex]}30)`;
-          element.style.border = `2px solid ${appleColors[colorIndex]}60`;
-          element.style.transform = 'scale(1.02)';
-          
-          // 3秒后恢复
-          setTimeout(() => {
-            element.style.background = '';
-            element.style.border = '';
-            element.style.transform = '';
-          }, 3000);
+
+    function flattenBookmarks(node) {
+        const bookmarks = [];
+        function traverse(n) {
+            if (n.url) bookmarks.push({ title: n.title, url: n.url, id: n.id });
+            if (n.children) n.children.forEach(traverse);
         }
-      });
-    });
-    
-    container.appendChild(tag);
-  });
-}
-
-// 生成苹果风格颜色调色板
-function generateAppleColorPalette(count) {
-  // 苹果系统颜色
-  const appleSystemColors = [
-    '#007aff', // 蓝色
-    '#5856d6', // 紫色
-    '#af52de', // 紫罗兰
-    '#ff2d92', // 品红
-    '#ff3b30', // 红色
-    '#ff9500', // 橙色
-    '#ffcc02', // 黄色
-    '#30d158', // 绿色
-    '#00c896', // 薄荷绿
-    '#0ac8fa', // 青色
-    '#5ac8fa', // 浅蓝
-    '#8e8e93', // 灰色
-    '#007aff', // 蓝色（重复）
-    '#ff6b6b', // 珊瑚红
-    '#4ecdc4'  // 青绿色
-  ];
-  
-  // 如果颜色数量不够，生成渐变色
-  if (count <= appleSystemColors.length) {
-    return appleSystemColors.slice(0, count);
-  }
-  
-  // 生成额外的渐变颜色
-  const colors = [...appleSystemColors];
-  
-  for (let i = appleSystemColors.length; i < count; i++) {
-    // 基于现有颜色生成渐变
-    const baseColor = appleSystemColors[i % appleSystemColors.length];
-    
-    // 从hex转换为HSL，调整亮度和饱和度
-    const rgb = hexToRgb(baseColor);
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    
-    // 调整HSL值
-    hsl.h = (hsl.h + (i * 30)) % 360; // 调整色相
-    hsl.s = Math.min(hsl.s + 0.1, 1); // 轻微增加饱和度
-    hsl.l = Math.max(hsl.l - 0.1, 0.3); // 轻微降低亮度
-    
-    const newRgb = hslToRgb(hsl.h, hsl.s, hsl.l);
-    const newColor = rgbToHex(newRgb.r, newRgb.g, newRgb.b);
-    
-    colors.push(newColor);
-  }
-  
-  return colors;
-}
-
-// 辅助函数：hex转rgb
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
-}
-
-// 辅助函数：rgb转hsl
-function rgbToHsl(r, g, b) {
-  r /= 255;
-  g /= 255;
-  b /= 255;
-  
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
-
-  if (max === min) {
-    h = s = 0; // 无色彩
-  } else {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+        traverse(node);
+        return bookmarks;
     }
-    h /= 6;
-  }
 
-  return { h: h * 360, s, l };
-}
+    function renderFolderTree(rootNode) {
+        const folderList = document.createElement('ul');
+        folderList.className = 'folder-list';
+        const allBookmarksNode = createFolderNode(rootNode, 0, true);
+        allBookmarksNode.classList.add('active');
+        folderList.appendChild(allBookmarksNode);
+        rootNode.children.forEach(node => {
+            if (node.children) folderList.appendChild(createFolderNode(node, 0));
+        });
+        folderListContainer.innerHTML = '';
+        folderListContainer.appendChild(folderList);
+    }
 
-// 辅助函数：hsl转rgb
-function hslToRgb(h, s, l) {
-  h /= 360;
-  
-  const hue2rgb = (p, q, t) => {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1/6) return p + (q - p) * 6 * t;
-    if (t < 1/2) return q;
-    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-    return p;
-  };
+    function createFolderNode(node, level, isRoot = false) {
+        const listItem = document.createElement('li');
+        const hasSubfolders = node.children && node.children.some(child => child.children);
+        listItem.innerHTML = `
+            <div class="folder-item" style="padding-left: ${level * 15}px;">
+                <span class="folder-toggle ${hasSubfolders ? '' : 'hidden'}">▸</span>
+                <span class="folder-icon">${isRoot ? '📚' : '📁'}</span>
+                <span class="folder-name">${isRoot ? '所有书签' : node.title || '未命名文件夹'}</span>
+                <div class="folder-tooltip">${isRoot ? '所有书签' : node.title || '未命名文件夹'}</div>
+            </div>`;
+        const folderItemDiv = listItem.querySelector('.folder-item');
+        folderItemDiv.addEventListener('click', () => {
+            currentFolderNode = node;
+            document.querySelectorAll('.folder-item.active').forEach(item => item.classList.remove('active'));
+            folderItemDiv.classList.add('active');
+            loadAndDisplayBookmarks(node);
+        });
+        if (hasSubfolders) {
+            const toggle = listItem.querySelector('.folder-toggle');
+            const subFoldersContainer = document.createElement('ul');
+            subFoldersContainer.className = 'sub-folders';
+            toggle.addEventListener('click', e => {
+                e.stopPropagation();
+                toggle.classList.toggle('expanded');
+                subFoldersContainer.classList.toggle('expanded');
+            });
+            node.children.forEach(child => {
+                if (child.children) subFoldersContainer.appendChild(createFolderNode(child, level + 1));
+            });
+            listItem.appendChild(subFoldersContainer);
+        }
+        return listItem;
+    }
 
-  let r, g, b;
+    // --- UI & Layout ---
+    function setViewMode(mode) {
+        currentViewMode = mode;
+        bookmarkContainer.className = 'bookmark-container';
+        bookmarkContainer.classList.add(`${mode}-view`);
+        [listViewBtn, cardViewBtn, iconViewBtn].forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`${mode}-view-btn`).classList.add('active');
+        displayBookmarks(currentBookmarks);
+    }
 
-  if (s === 0) {
-    r = g = b = l; // 无色彩
-  } else {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
-  }
+    function handleSearch(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const bookmarksInScope = flattenBookmarks(currentFolderNode);
+        currentBookmarks = bookmarksInScope.filter(bm => 
+            (bm.title && bm.title.toLowerCase().includes(searchTerm)) ||
+            (bm.url && bm.url.toLowerCase().includes(searchTerm))
+        );
+        displayBookmarks(currentBookmarks);
+    }
 
-  return {
-    r: Math.round(r * 255),
-    g: Math.round(g * 255),
-    b: Math.round(b * 255)
-  };
-}
+    function toggleSidebarCollapse() { body.classList.toggle('sidebar-collapsed'); }
+    function toggleIconMode() { body.classList.toggle('sidebar-icon-mode'); }
 
-// 辅助函数：rgb转hex
-function rgbToHex(r, g, b) {
-  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-} 
+    function initResizer(sidebarEl, resizerEl) {
+        let startX, startWidth;
+        function onMouseDown(e) {
+            startX = e.clientX;
+            startWidth = parseInt(document.defaultView.getComputedStyle(sidebarEl).width, 10);
+            document.documentElement.addEventListener('mousemove', onMouseMove);
+            document.documentElement.addEventListener('mouseup', onMouseUp);
+        }
+        function onMouseMove(e) {
+            const newWidth = startX + e.clientX - startX;
+            if (newWidth > 200 && newWidth < 500) sidebarEl.style.width = `${newWidth}px`;
+        }
+        function onMouseUp() {
+            document.documentElement.removeEventListener('mousemove', onMouseMove);
+            document.documentElement.removeEventListener('mouseup', onMouseUp);
+        }
+        resizerEl.addEventListener('mousedown', onMouseDown);
+    }
+
+    // --- Settings Panel ---
+    function openSettingsPanel() { settingsPanel.classList.add('is-visible'); }
+    function closeSettingsPanel() { settingsPanel.classList.remove('is-visible'); }
+
+    function loadAndApplySettings() {
+        const theme = localStorage.getItem('selectedTheme') || 'theme-default';
+        const customBg = localStorage.getItem('customBackground');
+        applyTheme(theme);
+        if (customBg) body.style.backgroundImage = `url(${customBg})`;
+        loadApiSettings();
+    }
+
+    function applyTheme(theme) {
+        body.className = 'visualization-page';
+        body.classList.add(theme);
+        themeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+    }
+
+    function handleBackgroundUpload(event) {
+        const file = event.target.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const imageDataUrl = e.target.result;
+            body.style.backgroundImage = `url(${imageDataUrl})`;
+            try {
+                localStorage.setItem('customBackground', imageDataUrl);
+            } catch (error) {
+                alert("无法保存背景图片，可能已超出存储限制。");
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearCustomBackground() {
+        body.style.backgroundImage = '';
+        localStorage.removeItem('customBackground');
+    }
+
+    // --- Data Management ---
+    function handleImport() {
+        chrome.bookmarks.import();
+    }
+
+    function handleExportBackup() {
+        chrome.bookmarks.export(downloadUrl => {
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `bookmarks_backup_${new Date().toISOString().split('T')[0]}.html`;
+            a.click();
+        });
+    }
+
+    function handleExportCsv() {
+        if (Object.keys(analysisCategories).length === 0) {
+            alert('请先运行AI分析，才能导出分类结果。');
+            return;
+        }
+        let csvContent = '类别,标题,URL\n';
+        for (const [category, items] of Object.entries(analysisCategories)) {
+            for (const item of items) {
+                const safeTitle = `"${(item.title || '').replace(/"/g, '""')}"`;
+                const safeUrl = `"${(item.url || '').replace(/"/g, '""')}"`;
+                csvContent += `"${category}",${safeTitle},${safeUrl}\n`;
+            }
+        }
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ai_bookmark_categories_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // --- API Settings ---
+    function loadApiSettings() {
+        chrome.storage.sync.get(['apiProvider', 'apiKey', 'geminiModel', 'openaiModel', 'customApiUrl', 'customModel', 'batchSize'], (result) => {
+            if (result.apiProvider) apiProviderSelect.value = result.apiProvider;
+            if (result.apiKey) apiKeyInput.value = result.apiKey;
+            if (result.geminiModel) document.getElementById('gemini-model').value = result.geminiModel;
+            if (result.openaiModel) document.getElementById('openai-model').value = result.openaiModel;
+            if (result.customApiUrl) document.getElementById('custom-api-url').value = result.customApiUrl;
+            if (result.customModel) document.getElementById('custom-model').value = result.customModel;
+            if (result.batchSize) document.getElementById('batch-size').value = result.batchSize;
+            toggleApiFields();
+        });
+    }
+
+    function toggleApiFields() {
+        const provider = apiProviderSelect.value;
+        geminiFields.classList.toggle('hidden', provider !== 'gemini');
+        openaiFields.classList.toggle('hidden', provider !== 'openai');
+        customApiFields.classList.toggle('hidden', provider !== 'custom');
+    }
+
+    function saveApiSettings() {
+        const settings = {
+            apiProvider: apiProviderSelect.value,
+            apiKey: apiKeyInput.value.trim(),
+            geminiModel: document.getElementById('gemini-model').value,
+            openaiModel: document.getElementById('openai-model').value,
+            customApiUrl: document.getElementById('custom-api-url').value.trim(),
+            customModel: document.getElementById('custom-model').value.trim(),
+            batchSize: parseInt(document.getElementById('batch-size').value, 10) || 50
+        };
+        chrome.storage.sync.set(settings, () => {
+            showApiStatus('设置已保存!', 'success');
+        });
+    }
+
+    async function testApiConnection() {
+        const provider = apiProviderSelect.value;
+        const apiKey = apiKeyInput.value.trim();
+        if (!apiKey) {
+            showApiStatus('请输入API密钥', 'error');
+            return;
+        }
+        showApiStatus('正在测试连接...', '');
+
+        let url, body;
+        const testPrompt = '测试连接，请回复"连接成功"';
+
+        if (provider === 'gemini') {
+            const model = document.getElementById('gemini-model').value;
+            url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            body = { contents: [{ parts: [{ text: testPrompt }] }] };
+        } else if (provider === 'openai') {
+            const model = document.getElementById('openai-model').value;
+            url = 'https://api.openai.com/v1/chat/completions';
+            body = { model: model, messages: [{ role: 'user', content: testPrompt }], max_tokens: 10 };
+        } else { // custom
+            url = document.getElementById('custom-api-url').value.trim();
+            const model = document.getElementById('custom-model').value.trim();
+            if (!url || !model) {
+                showApiStatus('自定义API需要填写URL和模型', 'error');
+                return;
+            }
+            body = { model: model, messages: [{ role: 'user', content: testPrompt }] };
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(provider === 'openai' && { 'Authorization': `Bearer ${apiKey}` }) },
+                body: JSON.stringify(body)
+            });
+            if (response.ok) {
+                showApiStatus('API连接成功!', 'success');
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`${response.status} ${response.statusText} - ${errorData.error?.message || ''}`);
+            }
+        } catch (error) {
+            showApiStatus(`连接失败: ${error.message}`, 'error');
+        }
+    }
+
+    function showApiStatus(message, type) {
+        apiStatusMessage.textContent = message;
+        apiStatusMessage.className = `api-status-message ${type}`;
+    }
+
+    // --- AI Analysis Tools ---
+    function addLog(message, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        analysisLog.appendChild(entry);
+        analysisLog.scrollTop = analysisLog.scrollHeight;
+    }
+
+    async function analyzeBookmarks() {
+        addLog('开始书签分析...');
+        analysisProgress.classList.remove('hidden');
+        analysisLogContainer.classList.remove('hidden');
+        const organizeBtn = document.getElementById('organize-bookmarks-btn');
+        organizeBtn.classList.add('hidden'); // Hide organize button during analysis
+        analysisStatus.textContent = '正在获取所有书签...';
+        analysisProgressBar.style.width = '0%';
+        
+        const allBookmarks = flattenBookmarks(bookmarkTreeRoot);
+        const totalCount = allBookmarks.length;
+        addLog(`共找到 ${totalCount} 个书签。`);
+
+        const settings = await new Promise(resolve => chrome.storage.sync.get(['apiKey', 'apiProvider', 'geminiModel', 'openaiModel', 'customApiUrl', 'customModel', 'batchSize'], resolve));
+        if (!settings.apiKey) {
+            addLog('API密钥未配置，分析中止。', 'error');
+            analysisStatus.textContent = '错误：请先配置API密钥。';
+            return;
+        }
+
+        const batchSize = settings.batchSize || 50;
+        let processedCount = 0;
+        analysisCategories = {};
+
+        for (let i = 0; i < totalCount; i += batchSize) {
+            const batch = allBookmarks.slice(i, i + batchSize);
+            const statusText = `正在处理 ${i + 1}-${Math.min(i + batchSize, totalCount)} / ${totalCount}...`;
+            analysisStatus.textContent = statusText;
+            addLog(statusText);
+
+            try {
+                const prompt = `你是一个专业的书签分类助手。请对以下书签进行详细分类，创建有意义且细致的分类体系。严格以JSON格式返回，不要添加其他说明文字。
+
+需要分类的书签：
+${JSON.stringify(batch.map(b => ({title: b.title, url: b.url})), null, 2)}`;
+                const result = await callApi(prompt, settings);
+                
+                for (const [category, items] of Object.entries(result)) {
+                    if (!analysisCategories[category]) analysisCategories[category] = [];
+                    // Match original bookmarks to get their IDs
+                    const itemsWithIds = items.map(item => {
+                        return allBookmarks.find(bm => bm.url === item.url && bm.title === item.title) || item;
+                    });
+                    analysisCategories[category].push(...itemsWithIds);
+                }
+
+            } catch (error) {
+                addLog(`批次 ${i / batchSize + 1} 处理失败: ${error.message}`, 'error');
+            }
+
+            processedCount += batch.length;
+            analysisProgressBar.style.width = `${(processedCount / totalCount) * 100}%`;
+        }
+
+        analysisStatus.textContent = `分析完成！共 ${Object.keys(analysisCategories).length} 个分类。`;
+        addLog('所有批次处理完毕。', 'success');
+        exportCsvBtn.classList.remove('hidden');
+        organizeBtn.classList.remove('hidden'); // Show organize button
+    }
+
+    async function organizeBookmarks() {
+        if (Object.keys(analysisCategories).length === 0) {
+            addLog('没有可用的分类结果来整理书签。', 'warning');
+            return;
+        }
+        if (!confirm('此操作将根据AI分类结果，在您的“其他书签”文件夹中创建新文件夹并移动书签。确定要继续吗？')) {
+            return;
+        }
+
+        addLog('开始整理书签到文件夹...');
+        const otherBookmarksId = '2'; // 'Other Bookmarks' folder ID
+        let organizedCount = 0;
+        const totalToOrganize = Object.values(analysisCategories).reduce((sum, items) => sum + items.length, 0);
+        analysisStatus.textContent = '正在整理书签...';
+
+        for (const category in analysisCategories) {
+            try {
+                addLog(`正在为分类 "${category}" 创建文件夹...`);
+                const categoryFolder = await createBookmarkFolder(category, otherBookmarksId);
+                addLog(`文件夹 "${category}" 已就绪 (ID: ${categoryFolder.id})`, 'success');
+
+                const items = analysisCategories[category];
+                for (const bookmark of items) {
+                    if (bookmark.id && bookmark.parentId !== categoryFolder.id) {
+                        await moveBookmark(bookmark.id, categoryFolder.id);
+                        organizedCount++;
+                        const progress = (organizedCount / totalToOrganize) * 100;
+                        analysisProgressBar.style.width = `${progress}%`;
+                        analysisStatus.textContent = `正在整理: ${organizedCount}/${totalToOrganize}`;
+                    }
+                }
+                addLog(`已将 ${items.length} 个书签移动到 "${category}"`);
+            } catch (error) {
+                addLog(`处理分类 "${category}" 时出错: ${error.message}`, 'error');
+            }
+        }
+        analysisStatus.textContent = `整理完成！共移动 ${organizedCount} 个书签。`;
+        addLog('书签整理完毕。', 'success');
+        alert('书签已根据分类自动整理到“其他书签”文件夹中！');
+    }
+
+    function createBookmarkFolder(title, parentId) {
+        return new Promise((resolve, reject) => {
+            chrome.bookmarks.getChildren(parentId, (children) => {
+                const existingFolder = children.find(child => child.title === title && !child.url);
+                if (existingFolder) {
+                    resolve(existingFolder);
+                } else {
+                    chrome.bookmarks.create({ parentId, title }, (newFolder) => {
+                        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                        else resolve(newFolder);
+                    });
+                }
+            });
+        });
+    }
+
+    function moveBookmark(bookmarkId, newParentId) {
+        return new Promise((resolve, reject) => {
+            chrome.bookmarks.move(bookmarkId, { parentId: newParentId }, (result) => {
+                if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+                else resolve(result);
+            });
+        });
+    }
+
+    async function callApi(prompt, settings) {
+        let url, body, headers = {'Content-Type': 'application/json'};
+        
+        if (settings.apiProvider === 'gemini') {
+            url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.geminiModel}:generateContent?key=${settings.apiKey}`;
+            body = { contents: [{ parts: [{ text: prompt }] }] };
+        } else if (settings.apiProvider === 'openai') {
+            url = 'https://api.openai.com/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${settings.apiKey}`;
+            body = { model: settings.openaiModel, messages: [{ role: 'user', content: prompt }], response_format: { type: "json_object" } };
+        } else { // custom
+            url = settings.customApiUrl;
+            headers['Authorization'] = `Bearer ${settings.apiKey}`;
+            body = { model: settings.customModel, messages: [{ role: 'user', content: prompt }] };
+        }
+
+        const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API Error: ${response.status} - ${errorData.error?.message || 'Unknown'}`);
+        }
+        const data = await response.json();
+        const responseText = data.candidates?.[0].content.parts[0].text || data.choices?.[0].message.content || JSON.stringify(data);
+        
+        const jsonMatch = responseText.match(/{[\s\S]*}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        throw new Error('API did not return valid JSON.');
+    }
+
+    // --- Start the application ---
+    initialize();
+});

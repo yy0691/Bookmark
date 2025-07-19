@@ -614,7 +614,7 @@ function getApiSettings() {
       // 根据提供商选择对应的模型
       switch (apiProvider) {
         case 'gemini':
-          model = result.geminiModel || 'gemini-pro';
+          model = result.geminiModel || 'gemini-2.0-flash';
           break;
         case 'openai':
           model = result.openaiModel || 'gpt-3.5-turbo';

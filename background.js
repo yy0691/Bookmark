@@ -4,7 +4,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     // 初始化设置
     chrome.storage.sync.set({
       apiProvider: 'gemini',
-      geminiModel: 'gemini-pro', // 默认Gemini模型
+      geminiModel: 'gemini-2.0-flash', // 默认Gemini模型
       openaiModel: 'gpt-3.5-turbo', // 默认OpenAI模型
       defaultCategories: '技术,教育,购物,社交媒体,新闻,娱乐,工作,其他',
       batchSize: 50 // 替换maxBookmarks为batchSize，表示每批处理的书签数量

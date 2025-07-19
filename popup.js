@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   checkApiStatus();
   
   // 书签管理分类
+  document.getElementById('bookmark-visualization').addEventListener('click', openBookmarkVisualization);
   document.getElementById('bookmark-manager').addEventListener('click', openBookmarkManager);
   document.getElementById('organize-bookmarks').addEventListener('click', () => openAnalyzePage('organize'));
   
@@ -43,6 +44,11 @@ function checkApiStatus() {
 // 打开选项页面
 function openOptions() {
   chrome.runtime.openOptionsPage();
+}
+
+// 打开书签可视化页面
+function openBookmarkVisualization() {
+  chrome.tabs.create({ url: 'visualization.html' });
 }
 
 // 打开书签管理器（新的独立页面）
