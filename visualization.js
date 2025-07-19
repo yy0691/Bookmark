@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const bgUploadBtn = document.getElementById('bg-upload-btn');
     const clearBgBtn = document.getElementById('clear-bg-btn');
     const analyzeBtn = document.getElementById('analyze-bookmarks-btn');
+    const regenerateCategoriesBtn = document.getElementById('regenerate-categories-btn');
     const analysisProgress = document.getElementById('analysis-progress');
     const analysisProgressBar = document.getElementById('analysis-progress-bar');
     const analysisStatus = document.getElementById('analysis-status');
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentBookmarks = [];
     let currentViewMode = 'card';
     let analysisCategories = {};
+    let suggestedCategories = []; // New state for suggested categories
 
     // --- Initialization ---
     function initialize() {
@@ -58,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         initializeEventListeners();
         setViewMode(currentViewMode);
+        loadSuggestedCategories(); // Load saved categories on start
     }
 
     function initializeEventListeners() {
@@ -71,13 +74,41 @@ document.addEventListener('DOMContentLoaded', () => {
         initResizer(sidebar, resizer);
 
         // Settings Panel
-        settingsBtn.addEventListener('click', openSettingsPanel);
-        closeSettingsPanelBtn.addEventListener('click', closeSettingsPanel);
-        settingsPanel.addEventListener('click', (e) => {
-            if (e.target === settingsPanel) {
-                closeSettingsPanel();
-            }
-        });
+        if (settingsBtn) {
+            console.log('设置按钮找到，添加事件监听器');
+            settingsBtn.addEventListener('click', (e) => {
+                console.log('设置按钮被点击');
+                e.preventDefault();
+                e.stopPropagation();
+                openSettingsPanel();
+            });
+        } else {
+            console.error('设置按钮未找到');
+        }
+        
+        if (closeSettingsPanelBtn) {
+            closeSettingsPanelBtn.addEventListener('click', closeSettingsPanel);
+        } else {
+            console.error('关闭设置按钮未找到');
+        }
+        
+        if (settingsPanel) {
+            settingsPanel.addEventListener('click', (e) => {
+                if (e.target === settingsPanel) {
+                    closeSettingsPanel();
+                }
+            });
+        } else {
+            console.error('设置面板未找到');
+        }
+        
+        // Overlay click to close
+        const overlay = document.getElementById('overlay');
+        if (overlay) {
+            overlay.addEventListener('click', closeSettingsPanel);
+        } else {
+            console.error('Overlay元素未找到');
+        }
         
         // Tabs
         tabButtons.forEach(button => {
@@ -104,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Tools
         analyzeBtn.addEventListener('click', analyzeBookmarks);
+        regenerateCategoriesBtn.addEventListener('click', regenerateSuggestedCategories);
         const organizeBtn = document.getElementById('organize-bookmarks-btn');
         organizeBtn.addEventListener('click', organizeBookmarks);
 
@@ -116,6 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
         apiProviderSelect.addEventListener('change', toggleApiFields);
         saveApiSettingsBtn.addEventListener('click', saveApiSettings);
         testApiBtn.addEventListener('click', testApiConnection);
+        
+        // Keyboard events
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && settingsPanel.classList.contains('is-visible')) {
+                closeSettingsPanel();
+            }
+        });
     }
 
     // --- Bookmark & Folder Logic ---
@@ -236,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.addEventListener('mouseup', onMouseUp);
         }
         function onMouseMove(e) {
-            const newWidth = startX + e.clientX - startX;
+            const newWidth = startWidth + e.clientX - startX;
             if (newWidth > 200 && newWidth < 500) sidebarEl.style.width = `${newWidth}px`;
         }
         function onMouseUp() {
@@ -247,8 +286,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Settings Panel ---
-    function openSettingsPanel() { settingsPanel.classList.add('is-visible'); }
-    function closeSettingsPanel() { settingsPanel.classList.remove('is-visible'); }
+    function openSettingsPanel() { 
+        settingsPanel.classList.add('is-visible');
+        document.getElementById('overlay').classList.add('is-visible');
+        document.body.style.overflow = 'hidden'; // 防止背景滚动
+    }
+    function closeSettingsPanel() { 
+        settingsPanel.classList.remove('is-visible');
+        document.getElementById('overlay').classList.remove('is-visible');
+        document.body.style.overflow = ''; // 恢复滚动
+    }
 
     function loadAndApplySettings() {
         const theme = localStorage.getItem('selectedTheme') || 'theme-default';
@@ -418,18 +465,74 @@ document.addEventListener('DOMContentLoaded', () => {
         analysisLog.scrollTop = analysisLog.scrollHeight;
     }
 
+    function loadSuggestedCategories() {
+        chrome.storage.local.get('suggestedCategories', (result) => {
+            if (result.suggestedCategories) {
+                suggestedCategories = result.suggestedCategories;
+                addLog('已加载之前保存的分类建议。');
+            }
+        });
+    }
+
+    async function regenerateSuggestedCategories() {
+        addLog('正在请求AI生成新的分类建议...');
+        analysisProgress.classList.remove('hidden');
+        analysisLogContainer.classList.remove('hidden');
+        analysisStatus.textContent = '正在生成分类建议...';
+        analysisProgressBar.style.width = '50%';
+
+        const settings = await new Promise(resolve => chrome.storage.sync.get(['apiKey', 'apiProvider', 'geminiModel', 'openaiModel', 'customApiUrl', 'customModel']));
+        if (!settings.apiKey) {
+            addLog('API密钥未配置，操作中止。', 'error');
+            analysisStatus.textContent = '错误：请先配置API密钥。';
+            return;
+        }
+
+        try {
+            const prompt = `你是一位信息架构专家和资深网民。请为书签管理器设计一个通用、清晰、全面的分类体系。\n- 目标是方便用户快速定位书签，避免分类过于宽泛或冗余。\n- 请参考主流导航网站（如hao123、360导航）和技术社区的分类方法。\n- 涵盖常见领域：如新闻、社交、购物、娱乐、学习、工作、技术、设计、金融、生活等。\n- 技术分类可以更细致，例如：前端开发、后端开发、数据库、人工智能、云计算等。\n- 请以JSON格式返回一个只包含分类名称字符串的数组。例如：["新闻资讯", "社交媒体", "开发工具", "设计资源"]。不要添加任何其他说明文字。`;
+            
+            const result = await callApi(prompt, settings, true); // true to expect array
+            
+            if (Array.isArray(result)) {
+                suggestedCategories = result;
+                chrome.storage.local.set({ suggestedCategories });
+                addLog(`成功生成 ${suggestedCategories.length} 个分类建议。`, 'success');
+                analysisStatus.textContent = '分类建议已更新！';
+                addLog('建议列表: ' + suggestedCategories.join(', '));
+            } else {
+                throw new Error('API返回的不是一个有效的数组。');
+            }
+        } catch (error) {
+            addLog(`生成分类建议失败: ${error.message}`, 'error');
+            analysisStatus.textContent = '生成建议失败。';
+        } finally {
+            analysisProgressBar.style.width = '100%';
+            setTimeout(() => { analysisProgress.classList.add('hidden'); }, 2000);
+        }
+    }
+
     async function analyzeBookmarks() {
+        if (suggestedCategories.length === 0) {
+            addLog('尚未生成分类建议。请先点击“重新生成分类建议”。', 'warning');
+            if (!confirm('尚未生成分类建议。是否现在生成？')) return;
+            await regenerateSuggestedCategories();
+            if (suggestedCategories.length === 0) {
+                addLog('无法在没有分类建议的情况下继续分析。', 'error');
+                return;
+            }
+        }
+
         addLog('开始书签分析...');
         analysisProgress.classList.remove('hidden');
         analysisLogContainer.classList.remove('hidden');
         const organizeBtn = document.getElementById('organize-bookmarks-btn');
-        organizeBtn.classList.add('hidden'); // Hide organize button during analysis
+        organizeBtn.classList.add('hidden');
         analysisStatus.textContent = '正在获取所有书签...';
         analysisProgressBar.style.width = '0%';
         
         const allBookmarks = flattenBookmarks(bookmarkTreeRoot);
         const totalCount = allBookmarks.length;
-        addLog(`共找到 ${totalCount} 个书签。`);
+        addLog(`共找到 ${totalCount} 个书签。将按照预设的 ${suggestedCategories.length} 个分类进行整理。`);
 
         const settings = await new Promise(resolve => chrome.storage.sync.get(['apiKey', 'apiProvider', 'geminiModel', 'openaiModel', 'customApiUrl', 'customModel', 'batchSize'], resolve));
         if (!settings.apiKey) {
@@ -441,6 +544,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const batchSize = settings.batchSize || 50;
         let processedCount = 0;
         analysisCategories = {};
+        // Initialize categories to ensure all suggested categories are present
+        suggestedCategories.forEach(cat => analysisCategories[cat] = []);
 
         for (let i = 0; i < totalCount; i += batchSize) {
             const batch = allBookmarks.slice(i, i + batchSize);
@@ -449,19 +554,19 @@ document.addEventListener('DOMContentLoaded', () => {
             addLog(statusText);
 
             try {
-                const prompt = `你是一个专业的书签分类助手。请对以下书签进行详细分类，创建有意义且细致的分类体系。严格以JSON格式返回，不要添加其他说明文字。
-
-需要分类的书签：
-${JSON.stringify(batch.map(b => ({title: b.title, url: b.url})), null, 2)}`;
+                const prompt = `你是一个严格的书签分类助手。请将以下书签精确地分配到【一个】最合适的预设分类中。\n- 必须从下面提供的分类列表中选择，不允许创建新分类。\n- 如果一个书签不属于任何预设分类，请将其归入 "未分类"。\n\n预设分类列表:\n${JSON.stringify(suggestedCategories)}\n\n需要分类的书签：\n${JSON.stringify(batch.map(b => ({title: b.title, url: b.url})), null, 2)}\n\n严格以JSON格式返回，格式为 {"分类名称": [{"title": "书签标题", "url": "书签URL"}]}。不要添加任何其他说明文字。`;
+                
                 const result = await callApi(prompt, settings);
                 
                 for (const [category, items] of Object.entries(result)) {
-                    if (!analysisCategories[category]) analysisCategories[category] = [];
-                    // Match original bookmarks to get their IDs
-                    const itemsWithIds = items.map(item => {
-                        return allBookmarks.find(bm => bm.url === item.url && bm.title === item.title) || item;
-                    });
-                    analysisCategories[category].push(...itemsWithIds);
+                    if (analysisCategories[category]) {
+                         const itemsWithIds = items.map(item => {
+                            return allBookmarks.find(bm => bm.url === item.url && bm.title === item.title) || item;
+                        });
+                        analysisCategories[category].push(...itemsWithIds);
+                    } else {
+                        addLog(`警告：API返回了未预设的分类 "${category}"，已忽略。`, 'warning');
+                    }
                 }
 
             } catch (error) {
@@ -472,34 +577,37 @@ ${JSON.stringify(batch.map(b => ({title: b.title, url: b.url})), null, 2)}`;
             analysisProgressBar.style.width = `${(processedCount / totalCount) * 100}%`;
         }
 
-        analysisStatus.textContent = `分析完成！共 ${Object.keys(analysisCategories).length} 个分类。`;
+        analysisStatus.textContent = `分析完成！`;
         addLog('所有批次处理完毕。', 'success');
         exportCsvBtn.classList.remove('hidden');
-        organizeBtn.classList.remove('hidden'); // Show organize button
+        organizeBtn.classList.remove('hidden');
     }
 
     async function organizeBookmarks() {
-        if (Object.keys(analysisCategories).length === 0) {
+        const categoriesWithItems = Object.keys(analysisCategories).filter(cat => analysisCategories[cat].length > 0);
+        if (categoriesWithItems.length === 0) {
             addLog('没有可用的分类结果来整理书签。', 'warning');
             return;
         }
-        if (!confirm('此操作将根据AI分类结果，在您的“其他书签”文件夹中创建新文件夹并移动书签。确定要继续吗？')) {
+        if (!confirm(`此操作将根据AI分类结果，在“其他书签”中创建 ${categoriesWithItems.length} 个文件夹并移动书签。确定吗？`)) {
             return;
         }
 
         addLog('开始整理书签到文件夹...');
         const otherBookmarksId = '2'; // 'Other Bookmarks' folder ID
         let organizedCount = 0;
-        const totalToOrganize = Object.values(analysisCategories).reduce((sum, items) => sum + items.length, 0);
+        const totalToOrganize = categoriesWithItems.reduce((sum, cat) => sum + analysisCategories[cat].length, 0);
         analysisStatus.textContent = '正在整理书签...';
 
-        for (const category in analysisCategories) {
+        for (const category of categoriesWithItems) {
+            const items = analysisCategories[category];
+            if (items.length === 0) continue;
+
             try {
                 addLog(`正在为分类 "${category}" 创建文件夹...`);
                 const categoryFolder = await createBookmarkFolder(category, otherBookmarksId);
                 addLog(`文件夹 "${category}" 已就绪 (ID: ${categoryFolder.id})`, 'success');
 
-                const items = analysisCategories[category];
                 for (const bookmark of items) {
                     if (bookmark.id && bookmark.parentId !== categoryFolder.id) {
                         await moveBookmark(bookmark.id, categoryFolder.id);
@@ -544,7 +652,7 @@ ${JSON.stringify(batch.map(b => ({title: b.title, url: b.url})), null, 2)}`;
         });
     }
 
-    async function callApi(prompt, settings) {
+    async function callApi(prompt, settings, expectArray = false) {
         let url, body, headers = {'Content-Type': 'application/json'};
         
         if (settings.apiProvider === 'gemini') {
@@ -568,11 +676,11 @@ ${JSON.stringify(batch.map(b => ({title: b.title, url: b.url})), null, 2)}`;
         const data = await response.json();
         const responseText = data.candidates?.[0].content.parts[0].text || data.choices?.[0].message.content || JSON.stringify(data);
         
-        const jsonMatch = responseText.match(/{[\s\S]*}/);
+        const jsonMatch = responseText.match(expectArray ? /\[[\s\S]*\]/ : /{[\s\S]*}/);
         if (jsonMatch) {
             return JSON.parse(jsonMatch[0]);
         }
-        throw new Error('API did not return valid JSON.');
+        throw new Error(`API did not return valid ${expectArray ? 'array' : 'JSON'}.`);
     }
 
     // --- Start the application ---

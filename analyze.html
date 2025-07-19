@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>书签分析</title>
   <style>
     * {
@@ -446,6 +447,9 @@
       font-weight: 500;
       cursor: pointer;
       transition: all 0.3s ease;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
       user-select: none;
     }
 
@@ -769,6 +773,9 @@
       color: rgba(255, 255, 255, 0.4);
       font-size: 12px;
       cursor: grab;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
       user-select: none;
       transition: color 0.2s ease;
     }
@@ -1255,37 +1262,10 @@
   </div>
   </div>
 
-  <!-- 首先尝试加载CDN版本 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" onerror="console.warn('Chart.js CDN加载失败')"></script>
-  <script src="https://cdn.jsdelivr.net/npm/d3@7" onerror="console.warn('D3.js CDN加载失败')"></script>
-  
-  <!-- 检测库加载状态的脚本 -->
-  <script>
-    // 检测外部库加载状态
-    window.addEventListener('DOMContentLoaded', function() {
-      const libraryStatus = {
-        chartjs: typeof Chart !== 'undefined',
-        d3js: typeof d3 !== 'undefined'
-      };
-      
-      console.log('外部库加载状态:', libraryStatus);
-      
-      if (!libraryStatus.chartjs) {
-        console.warn('Chart.js未加载，饼图功能将不可用');
-      }
-      
-      if (!libraryStatus.d3js) {
-        console.warn('D3.js未加载，树形图功能将不可用');
-      }
-      
-      // 将状态保存到全局变量供其他脚本使用
-      window.libraryStatus = libraryStatus;
-    });
-  </script>
-  
   <!-- 隐藏的文件输入元素 -->
   <input type="file" id="bookmark-file-input" accept=".html,.htm,.json" style="display: none;">
   
+  <script src="library-checker.js"></script>
   <script src="visualization.js"></script>
   <script src="analyze.js"></script>
 </body>

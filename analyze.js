@@ -1102,6 +1102,15 @@ function parseJsonWithRecovery(jsonStr) {
     // 修复4: 处理缺失的引号
     fixedJson = fixedJson.replace(/(\w+):/g, '"$1":');
     
+    // 修复5: 处理数组中的尾部逗号
+    fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1');
+    
+    // 修复6: 处理对象中的尾部逗号
+    fixedJson = fixedJson.replace(/,(\s*})/g, '$1');
+    
+    // 修复7: 处理可能的转义字符问题
+    fixedJson = fixedJson.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    
     addLogEntry(`尝试修复后的JSON: ${fixedJson.substring(0, 100)}...`, 'info');
     
     try {
@@ -1112,12 +1121,14 @@ function parseJsonWithRecovery(jsonStr) {
       // 作为最后的手段，尝试提取键值对并构建基本结构
       try {
         const fallbackResult = {};
-        const keyValueMatches = fixedJson.match(/"([^"]+)":\s*\[([^\]]*)\]/g);
         
-        if (keyValueMatches && keyValueMatches.length > 0) {
+        // 更灵活的键值对匹配
+        const categoryMatches = fixedJson.match(/"([^"]+)":\s*\[([^\]]*)\]/g);
+        
+        if (categoryMatches && categoryMatches.length > 0) {
           addLogEntry(`尝试从键值对构建JSON结构...`, 'warning');
           
-          keyValueMatches.forEach(match => {
+          categoryMatches.forEach(match => {
             const kvMatch = match.match(/"([^"]+)":\s*\[([^\]]*)\]/);
             if (kvMatch) {
               const category = kvMatch[1];
@@ -1125,18 +1136,28 @@ function parseJsonWithRecovery(jsonStr) {
               
               // 尝试解析书签对象
               const bookmarks = [];
-              const bookmarkMatches = content.match(/{"title":\s*"([^"]+)",\s*"url":\s*"([^"]+)"}/g);
               
-              if (bookmarkMatches) {
-                bookmarkMatches.forEach(bmMatch => {
-                  const bmParts = bmMatch.match(/{"title":\s*"([^"]+)",\s*"url":\s*"([^"]+)"}/);
-                  if (bmParts) {
-                    bookmarks.push({
-                      title: bmParts[1],
-                      url: bmParts[2]
-                    });
-                  }
-                });
+              // 更灵活的书签匹配模式
+              const bookmarkPatterns = [
+                /{"title":\s*"([^"]+)",\s*"url":\s*"([^"]+)"}/g,
+                /{title:\s*"([^"]+)",\s*url:\s*"([^"]+)"}/g,
+                /{title:\s*'([^']+)',\s*url:\s*'([^']+)'}/g
+              ];
+              
+              for (const pattern of bookmarkPatterns) {
+                const bookmarkMatches = content.match(pattern);
+                if (bookmarkMatches) {
+                  bookmarkMatches.forEach(bmMatch => {
+                    const bmParts = bmMatch.match(pattern);
+                    if (bmParts) {
+                      bookmarks.push({
+                        title: bmParts[1],
+                        url: bmParts[2]
+                      });
+                    }
+                  });
+                  break;
+                }
               }
               
               if (bookmarks.length > 0) {
@@ -1150,6 +1171,25 @@ function parseJsonWithRecovery(jsonStr) {
             return fallbackResult;
           }
         }
+        
+        // 如果上面的方法失败，尝试更简单的解析
+        const simpleMatches = fixedJson.match(/"([^"]+)":\s*"([^"]+)"/g);
+        if (simpleMatches && simpleMatches.length > 0) {
+          addLogEntry(`尝试简单键值对解析...`, 'warning');
+          
+          simpleMatches.forEach(match => {
+            const parts = match.match(/"([^"]+)":\s*"([^"]+)"/);
+            if (parts) {
+              fallbackResult[parts[1]] = parts[2];
+            }
+          });
+          
+          if (Object.keys(fallbackResult).length > 0) {
+            addLogEntry(`成功从简单键值对构建了${Object.keys(fallbackResult).length}个条目`, 'success');
+            return fallbackResult;
+          }
+        }
+        
       } catch (fallbackError) {
         addLogEntry(`备用解析方案也失败了: ${fallbackError.message}`, 'error');
       }
@@ -2056,13 +2096,25 @@ function generateVisualizations() {
       let successCount = 0;
       let totalAttempts = 3;
       
-      // 检查Chart.js是否可用
+      // 检查Chart.js是否可用，如果不可用则使用备用实现
       if (typeof Chart === 'undefined') {
-        addLogEntry('Chart.js库未加载，跳过饼图生成', 'warning');
+        addLogEntry('Chart.js库未加载，使用备用饼图实现', 'warning');
+        try {
+          // 使用备用饼图实现
+          if (typeof createSimplePieChart === 'function') {
+            createSimplePieChart('category-pie-chart', categories);
+            successCount++;
+            addLogEntry('备用饼图生成成功', 'success');
+          } else {
+            addLogEntry('备用饼图函数不可用', 'error');
+          }
+        } catch (chartError) {
+          addLogEntry(`备用饼图生成失败: ${chartError.message}`, 'error');
+        }
       } else {
         try {
           // 生成饼图
-      generateCategoryPieChart();
+          generateCategoryPieChart();
           successCount++;
           addLogEntry('饼图生成成功', 'success');
         } catch (chartError) {
@@ -2070,13 +2122,25 @@ function generateVisualizations() {
         }
       }
       
-      // 检查D3是否可用
+      // 检查D3是否可用，如果不可用则使用备用实现
       if (typeof d3 === 'undefined') {
-        addLogEntry('D3.js库未加载，跳过树形图生成', 'warning');
+        addLogEntry('D3.js库未加载，使用备用树形图实现', 'warning');
+        try {
+          // 使用备用树形图实现
+          if (typeof createSimpleTreeView === 'function') {
+            createSimpleTreeView('category-tree', categories);
+            successCount++;
+            addLogEntry('备用树形图生成成功', 'success');
+          } else {
+            addLogEntry('备用树形图函数不可用', 'error');
+          }
+        } catch (d3Error) {
+          addLogEntry(`备用树形图生成失败: ${d3Error.message}`, 'error');
+        }
       } else {
         try {
           // 生成树形图
-      generateCategoryTreeView();
+          generateCategoryTreeView();
           successCount++;
           addLogEntry('树形图生成成功', 'success');
         } catch (d3Error) {
@@ -2086,7 +2150,7 @@ function generateVisualizations() {
       
       // 生成标签云（不依赖外部库）
       try {
-      generateTagCloud();
+        generateTagCloud();
         successCount++;
         addLogEntry('标签云生成成功', 'success');
       } catch (tagCloudError) {
@@ -2096,7 +2160,7 @@ function generateVisualizations() {
       if (successCount > 0) {
         addLogEntry(`可视化图表生成完成，成功生成 ${successCount}/${totalAttempts} 个图表`, 'success');
       } else {
-        addLogEntry('所有可视化图表生成均失败', 'error');
+        addLogEntry('所有可视化图表生成均失败，显示简单统计', 'warning');
         // 显示一个简单的文本统计作为备用
         showSimpleStatistics();
       }
@@ -4629,70 +4693,83 @@ async function executeActionFromUrl(action) {
 
 // 初始化事件监听器
 function initializeEventListeners() {
-  // 初始化Web Worker
-  initializeWorker();
-  
-  // 添加按钮事件监听
-  document.getElementById('analyze-bookmarks').addEventListener('click', analyzeBookmarks);
-  document.getElementById('cancel-analyze').addEventListener('click', cancelAnalyze);
-  document.getElementById('organize-bookmarks').addEventListener('click', organizeBookmarks);
-  document.getElementById('export-bookmarks').addEventListener('click', exportBookmarks);
-  document.getElementById('setup-api').addEventListener('click', openOptions);
-  document.getElementById('view-history').addEventListener('click', openHistoryPage);
-  
-  // 添加新功能的事件监听器
-  document.getElementById('detect-duplicates').addEventListener('click', detectDuplicateBookmarks);
-  document.getElementById('detect-invalid').addEventListener('click', detectInvalidBookmarks);
-  document.getElementById('cleanup-bookmarks').addEventListener('click', cleanupBookmarks);
-  document.getElementById('manage-bookmarks').addEventListener('click', openBookmarkManager);
-  document.getElementById('import-bookmarks').addEventListener('click', importBookmarks);
-  document.getElementById('backup-bookmarks').addEventListener('click', backupBookmarks);
-  
-  // 书签管理器相关事件监听器
-  document.getElementById('expand-all-folders').addEventListener('click', () => expandAllFolders(true));
-  document.getElementById('collapse-all-folders').addEventListener('click', () => expandAllFolders(false));
-  document.getElementById('create-folder').addEventListener('click', createNewFolder);
-  document.getElementById('refresh-manager').addEventListener('click', refreshBookmarkManager);
-  
-  // 批量操作事件监听器
-  document.getElementById('batch-delete').addEventListener('click', batchDeleteItems);
-  document.getElementById('batch-rename').addEventListener('click', batchRenameItems);
-  document.getElementById('batch-move').addEventListener('click', batchMoveItems);
-  document.getElementById('batch-export').addEventListener('click', batchExportItems);
-  document.getElementById('select-all-bookmarks').addEventListener('click', () => selectAllBookmarks(true));
-  document.getElementById('deselect-all-bookmarks').addEventListener('click', () => selectAllBookmarks(false));
-  
-  // 模态框事件监听器
-  document.getElementById('modal-close').addEventListener('click', closeEditModal);
-  document.getElementById('cancel-edit').addEventListener('click', closeEditModal);
-  document.getElementById('save-edit').addEventListener('click', saveBookmarkEdit);
-  document.getElementById('move-modal-close').addEventListener('click', closeMoveModal);
-  document.getElementById('cancel-move').addEventListener('click', closeMoveModal);
-  document.getElementById('confirm-move').addEventListener('click', confirmMoveItems);
-  
-  // 检测结果操作事件监听器
-  document.getElementById('remove-duplicates').addEventListener('click', removeDuplicateBookmarks);
-  document.getElementById('remove-invalid').addEventListener('click', removeInvalidBookmarks);
-  document.getElementById('remove-empty-folders').addEventListener('click', removeEmptyFolders);
-  document.getElementById('select-all-duplicates').addEventListener('click', () => selectAllDetectionItems('duplicates', true));
-  document.getElementById('deselect-all-duplicates').addEventListener('click', () => selectAllDetectionItems('duplicates', false));
-  document.getElementById('select-all-invalid').addEventListener('click', () => selectAllDetectionItems('invalid', true));
-  document.getElementById('deselect-all-invalid').addEventListener('click', () => selectAllDetectionItems('invalid', false));
-  document.getElementById('select-all-empty-folders').addEventListener('click', () => selectAllDetectionItems('empty-folders', true));
-  document.getElementById('deselect-all-empty-folders').addEventListener('click', () => selectAllDetectionItems('empty-folders', false));
-  
-  // 文件导入事件监听器
-  document.getElementById('bookmark-file-input').addEventListener('change', handleFileImport);
-  
-  // 添加日志控制按钮事件监听
-  document.getElementById('toggle-log').addEventListener('click', toggleLogVisibility);
-  document.getElementById('clear-log').addEventListener('click', clearLog);
-  
-  // 添加可视化切换事件
-  document.querySelectorAll('.viz-tab').forEach(tab => {
-    tab.addEventListener('click', switchVisualizationTab);
-  });
-  
-  // 添加窗口关闭事件，终止Worker
-  window.addEventListener('beforeunload', terminateWorker);
+  try {
+    // 初始化Web Worker
+    initializeWorker();
+    
+    // 添加按钮事件监听 - 使用安全的方式获取元素
+    const elements = {
+      'analyze-bookmarks': analyzeBookmarks,
+      'cancel-analyze': cancelAnalyze,
+      'organize-bookmarks': organizeBookmarks,
+      'export-bookmarks': exportBookmarks,
+      'setup-api': openOptions,
+      'view-history': openHistoryPage,
+      'detect-duplicates': detectDuplicateBookmarks,
+      'detect-invalid': detectInvalidBookmarks,
+      'cleanup-bookmarks': cleanupBookmarks,
+      'manage-bookmarks': openBookmarkManager,
+      'import-bookmarks': importBookmarks,
+      'backup-bookmarks': backupBookmarks,
+      'expand-all-folders': () => expandAllFolders(true),
+      'collapse-all-folders': () => expandAllFolders(false),
+      'create-folder': createNewFolder,
+      'refresh-manager': refreshBookmarkManager,
+      'batch-delete': batchDeleteItems,
+      'batch-rename': batchRenameItems,
+      'batch-move': batchMoveItems,
+      'batch-export': batchExportItems,
+      'select-all-bookmarks': () => selectAllBookmarks(true),
+      'deselect-all-bookmarks': () => selectAllBookmarks(false),
+      'modal-close': closeEditModal,
+      'cancel-edit': closeEditModal,
+      'save-edit': saveBookmarkEdit,
+      'move-modal-close': closeMoveModal,
+      'cancel-move': closeMoveModal,
+      'confirm-move': confirmMoveItems,
+      'remove-duplicates': removeDuplicateBookmarks,
+      'remove-invalid': removeInvalidBookmarks,
+      'remove-empty-folders': removeEmptyFolders,
+      'select-all-duplicates': () => selectAllDetectionItems('duplicates', true),
+      'deselect-all-duplicates': () => selectAllDetectionItems('duplicates', false),
+      'select-all-invalid': () => selectAllDetectionItems('invalid', true),
+      'deselect-all-invalid': () => selectAllDetectionItems('invalid', false),
+      'select-all-empty-folders': () => selectAllDetectionItems('empty-folders', true),
+      'deselect-all-empty-folders': () => selectAllDetectionItems('empty-folders', false),
+      'bookmark-file-input': handleFileImport,
+      'toggle-log': toggleLogVisibility,
+      'clear-log': clearLog
+    };
+    
+    // 安全地添加事件监听器
+    Object.entries(elements).forEach(([id, handler]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.addEventListener('click', handler);
+        console.log(`已添加事件监听器: ${id}`);
+      } else {
+        console.warn(`元素未找到: ${id}`);
+      }
+    });
+    
+    // 添加可视化切换事件
+    const vizTabs = document.querySelectorAll('.viz-tab');
+    if (vizTabs.length > 0) {
+      vizTabs.forEach(tab => {
+        tab.addEventListener('click', switchVisualizationTab);
+      });
+      console.log(`已添加 ${vizTabs.length} 个可视化标签事件监听器`);
+    } else {
+      console.warn('未找到可视化标签元素');
+    }
+    
+    // 添加窗口关闭事件，终止Worker
+    window.addEventListener('beforeunload', terminateWorker);
+    
+    console.log('事件监听器初始化完成');
+    
+  } catch (error) {
+    console.error('初始化事件监听器时出错:', error);
+    addLogEntry(`事件监听器初始化失败: ${error.message}`, 'error');
+  }
 }

@@ -17,6 +17,11 @@
             <div id="folder-list-container">
                 <!-- Folder list will be loaded here -->
             </div>
+            <div id="sidebar-footer">
+                <button id="theme-settings-btn" class="view-btn" title="设置">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19.4,12c0-0.2,0-0.4,0-0.6c0-0.2,0-0.4,0-0.6l2.1-1.6c0.2-0.1,0.2-0.4,0.1-0.6l-2-3.5C19.5,5,19.2,4.9,19,5l-2.5,1c-0.5-0.4-1-0.7-1.6-1l-0.4-2.7C14.5,2.2,14.2,2,14,2h-4c-0.2,0-0.5,0.2-0.5,0.4L9.1,5C8.6,5.3,8.1,5.6,7.5,6L5,5C4.8,4.9,4.5,5,4.4,5.2l-2,3.5C2.3,8.9,2.4,9.2,2.6,9.3l2.1,1.6c0,0.2,0,0.4,0,0.6c0,0.2,0,0.4,0,0.6l-2.1,1.6C2.4,14.8,2.3,15.1,2.4,15.3l2,3.5C4.5,19,4.8,19.1,5,19l2.5-1c0.5,0.4,1,0.7,1.6,1l0.4,2.7c0,0.2,0.2,0.4,0.5,0.4h4c0.2,0,0.5-0.2,0.5-0.4l0.4-2.7c0.5-0.3,1.1-0.6,1.6-1l2.5,1c0.2,0.1,0.5,0,0.6-0.2l2-3.5c0.1-0.2,0.1-0.5-0.1-0.6L19.4,12z M12,15.5c-1.9,0-3.5-1.6-3.5-3.5s1.6-3.5,3.5-3.5s3.5,1.6,3.5,3.5S13.9,15.5,12,15.5z"></path></svg>
+                </button>
+            </div>
         </div>
         <div id="sidebar-resizer"></div>
         <div class="content-container">
@@ -24,20 +29,17 @@
                 <div id="search-container">
                     <input type="text" id="search-input" placeholder="在当前分类下搜索...">
                 </div>
-                <button id="theme-settings-btn" class="view-btn" title="主题设置">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19.4,12c0-0.2,0-0.4,0-0.6c0-0.2,0-0.4,0-0.6l2.1-1.6c0.2-0.1,0.2-0.4,0.1-0.6l-2-3.5C19.5,5,19.2,4.9,19,5l-2.5,1 c-0.5-0.4-1-0.7-1.6-1l-0.4-2.7C14.5,2.2,14.2,2,14,2h-4c-0.2,0-0.5,0.2-0.5,0.4L9.1,5C8.6,5.3,8.1,5.6,7.5,6L5,5 C4.8,4.9,4.5,5,4.4,5.2l-2,3.5C2.3,8.9,2.4,9.2,2.6,9.3l2.1,1.6c0,0.2,0,0.4,0,0.6c0,0.2,0,0.4,0,0.6l-2.1,1.6 C2.4,14.8,2.3,15.1,2.4,15.3l2,3.5C4.5,19,4.8,19.1,5,19l2.5-1c0.5,0.4,1,0.7,1.6,1l0.4,2.7c0,0.2,0.2,0.4,0.5,0.4h4 c0.2,0,0.5-0.2,0.5-0.4l0.4-2.7c0.5-0.3,1.1-0.6,1.6-1l2.5,1c0.2,0.1,0.5,0,0.6-0.2l2-3.5c0.1-0.2,0.1-0.5-0.1-0.6L19.4,12z M12,15.5c-1.9,0-3.5-1.6-3.5-3.5s1.6-3.5,3.5-3.5s3.5,1.6,3.5,3.5S13.9,15.5,12,15.5z"></path></svg>
-                </button>
-            </div>
-            <div id="view-controls">
-                <button id="list-view-btn" class="view-btn" title="列表视图">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"></path></svg>
-                </button>
-                <button id="card-view-btn" class="view-btn active" title="卡片视图">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 4h6v6H4V4zm8 0h6v6h-6V4zM4 14h6v6H4v-6zm8 14h6v-6h-6v6z"></path></svg>
-                </button>
-                <button id="icon-view-btn" class="view-btn" title="图标视图">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 3h4v4H3V3zm5 0h4v4H8V3zm5 0h4v4h-4V3zM3 8h4v4H3V8zm5 0h4v4H8V8zm5 0h4v4h-4V8zM3 13h4v4H3v-4zm5 0h4v4H8v-4zm5 0h4v4h-4v-4z"></path></svg>
-                </button>
+                <div id="view-controls">
+                    <button id="list-view-btn" class="view-btn" title="列表视图">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z"></path></svg>
+                    </button>
+                    <button id="card-view-btn" class="view-btn active" title="卡片视图">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M4 4h6v6H4V4zm8 0h6v6h-6V4zM4 14h6v6H4v-6zm8 14h6v-6h-6v6z"></path></svg>
+                    </button>
+                    <button id="icon-view-btn" class="view-btn" title="图标视图">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 3h4v4H3V3zm5 0h4v4H8V3zm5 0h4v4h-4V3zM3 8h4v4H3V8zm5 0h4v4H8V8zm5 0h4v4h-4V8zM3 13h4v4H3v-4zm5 0h4v4H8v-4zm5 0h4v4h-4v-4z"></path></svg>
+                    </button>
+                </div>
             </div>
             <div id="bookmark-container">
                 <!-- Bookmarks will be loaded here -->
@@ -100,8 +102,9 @@
                     <h2>工具</h2>
                     <div class="setting-group">
                         <label>AI智能分析</label>
-                        <p class="description">使用AI对所有书签进行智能分类。请先在“API设置”中完成配置。</p>
+                        <p class="description">使用AI预先生成分类结构，然后对所有书签进行智能分类。请先在“API设置”中完成配置。</p>
                         <button id="analyze-bookmarks-btn" class="action-btn">开始分析</button>
+                        <button id="regenerate-categories-btn" class="action-btn">重新生成分类建议</button>
                         <button id="organize-bookmarks-btn" class="action-btn hidden">将分类整理到文件夹</button>
                     </div>
                     <div id="analysis-progress" class="setting-group hidden">

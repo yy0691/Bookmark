@@ -1,13 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "书签助手 - AI分类整理",
+  "name": "书签助手测试",
   "version": "1.0",
-  "description": "使用AI自动分类并整理浏览器书签",
+  "description": "测试版本",
   "permissions": [
     "bookmarks",
-    "storage",
-    "tabs",
-    "activeTab"
+    "storage"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -17,7 +15,6 @@
       "128": "images/icon128.png"
     }
   },
-  "options_page": "options.html",
   "background": {
     "service_worker": "background.js"
   },
@@ -25,11 +22,5 @@
     "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
-  },
-  "chrome_url_overrides": {
-    "newtab": "visualization.html"
-  },
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self';"
   }
 } 
