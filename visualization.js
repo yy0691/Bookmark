@@ -7,16 +7,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('folder-sidebar');
     const resizer = document.getElementById('sidebar-resizer');
     const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+    const iconModeBtn = document.getElementById('icon-mode-btn');
     const listViewBtn = document.getElementById('list-view-btn');
     const cardViewBtn = document.getElementById('card-view-btn');
     const iconViewBtn = document.getElementById('icon-view-btn');
 
     // --- Settings Panel Elements ---
-    let settingsBtn, settingsPanel, closeSettingsPanelBtn, tabButtons, tabContents, themeButtons;
-    let bgUploadInput, bgUploadBtn, clearBgBtn;
-    let analyzeBtn, analysisProgress, analysisProgressBar, analysisStatus, analysisLogContainer, analysisLog;
-    let importBtn, exportBackupBtn, exportCsvBtn;
-    let apiProviderSelect, apiKeyInput, geminiFields, openaiFields, customApiFields, saveApiSettingsBtn, testApiBtn, apiStatusMessage;
+    const settingsBtn = document.getElementById('theme-settings-btn');
+    const settingsPanel = document.getElementById('settings-panel');
+    const closeSettingsPanelBtn = document.getElementById('close-settings-panel-btn');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    const bgUploadInput = document.getElementById('bg-upload-input');
+    const bgUploadBtn = document.getElementById('bg-upload-btn');
+    const clearBgBtn = document.getElementById('clear-bg-btn');
+    const analyzeBtn = document.getElementById('analyze-bookmarks-btn');
+    const analysisProgress = document.getElementById('analysis-progress');
+    const analysisProgressBar = document.getElementById('analysis-progress-bar');
+    const analysisStatus = document.getElementById('analysis-status');
+    const analysisLogContainer = document.getElementById('analysis-log-container');
+    const analysisLog = document.getElementById('analysis-log');
+    const importBtn = document.getElementById('import-bookmarks-btn');
+    const exportBackupBtn = document.getElementById('export-backup-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const apiProviderSelect = document.getElementById('api-provider');
+    const apiKeyInput = document.getElementById('api-key');
+    const geminiFields = document.getElementById('gemini-fields');
+    const openaiFields = document.getElementById('openai-fields');
+    const customApiFields = document.getElementById('custom-api-fields');
+    const saveApiSettingsBtn = document.getElementById('save-api-settings-btn');
+    const testApiBtn = document.getElementById('test-api-btn');
+    const apiStatusMessage = document.getElementById('api-status-message');
 
     // --- State ---
     let bookmarkTreeRoot = null;
@@ -27,34 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialization ---
     function initialize() {
-        // Assign DOM elements here to ensure they are loaded
-        settingsBtn = document.getElementById('theme-settings-btn');
-        settingsPanel = document.getElementById('settings-panel');
-        closeSettingsPanelBtn = document.getElementById('close-settings-panel-btn');
-        tabButtons = document.querySelectorAll('.tab-btn');
-        tabContents = document.querySelectorAll('.tab-content');
-        themeButtons = document.querySelectorAll('.theme-btn');
-        bgUploadInput = document.getElementById('bg-upload-input');
-        bgUploadBtn = document.getElementById('bg-upload-btn');
-        clearBgBtn = document.getElementById('clear-bg-btn');
-        analyzeBtn = document.getElementById('analyze-bookmarks-btn');
-        analysisProgress = document.getElementById('analysis-progress');
-        analysisProgressBar = document.getElementById('analysis-progress-bar');
-        analysisStatus = document.getElementById('analysis-status');
-        analysisLogContainer = document.getElementById('analysis-log-container');
-        analysisLog = document.getElementById('analysis-log');
-        importBtn = document.getElementById('import-bookmarks-btn');
-        exportBackupBtn = document.getElementById('export-backup-btn');
-        exportCsvBtn = document.getElementById('export-csv-btn');
-        apiProviderSelect = document.getElementById('api-provider');
-        apiKeyInput = document.getElementById('api-key');
-        geminiFields = document.getElementById('gemini-fields');
-        openaiFields = document.getElementById('openai-fields');
-        customApiFields = document.getElementById('custom-api-fields');
-        saveApiSettingsBtn = document.getElementById('save-api-settings-btn');
-        testApiBtn = document.getElementById('test-api-btn');
-        apiStatusMessage = document.getElementById('api-status-message');
-
         loadAndApplySettings();
         chrome.bookmarks.getTree(tree => {
             bookmarkTreeRoot = tree[0];
@@ -70,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Main UI
         searchInput.addEventListener('input', handleSearch);
         toggleSidebarBtn.addEventListener('click', toggleSidebarCollapse);
-        // Removed iconModeBtn as per user request
+        iconModeBtn.addEventListener('click', toggleIconMode);
         listViewBtn.addEventListener('click', () => setViewMode('list'));
         cardViewBtn.addEventListener('click', () => setViewMode('card'));
         iconViewBtn.addEventListener('click', () => setViewMode('icon'));
@@ -574,19 +568,11 @@ ${JSON.stringify(batch.map(b => ({title: b.title, url: b.url})), null, 2)}`;
         const data = await response.json();
         const responseText = data.candidates?.[0].content.parts[0].text || data.choices?.[0].message.content || JSON.stringify(data);
         
-        // Find the first '{' and the last '}' to extract the JSON string
-        const firstCurly = responseText.indexOf('{');
-        const lastCurly = responseText.lastIndexOf('}');
-
-        if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
-            const jsonString = responseText.substring(firstCurly, lastCurly + 1);
-            try {
-                return JSON.parse(jsonString);
-            } catch (e) {
-                throw new Error(`无法解析AI返回的JSON: ${e.message}. 原始响应: ${responseText}`);
-            }
+        const jsonMatch = responseText.match(/{[\s\S]*}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
         }
-        throw new Error(`API did not return valid JSON. 原始响应: ${responseText}`);
+        throw new Error('API did not return valid JSON.');
     }
 
     // --- Start the application ---
