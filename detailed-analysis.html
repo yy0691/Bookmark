@@ -1,0 +1,2152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>详细分析 - 书签助手</title>
+    <link rel="stylesheet" href="apple-style.css">
+    <style>
+        /* 毛玻璃风格背景 */
+        body {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        /* 主容器毛玻璃效果 */
+        .main-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            max-width: 1400px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        /* 顶部导航栏 */
+        .top-nav {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .nav-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1d1d1f;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-size: 14px;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .nav-btn.primary {
+            background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+            color: white;
+            border-color: transparent;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            width: 280px;
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+        
+        .sidebar-subtitle {
+            font-size: 12px;
+            color: #6e6e73;
+        }
+        
+        .sidebar-nav {
+            padding: 16px 0;
+        }
+        
+        .nav-section {
+            margin-bottom: 24px;
+        }
+        
+        .nav-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6e6e73;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0 20px 8px;
+            margin-bottom: 8px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #1d1d1f;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: rgba(0, 122, 255, 0.3);
+        }
+        
+        .nav-item.active {
+            background: rgba(0, 122, 255, 0.1);
+            border-left-color: #007aff;
+            color: #007aff;
+        }
+        
+        .nav-item-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-item-text {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .nav-item-badge {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        /* 主内容区域 */
+        .main-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            height: calc(100vh - 140px);
+        }
+        
+        .content-header {
+            margin-bottom: 24px;
+        }
+        
+        .content-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+        
+        .content-description {
+            font-size: 14px;
+            color: #6e6e73;
+            line-height: 1.5;
+        }
+        
+        /* 功能卡片 */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(31, 38, 135, 0.25);
+        }
+        
+        .feature-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .feature-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+        
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+        
+        .feature-description {
+            font-size: 14px;
+            color: #6e6e73;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        
+        .feature-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .feature-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 12px;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .feature-btn.primary {
+            background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+            color: white;
+            border-color: transparent;
+        }
+        
+        /* 数据展示区域 */
+        .data-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .data-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .data-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+        
+        .data-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .data-control-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .data-control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #007aff;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #6e6e73;
+            font-weight: 500;
+        }
+        
+        /* 响应式布局 */
+        .layout-container {
+            display: flex;
+            height: calc(100vh - 140px);
+        }
+        
+        @media (max-width: 768px) {
+            .layout-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 200px;
+            }
+            
+            .main-content {
+                height: auto;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .main-container,
+        .feature-card,
+        .data-section {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        /* 加载状态 */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #007aff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 内容区域 */
+        .content-section {
+            display: none;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        /* 进度条样式 */
+        .progress-container {
+            margin: 16px 0;
+        }
+        
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #007aff, #5856d6);
+            height: 100%;
+            border-radius: 8px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-status {
+            font-size: 12px;
+            color: #6e6e73;
+            text-align: center;
+        }
+        
+        /* 日志容器 */
+        .log-container {
+            background: rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        }
+        
+        .log-content {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 4px;
+            color: #3a3a3c;
+        }
+        
+        .log-entry.info {
+            color: #007aff;
+        }
+        
+        .log-entry.success {
+            color: #30d158;
+        }
+        
+        .log-entry.warning {
+            color: #ff9500;
+        }
+        
+        .log-entry.error {
+            color: #ff3b30;
+        }
+        
+        .log-entry-time {
+            color: #8e8e93;
+            margin-right: 8px;
+        }
+        
+        /* API状态显示 */
+        .api-status-display {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .api-status-display.connected {
+            background: rgba(52, 209, 88, 0.1);
+            color: #30d158;
+        }
+        
+        .api-status-display.not-connected {
+            background: rgba(255, 59, 48, 0.1);
+            color: #ff3b30;
+        }
+        
+        /* 分析控制 */
+        .analysis-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* 书签树样式 */
+        .bookmark-tree {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+        }
+        
+        .tree-node {
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }
+        
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            gap: 8px;
+        }
+        
+        .tree-node-content:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateX(2px);
+        }
+        
+        .tree-expand-btn {
+            background: none;
+            border: none;
+            color: #6e6e73;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .tree-expand-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: #1d1d1f;
+        }
+        
+        .tree-checkbox {
+            margin: 0;
+            accent-color: #007aff;
+        }
+        
+        .tree-icon {
+            font-size: 16px;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .tree-title {
+            font-size: 14px;
+            color: #1d1d1f;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .tree-title:hover {
+            color: #007aff;
+        }
+        
+        .folder-count {
+            font-size: 11px;
+            color: #007aff;
+            background: rgba(0, 122, 255, 0.1);
+            border: 1px solid rgba(0, 122, 255, 0.3);
+            padding: 2px 6px;
+            border-radius: 50px;
+            min-width: 20px;
+            text-align: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .tree-children {
+            margin-left: 12px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding-left: 6px;
+            margin-top: 2px;
+        }
+        
+        .tree-children.hidden {
+            display: none;
+        }
+        
+        /* 批量操作工具栏 */
+        .batch-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .batch-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+        
+        .batch-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        /* 检测列表样式 */
+        .detection-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .detection-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .detection-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(2px);
+        }
+        
+        .detection-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .detection-checkbox {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            accent-color: #007aff;
+        }
+        
+        .detection-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .detection-title {
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        
+        .detection-url {
+            font-size: 12px;
+            color: #6e6e73;
+            word-break: break-all;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .detection-meta {
+            font-size: 11px;
+            color: #8e8e93;
+            margin-top: 4px;
+        }
+        
+        /* 重复书签组 */
+        .duplicate-group {
+            border-left: 3px solid #ff9500;
+            padding-left: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .duplicate-group-header {
+            font-weight: 600;
+            color: #ff9500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        /* 导入选项 */
+        .import-options {
+            margin-bottom: 20px;
+        }
+        
+        .option-group {
+            margin-bottom: 16px;
+        }
+        
+        .option-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #1d1d1f;
+            cursor: pointer;
+        }
+        
+        .option-group input[type="radio"] {
+            margin-right: 8px;
+            accent-color: #007aff;
+        }
+        
+        .conflict-handling {
+            margin-top: 16px;
+        }
+        
+        .conflict-handling h5 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+        
+        .conflict-handling select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            font-size: 14px;
+            color: #1d1d1f;
+        }
+        
+        .import-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* 隐藏文件输入 */
+        .hidden {
+            display: none !important;
+        }
+        
+        /* 占位符文本 */
+        .placeholder-text {
+            text-align: center;
+            color: #6e6e73;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+        
+        /* 可视化区域 */
+        .visualization-area {
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 结果内容 */
+        .results-content {
+            min-height: 200px;
+        }
+        
+        /* 管理器控制 */
+        .manager-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* 检测控制 */
+        .detection-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* 导出选项 */
+        .export-options {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* 备份控制 */
+        .backup-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* 报告选项 */
+        .report-options {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        /* 模态框样式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 32px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+        
+        .modal-close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: #6e6e73;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: #1d1d1f;
+        }
+        
+        .modal-body {
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #1d1d1f;
+            font-size: 14px;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            font-size: 14px;
+            color: #1d1d1f;
+            transition: all 0.2s ease;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #007aff;
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+        
+        .modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        /* 预览区域 */
+        .preview-area {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        /* 报告内容 */
+        .report-content {
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        
+        .report-group {
+            margin: 20px 0;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .report-item {
+            margin: 10px 0;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 文件输入样式 */
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .file-input-label:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+                border-radius: 16px;
+            }
+            
+            .modal-header h3 {
+                font-size: 18px;
+            }
+            
+            .form-input, .form-select {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+            
+            .feature-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            
+            .batch-actions {
+                flex-direction: column;
+                gap: 6px;
+            }
+        }
+        
+        /* 动画效果 */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-content {
+            animation: slideInUp 0.3s ease-out;
+        }
+        
+        /* 加载状态 */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #007aff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* 成功/错误状态 */
+        .status-success {
+            background: rgba(52, 209, 88, 0.1);
+            border-color: rgba(52, 209, 88, 0.3);
+            color: #30d158;
+        }
+        
+        .status-error {
+            background: rgba(255, 59, 48, 0.1);
+            border-color: rgba(255, 59, 48, 0.3);
+            color: #ff3b30;
+        }
+        
+        .status-warning {
+            background: rgba(255, 149, 0, 0.1);
+            border-color: rgba(255, 149, 0, 0.3);
+            color: #ff9500;
+        }
+        
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* 图表样式 */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+        }
+        
+        .chart-card {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .chart-card:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(31, 38, 135, 0.25);
+        }
+        
+        .chart-card h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+            text-align: center;
+        }
+        
+        .chart-container {
+            min-height: 200px;
+        }
+        
+        /* 柱状图样式 */
+        .bar-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .bar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .bar-label {
+            min-width: 120px;
+            font-size: 12px;
+            color: #6e6e73;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .bar-container {
+            flex: 1;
+            position: relative;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007aff, #5856d6);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+        }
+        
+        .bar-value {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+        
+        /* 折线图样式 */
+        .line-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .line-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .line-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(2px);
+        }
+        
+        .line-date {
+            font-size: 12px;
+            color: #6e6e73;
+            font-weight: 500;
+        }
+        
+        .line-value {
+            font-size: 14px;
+            color: #007aff;
+            font-weight: 600;
+        }
+        
+        /* 树状图样式 */
+        .treeview-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+        }
+        
+        .tree-node {
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }
+        
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            gap: 8px;
+        }
+        
+        .tree-node-content:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+            transform: translateX(2px);
+        }
+        
+        .tree-expand-btn {
+            background: none;
+            border: none;
+            color: #6e6e73;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .tree-expand-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: #1d1d1f;
+        }
+        
+        .tree-icon {
+            font-size: 16px;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .tree-title {
+            font-size: 14px;
+            color: #1d1d1f;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        .tree-title:hover {
+            color: #007aff;
+        }
+        
+        .folder-count {
+            font-size: 11px;
+            color: #007aff;
+            background: rgba(0, 122, 255, 0.1);
+            border: 1px solid rgba(0, 122, 255, 0.3);
+            padding: 2px 6px;
+            border-radius: 50px;
+            min-width: 20px;
+            text-align: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .tree-children {
+            margin-left: 12px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding-left: 6px;
+            margin-top: 2px;
+        }
+        
+        .tree-children.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 顶部导航栏 -->
+        <div class="top-nav">
+            <div class="nav-title">
+                <span>🔍</span>
+                <span>详细分析</span>
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn" id="refresh-btn">
+                    <span>🔄</span>
+                    <span>刷新</span>
+                </button>
+                <button class="nav-btn" id="export-btn">
+                    <span>📤</span>
+                    <span>导出</span>
+                </button>
+                <button class="nav-btn primary" id="back-btn">
+                    <span>←</span>
+                    <span>返回</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 主布局 -->
+        <div class="layout-container">
+            <!-- 侧边栏 -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">分析功能</div>
+                    <div class="sidebar-subtitle">选择要使用的分析工具</div>
+                </div>
+                
+                <div class="sidebar-nav">
+                    <!-- 数据可视化 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">📊 数据可视化</div>
+                        <div class="nav-item active" data-section="wordcloud">
+                            <div class="nav-item-icon">☁️</div>
+                            <div class="nav-item-text">词云展示</div>
+                        </div>
+                        <div class="nav-item" data-section="treeview">
+                            <div class="nav-item-icon">🌳</div>
+                            <div class="nav-item-text">树状图展示</div>
+                        </div>
+                        <div class="nav-item" data-section="charts">
+                            <div class="nav-item-icon">📈</div>
+                            <div class="nav-item-text">统计图表</div>
+                        </div>
+                    </div>
+                    
+                    <!-- AI智能分析 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">🤖 AI智能分析</div>
+                        <div class="nav-item" data-section="ai-analysis">
+                            <div class="nav-item-icon">🔍</div>
+                            <div class="nav-item-text">分析并分类书签</div>
+                        </div>
+                        <div class="nav-item" data-section="regenerate">
+                            <div class="nav-item-icon">🔄</div>
+                            <div class="nav-item-text">重新生成分类建议</div>
+                        </div>
+                        <div class="nav-item" data-section="analysis-log">
+                            <div class="nav-item-icon">📝</div>
+                            <div class="nav-item-text">分析日志</div>
+                        </div>
+                        <div class="nav-item" data-section="analysis-results">
+                            <div class="nav-item-icon">📊</div>
+                            <div class="nav-item-text">分析结果</div>
+                        </div>
+                        <div class="nav-item" data-section="export-csv">
+                            <div class="nav-item-icon">📤</div>
+                            <div class="nav-item-text">导出CSV</div>
+                        </div>
+                        <div class="nav-item" data-section="history">
+                            <div class="nav-item-icon">📚</div>
+                            <div class="nav-item-text">历史版本</div>
+                        </div>
+                        <div class="nav-item" data-section="organize">
+                            <div class="nav-item-icon">📁</div>
+                            <div class="nav-item-text">整理到文件夹</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 书签管理器 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">📂 书签管理器</div>
+                        <div class="nav-item" data-section="batch-operations">
+                            <div class="nav-item-icon">⚡</div>
+                            <div class="nav-item-text">批量处理</div>
+                        </div>
+                        <div class="nav-item" data-section="duplicates">
+                            <div class="nav-item-icon">🔄</div>
+                            <div class="nav-item-text">重复书签整理</div>
+                            <div class="nav-item-badge" id="duplicate-badge" style="display: none;">0</div>
+                        </div>
+                        <div class="nav-item" data-section="invalid">
+                            <div class="nav-item-icon">❌</div>
+                            <div class="nav-item-text">失效书签整理</div>
+                            <div class="nav-item-badge" id="invalid-badge" style="display: none;">0</div>
+                        </div>
+                        <div class="nav-item" data-section="empty-folders">
+                            <div class="nav-item-icon">📁</div>
+                            <div class="nav-item-text">空文件夹整理</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 数据管理 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">📦 数据管理</div>
+                        <div class="nav-item" data-section="import">
+                            <div class="nav-item-icon">📥</div>
+                            <div class="nav-item-text">导入功能</div>
+                        </div>
+                        <div class="nav-item" data-section="export">
+                            <div class="nav-item-icon">📤</div>
+                            <div class="nav-item-text">导出功能</div>
+                        </div>
+                        <div class="nav-item" data-section="backup">
+                            <div class="nav-item-icon">💾</div>
+                            <div class="nav-item-text">备份恢复</div>
+                        </div>
+                        <div class="nav-item" data-section="reports">
+                            <div class="nav-item-icon">📋</div>
+                            <div class="nav-item-text">检测报告</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 主内容区域 -->
+            <div class="main-content">
+                <!-- 默认显示词云展示 -->
+                <div id="wordcloud-section" class="content-section active">
+                    <div class="content-header">
+                        <div class="content-title">词云展示</div>
+                        <div class="content-description">基于书签标题和分类生成交互式词云，直观展示书签内容分布</div>
+                    </div>
+                    
+                    <!-- 统计信息 -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="total-bookmarks">-</div>
+                            <div class="stat-label">总书签数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="total-folders">-</div>
+                            <div class="stat-label">文件夹数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="unique-words">-</div>
+                            <div class="stat-label">唯一词汇</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="avg-length">-</div>
+                            <div class="stat-label">平均长度</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 词云控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">词云设置</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="generate-wordcloud-btn">生成词云</button>
+                                <button class="data-control-btn" id="export-wordcloud-btn">导出图片</button>
+                                <button class="data-control-btn" id="refresh-wordcloud-btn">刷新数据</button>
+                            </div>
+                        </div>
+                        <div id="wordcloud-container" class="visualization-area">
+                            <div class="placeholder-text">点击"生成词云"开始分析</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI智能分析 -->
+                <div id="ai-analysis-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">AI智能分析</div>
+                        <div class="content-description">使用AI分析并分类书签，生成智能分类建议</div>
+                    </div>
+                    
+                    <!-- API状态 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">API连接状态</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="setup-api-btn">设置API</button>
+                            </div>
+                        </div>
+                        <div class="api-status-display">
+                            <span id="api-status-text">检查中...</span>
+                            <span id="api-provider-text"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- 分析控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">分析控制</div>
+                        </div>
+                        <div class="analysis-controls">
+                            <button class="feature-btn primary" id="analyze-bookmarks-btn">🔍 开始分析</button>
+                            <button class="feature-btn" id="cancel-analyze-btn" style="display: none;">❌ 取消分析</button>
+                            <button class="feature-btn" id="regenerate-categories-btn">🔄 重新生成分类</button>
+                            <button class="feature-btn" id="organize-bookmarks-btn">📁 整理到文件夹</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="analysis-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="analysis-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="analysis-status" class="progress-status">准备分析...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 分析日志 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">分析日志</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-log-btn">清空日志</button>
+                                <button class="data-control-btn" id="toggle-log-btn">显示/隐藏</button>
+                            </div>
+                        </div>
+                        <div id="analysis-log-container" class="log-container">
+                            <div id="analysis-log" class="log-content"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 分析结果 -->
+                    <div id="analysis-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">分析结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="export-csv-btn">导出CSV</button>
+                                <button class="data-control-btn" id="view-history-btn">历史版本</button>
+                            </div>
+                        </div>
+                        <div id="results-preview" class="results-content"></div>
+                    </div>
+                </div>
+                
+                <!-- 书签管理器 -->
+                <div id="bookmark-manager-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">书签管理器</div>
+                        <div class="content-description">批量处理书签，支持增删查改、导入导出等操作</div>
+                    </div>
+                    
+                    <!-- 管理器工具栏 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">工具栏</div>
+                        </div>
+                        <div class="manager-controls">
+                            <button class="feature-btn" id="expand-all-folders-btn">📂 展开全部</button>
+                            <button class="feature-btn" id="collapse-all-folders-btn">📁 折叠全部</button>
+                            <button class="feature-btn" id="create-folder-btn">➕ 新建文件夹</button>
+                            <button class="feature-btn" id="refresh-manager-btn">🔄 刷新</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 批量操作工具栏 -->
+                    <div id="batch-operations" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">批量操作</div>
+                        </div>
+                        <div class="batch-toolbar">
+                            <div class="batch-info">
+                                <span id="selected-count">已选择 0 项</span>
+                            </div>
+                            <div class="batch-actions">
+                                <button class="feature-btn" id="batch-delete-btn">🗑️ 批量删除</button>
+                                <button class="feature-btn" id="batch-rename-btn">📝 批量重命名</button>
+                                <button class="feature-btn" id="batch-move-btn">📁 批量移动</button>
+                                <button class="feature-btn" id="batch-export-btn">📤 导出选中</button>
+                                <button class="feature-btn" id="select-all-btn">☑️ 全选</button>
+                                <button class="feature-btn" id="deselect-all-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 书签树 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">书签树结构</div>
+                        </div>
+                        <div id="bookmark-tree" class="bookmark-tree"></div>
+                    </div>
+                </div>
+                
+                <!-- 重复书签检测 -->
+                <div id="duplicates-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">重复书签检测</div>
+                        <div class="content-description">检测并清理重复的书签，支持URL和标题相似度检测</div>
+                    </div>
+                    
+                    <!-- 检测控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测控制</div>
+                        </div>
+                        <div class="detection-controls">
+                            <button class="feature-btn primary" id="detect-duplicates-btn">🔄 开始检测</button>
+                            <button class="feature-btn" id="remove-duplicates-btn" style="display: none;">🗑️ 移除重复</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测结果 -->
+                    <div id="duplicate-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">检测结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="select-all-duplicates-btn">☑️ 全选</button>
+                                <button class="data-control-btn" id="deselect-all-duplicates-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                        <div id="duplicate-list" class="detection-list"></div>
+                    </div>
+                </div>
+                
+                <!-- 失效书签检测 -->
+                <div id="invalid-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">失效书签检测</div>
+                        <div class="content-description">检测并清理失效的书签链接</div>
+                    </div>
+                    
+                    <!-- 检测控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测控制</div>
+                        </div>
+                        <div class="detection-controls">
+                            <button class="feature-btn primary" id="detect-invalid-btn">❌ 开始检测</button>
+                            <button class="feature-btn" id="remove-invalid-btn" style="display: none;">🗑️ 删除失效</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测结果 -->
+                    <div id="invalid-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">检测结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="select-all-invalid-btn">☑️ 全选</button>
+                                <button class="data-control-btn" id="deselect-all-invalid-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                        <div id="invalid-list" class="detection-list"></div>
+                    </div>
+                </div>
+                
+                <!-- 空文件夹检测 -->
+                <div id="empty-folders-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">空文件夹检测</div>
+                        <div class="content-description">检测并清理空的书签文件夹</div>
+                    </div>
+                    
+                    <!-- 检测控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测控制</div>
+                        </div>
+                        <div class="detection-controls">
+                            <button class="feature-btn primary" id="detect-empty-folders-btn">📁 开始检测</button>
+                            <button class="feature-btn" id="remove-empty-folders-btn" style="display: none;">🗑️ 删除空文件夹</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测结果 -->
+                    <div id="empty-folders-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">检测结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="select-all-empty-folders-btn">☑️ 全选</button>
+                                <button class="data-control-btn" id="deselect-all-empty-folders-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                        <div id="empty-folders-list" class="detection-list"></div>
+                    </div>
+                </div>
+                
+                <!-- 导入功能 -->
+                <div id="import-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">导入功能</div>
+                        <div class="content-description">从多种格式文件导入书签数据</div>
+                    </div>
+                    
+                    <!-- 导入选项 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">导入选项</div>
+                        </div>
+                        <div class="import-options">
+                            <div class="option-group">
+                                <label>
+                                    <input type="radio" name="import-strategy" value="merge" checked>
+                                    合并现有书签
+                                </label>
+                                <label>
+                                    <input type="radio" name="import-strategy" value="overwrite">
+                                    覆盖现有书签
+                                </label>
+                                <label>
+                                    <input type="radio" name="import-strategy" value="selective">
+                                    选择性导入
+                                </label>
+                            </div>
+                            
+                            <div class="conflict-handling">
+                                <h5>冲突处理策略</h5>
+                                <select id="conflict-strategy">
+                                    <option value="skip">跳过重复项</option>
+                                    <option value="rename">重命名</option>
+                                    <option value="replace">替换</option>
+                                    <option value="ask">询问用户</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="import-actions">
+                            <button class="feature-btn primary" id="import-file-btn">选择文件导入</button>
+                            <button class="feature-btn" id="import-url-btn">从URL导入</button>
+                            <input type="file" id="import-file-input" accept=".html,.json,.csv" class="hidden">
+                        </div>
+                        
+                        <div id="import-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="import-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="import-status" class="progress-status">准备导入...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 导出功能 -->
+                <div id="export-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">导出功能</div>
+                        <div class="content-description">将书签数据导出为多种格式</div>
+                    </div>
+                    
+                    <!-- 导出选项 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">导出选项</div>
+                        </div>
+                        <div class="export-options">
+                            <button class="feature-btn" id="export-backup-btn">💾 备份所有书签 (JSON)</button>
+                            <button class="feature-btn" id="export-ai-categories-btn">📊 导出AI分类 (CSV)</button>
+                            <button class="feature-btn" id="export-custom-btn">📤 自定义导出</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 备份恢复 -->
+                <div id="backup-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">备份恢复</div>
+                        <div class="content-description">管理书签备份和恢复功能</div>
+                    </div>
+                    
+                    <!-- 备份控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">备份控制</div>
+                        </div>
+                        <div class="backup-controls">
+                            <button class="feature-btn" id="create-backup-btn">💾 创建备份</button>
+                            <button class="feature-btn" id="restore-backup-btn">📥 恢复备份</button>
+                            <button class="feature-btn" id="manage-backups-btn">📋 管理备份</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 检测报告 -->
+                <div id="reports-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">检测报告</div>
+                        <div class="content-description">查看和管理各种检测报告</div>
+                    </div>
+                    
+                    <!-- 报告选项 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">报告选项</div>
+                        </div>
+                        <div class="report-options">
+                            <button class="feature-btn" id="view-duplicate-report-btn">🔄 重复书签报告</button>
+                            <button class="feature-btn" id="view-invalid-report-btn">❌ 失效书签报告</button>
+                            <button class="feature-btn" id="view-cleanup-report-btn">🧹 清理报告</button>
+                            <button class="feature-btn" id="generate-comprehensive-report-btn">📋 生成综合报告</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 树状图展示 -->
+                <div id="treeview-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">树状图展示</div>
+                        <div class="content-description">以树状结构展示书签的层级关系，支持展开/折叠操作</div>
+                    </div>
+                    
+                    <!-- 树状图控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">树状图设置</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="expand-all-tree-btn">展开全部</button>
+                                <button class="data-control-btn" id="collapse-all-tree-btn">折叠全部</button>
+                                <button class="data-control-btn" id="refresh-tree-btn">刷新数据</button>
+                            </div>
+                        </div>
+                        <div id="treeview-container" class="visualization-area">
+                            <div class="placeholder-text">正在加载树状图...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 统计图表 -->
+                <div id="charts-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">统计图表</div>
+                        <div class="content-description">通过图表直观展示书签数据的统计信息</div>
+                    </div>
+                    
+                    <!-- 图表控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">图表设置</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="generate-charts-btn">生成图表</button>
+                                <button class="data-control-btn" id="export-charts-btn">导出图表</button>
+                                <button class="data-control-btn" id="refresh-charts-btn">刷新数据</button>
+                            </div>
+                        </div>
+                        <div id="charts-container" class="visualization-area">
+                            <div class="placeholder-text">点击"生成图表"开始分析</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 重新生成分类建议 -->
+                <div id="regenerate-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">重新生成分类建议</div>
+                        <div class="content-description">基于新的参数重新生成AI分类建议</div>
+                    </div>
+                    
+                    <!-- 重新生成控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">重新生成控制</div>
+                        </div>
+                        <div class="analysis-controls">
+                            <button class="feature-btn primary" id="regenerate-categories-btn">🔄 重新生成分类</button>
+                            <button class="feature-btn" id="regenerate-settings-btn">⚙️ 调整参数</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="regenerate-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="regenerate-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="regenerate-status" class="progress-status">准备重新生成...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 重新生成结果 -->
+                    <div id="regenerate-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">重新生成结果</div>
+                        </div>
+                        <div id="regenerate-preview" class="results-content"></div>
+                    </div>
+                </div>
+                
+                <!-- 分析日志 -->
+                <div id="analysis-log-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">分析日志</div>
+                        <div class="content-description">查看AI分析的详细日志记录</div>
+                    </div>
+                    
+                    <!-- 日志控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">日志控制</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-analysis-log-btn">清空日志</button>
+                                <button class="data-control-btn" id="export-analysis-log-btn">导出日志</button>
+                                <button class="data-control-btn" id="toggle-analysis-log-btn">显示/隐藏</button>
+                            </div>
+                        </div>
+                        <div id="analysis-log-display" class="log-container">
+                            <div id="analysis-log-content" class="log-content"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 分析结果 -->
+                <div id="analysis-results-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">分析结果</div>
+                        <div class="content-description">查看AI分析生成的分类结果</div>
+                    </div>
+                    
+                    <!-- 结果控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">结果控制</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="export-analysis-results-btn">导出结果</button>
+                                <button class="data-control-btn" id="apply-analysis-results-btn">应用结果</button>
+                                <button class="data-control-btn" id="refresh-analysis-results-btn">刷新结果</button>
+                            </div>
+                        </div>
+                        <div id="analysis-results-display" class="results-content"></div>
+                    </div>
+                </div>
+                
+                <!-- 导出CSV -->
+                <div id="export-csv-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">导出CSV</div>
+                        <div class="content-description">将分析结果导出为CSV格式</div>
+                    </div>
+                    
+                    <!-- CSV导出控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">导出选项</div>
+                        </div>
+                        <div class="export-options">
+                            <button class="feature-btn" id="export-all-csv-btn">📊 导出所有数据</button>
+                            <button class="feature-btn" id="export-categories-csv-btn">🏷️ 导出分类结果</button>
+                            <button class="feature-btn" id="export-statistics-csv-btn">📈 导出统计信息</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 历史版本 -->
+                <div id="history-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">历史版本</div>
+                        <div class="content-description">查看和管理历史分析版本</div>
+                    </div>
+                    
+                    <!-- 历史版本控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">版本控制</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="create-version-btn">创建版本</button>
+                                <button class="data-control-btn" id="restore-version-btn">恢复版本</button>
+                                <button class="data-control-btn" id="delete-version-btn">删除版本</button>
+                            </div>
+                        </div>
+                        <div id="history-list" class="detection-list">
+                            <div class="placeholder-text">暂无历史版本</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 整理到文件夹 -->
+                <div id="organize-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">整理到文件夹</div>
+                        <div class="content-description">根据AI分析结果自动整理书签到文件夹</div>
+                    </div>
+                    
+                    <!-- 整理控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">整理控制</div>
+                        </div>
+                        <div class="analysis-controls">
+                            <button class="feature-btn primary" id="organize-bookmarks-btn">📁 开始整理</button>
+                            <button class="feature-btn" id="preview-organize-btn">👁️ 预览整理</button>
+                            <button class="feature-btn" id="organize-settings-btn">⚙️ 整理设置</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="organize-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="organize-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="organize-status" class="progress-status">准备整理...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 整理结果 -->
+                    <div id="organize-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">整理结果</div>
+                        </div>
+                        <div id="organize-preview" class="results-content"></div>
+                    </div>
+                </div>
+                
+                <!-- 批量处理 -->
+                <div id="batch-operations-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">批量处理</div>
+                        <div class="content-description">批量操作选中的书签和文件夹</div>
+                    </div>
+                    
+                    <!-- 批量操作控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">批量操作</div>
+                        </div>
+                        <div class="batch-toolbar">
+                            <div class="batch-info">
+                                <span id="batch-selected-count">已选择 0 项</span>
+                            </div>
+                            <div class="batch-actions">
+                                <button class="feature-btn" id="batch-delete-btn">🗑️ 批量删除</button>
+                                <button class="feature-btn" id="batch-rename-btn">📝 批量重命名</button>
+                                <button class="feature-btn" id="batch-move-btn">📁 批量移动</button>
+                                <button class="feature-btn" id="batch-export-btn">📤 导出选中</button>
+                                <button class="feature-btn" id="batch-select-all-btn">☑️ 全选</button>
+                                <button class="feature-btn" id="batch-deselect-all-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 批量操作结果 -->
+                    <div id="batch-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">操作结果</div>
+                        </div>
+                        <div id="batch-preview" class="results-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 先加载基础功能模块 -->
+    <script src="analyze.js"></script>
+    <script src="visualization.js"></script>
+    <!-- 最后加载详细分析页面功能 -->
+    <script src="detailed-analysis.js"></script>
+</body>
+</html> 

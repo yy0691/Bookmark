@@ -5,6 +5,171 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>书签可视化</title>
     <link rel="stylesheet" href="apple-style.css">
+    <style>
+        /* 毛玻璃风格背景 */
+        body {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        
+        /* 主容器毛玻璃效果 */
+        .main-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        /* 侧边栏毛玻璃效果 */
+        #folder-sidebar {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 顶部栏毛玻璃效果 */
+        #top-bar {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 搜索框毛玻璃效果 */
+        #search-input {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+        }
+        
+        #search-input:focus {
+            background: rgba(255, 255, 255, 0.5);
+            border-color: #007aff;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+        
+        /* 书签项毛玻璃效果 */
+        .bookmark-item {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .bookmark-item:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(31, 38, 135, 0.25);
+        }
+        
+        /* 设置面板毛玻璃效果 */
+        #settings-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+        }
+        
+        .panel-content-wrapper {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+        }
+        
+        /* 面板侧边栏毛玻璃效果 */
+        .panel-sidebar {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* 标签页按钮毛玻璃效果 */
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+            color: white;
+            border-color: transparent;
+        }
+        
+        /* 操作按钮毛玻璃效果 */
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .action-btn.primary {
+            background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+            color: white;
+            border-color: transparent;
+        }
+        
+        .action-btn.primary:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+        }
+        
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .main-container,
+        .section,
+        .bookmark-item {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .main-container {
+                border-radius: 16px;
+                margin: 8px;
+            }
+            
+            .panel-content-wrapper {
+                border-radius: 16px;
+            }
+        }
+    </style>
 </head>
 <body class="visualization-page">
 
@@ -39,6 +204,9 @@
                     <button id="icon-view-btn" class="view-btn" title="图标视图">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M3 3h4v4H3V3zm5 0h4v4H8V3zm5 0h4v4h-4V3zM3 8h4v4H3V8zm5 0h4v4H8V8zm5 0h4v4h-4V8zM3 13h4v4H3v-4zm5 0h4v4H8v-4zm5 0h4v4h-4v-4z"></path></svg>
                     </button>
+                    <button id="batch-mode-btn" class="view-btn" title="批量操作模式">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+                    </button>
                 </div>
             </div>
             <div id="bookmark-container">
@@ -66,6 +234,10 @@
                     <button class="tab-btn" data-tab="data">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5S13.5 3.62 13.5 5v10.5c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5V6H9v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 2.76 2.24 5 5 5s5-2.24 5-5V6h-1.5z"></path></svg>
                         <span>数据</span>
+                    </button>
+                    <button class="tab-btn" data-tab="personalization">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
+                        <span>个性化</span>
                     </button>
                     <button class="tab-btn" data-tab="api-settings">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19.4 12c0-.2 0-.4 0-.6 0-.2 0-.4 0-.6l2.1-1.6c.2-.1.2-.4.1-.6l-2-3.5c-.1-.2-.4-.3-.6-.2l-2.5 1c-.5-.4-1-.7-1.6-1l-.4-2.7c0-.2-.2-.4-.5-.4h-4c-.2 0-.5.2-.5.4l-.4 2.7c-.5.3-1.1.6-1.6 1l-2.5-1c-.2 0-.5.1-.6.3l-2 3.5c-.1.2-.1.5.1.6l2.1 1.6c0 .2 0 .4 0 .6 0 .2 0 .4 0 .6l-2.1 1.6c-.2.1-.3.4-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1 .7 1.6 1l.4 2.7c0 .2.2.4.5.4h4c.2 0 .5-.2.5.4l.4-2.7c.5-.3 1.1-.6 1.6-1l2.5 1c.2 0 .5-.1.6-.3l2-3.5c.1-.2.1-.5-.1-.6l-2.1-1.6zM12 15.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.9 3.5-3.5 3.5z"></path></svg>
@@ -100,39 +272,383 @@
                 <!-- Tools Tab -->
                 <div id="tab-tools" class="tab-content">
                     <h2>工具</h2>
+                    
+                    <!-- 数据可视化 -->
+                    <div class="setting-group">
+                        <label>数据可视化</label>
+                        <p class="description">可视化展示书签分类数据，包括词云、树状图和统计图表。</p>
+                        <div class="visualization-controls">
+                            <button id="show-wordcloud-btn" class="action-btn">词云展示</button>
+                            <button id="show-treeview-btn" class="action-btn">树状图展示</button>
+                            <button id="show-charts-btn" class="action-btn">统计图表</button>
+                            <button id="refresh-visualization-btn" class="action-btn">刷新数据</button>
+                        </div>
+                        <div id="visualization-container" class="visualization-area hidden">
+                            <div id="wordcloud-container" class="visualization-panel hidden"></div>
+                            <div id="treeview-container" class="visualization-panel hidden"></div>
+                            <div id="charts-container" class="visualization-panel hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI智能分析 -->
                     <div class="setting-group">
                         <label>AI智能分析</label>
-                        <p class="description">使用AI预先生成分类结构，然后对所有书签进行智能分类。请先在“API设置”中完成配置。</p>
-                        <button id="analyze-bookmarks-btn" class="action-btn">开始分析</button>
-                        <button id="regenerate-categories-btn" class="action-btn">重新生成分类建议</button>
-                        <button id="organize-bookmarks-btn" class="action-btn hidden">将分类整理到文件夹</button>
+                        <p class="description">使用AI预先生成分类结构，然后对所有书签进行智能分类。请先在"API设置"中完成配置。</p>
+                        <div class="ai-analysis-controls">
+                            <button id="analyze-bookmarks-btn" class="action-btn">开始分析</button>
+                            <button id="regenerate-categories-btn" class="action-btn">重新生成分类建议</button>
+                            <button id="organize-bookmarks-btn" class="action-btn hidden">将分类整理到文件夹</button>
+                        </div>
+                        <div id="analysis-progress" class="setting-group hidden">
+                            <label>分析进度</label>
+                            <div class="progress-bar-container"><div id="analysis-progress-bar"></div></div>
+                            <div id="analysis-status"></div>
+                        </div>
+                        <div id="analysis-log-container" class="setting-group hidden">
+                            <label>分析日志</label>
+                            <div id="analysis-log"></div>
+                        </div>
+                        <div id="analysis-results" class="setting-group hidden">
+                            <label>分析结果</label>
+                            <div id="results-preview"></div>
+                            <div class="results-actions">
+                                <button id="export-csv-btn" class="action-btn">导出CSV</button>
+                                <button id="view-history-btn" class="action-btn">历史版本</button>
+                            </div>
+                        </div>
                     </div>
-                    <div id="analysis-progress" class="setting-group hidden">
-                        <label>分析进度</label>
-                        <div class="progress-bar-container"><div id="analysis-progress-bar"></div></div>
-                        <div id="analysis-status"></div>
+
+                    <!-- 书签管理器快速入口 -->
+                    <div class="setting-group">
+                        <label>书签管理器</label>
+                        <p class="description">快速访问书签管理器，进行批量处理和整理操作。</p>
+                        <div class="manager-controls">
+                            <button id="open-bookmark-manager-btn" class="action-btn">打开书签管理器</button>
+                            <button id="detect-duplicates-btn" class="action-btn">检测重复书签</button>
+                            <button id="detect-invalid-btn" class="action-btn">检测失效书签</button>
+                            <button id="detect-empty-folders-btn" class="action-btn">检测空文件夹</button>
+                        </div>
                     </div>
-                    <div id="analysis-log-container" class="setting-group hidden">
-                        <label>分析日志</label>
-                        <div id="analysis-log"></div>
+
+                    <!-- 快速入口 -->
+                    <div class="setting-group">
+                        <label>快速入口</label>
+                        <p class="description">快速访问其他功能页面。</p>
+                        <div class="quick-access-controls">
+                            <button id="open-analyze-page-btn" class="action-btn">打开详细分析页面</button>
+                            <button id="open-history-page-btn" class="action-btn">打开历史记录页面</button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Data Tab -->
                 <div id="tab-data" class="tab-content">
                     <h2>数据管理</h2>
+                    
+                    <!-- 导入功能 -->
                     <div class="setting-group">
-                        <label>导入</label>
-                        <p class="description">从HTML或JSON文件导入书签。</p>
-                        <button id="import-bookmarks-btn" class="action-btn">导入文件</button>
-                    </div>
-                    <div class="setting-group">
-                        <label>导出</label>
-                        <p class="description">将书签数据备份到本地。</p>
-                        <div class="file-buttons">
-                            <button id="export-backup-btn" class="action-btn">备份所有书签 (JSON)</button>
-                            <button id="export-csv-btn" class="action-btn">导出AI分类 (CSV)</button>
+                        <label>📥 导入功能</label>
+                        <p class="description">从多种格式文件导入书签数据。</p>
+                        
+                        <div class="import-section">
+                            <div class="import-format">
+                                <h4>支持格式</h4>
+                                <ul>
+                                    <li>HTML书签文件 (.html)</li>
+                                    <li>JSON格式 (.json)</li>
+                                    <li>CSV格式 (.csv)</li>
+                                    <li>其他浏览器格式</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="import-options">
+                                <h4>导入选项</h4>
+                                <div class="option-group">
+                                    <label>
+                                        <input type="radio" name="import-strategy" value="merge" checked>
+                                        合并现有书签
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="import-strategy" value="overwrite">
+                                        覆盖现有书签
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="import-strategy" value="selective">
+                                        选择性导入
+                                    </label>
+                                </div>
+                                
+                                <div class="conflict-handling">
+                                    <h5>冲突处理策略</h5>
+                                    <select id="conflict-strategy" title="选择冲突处理策略">
+                                        <option value="skip">跳过重复项</option>
+                                        <option value="rename">重命名</option>
+                                        <option value="replace">替换</option>
+                                        <option value="ask">询问用户</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
+                        
+                        <div class="import-actions">
+                            <button id="import-bookmarks-btn" class="action-btn primary">选择文件导入</button>
+                            <button id="import-from-url-btn" class="action-btn">从URL导入</button>
+                            <input type="file" id="import-file-input" accept=".html,.json,.csv" class="hidden" title="选择要导入的书签文件">
+                        </div>
+                        
+                        <div id="import-progress" class="import-progress hidden">
+                            <div class="progress-info">
+                                <span id="import-status">准备导入...</span>
+                                <span id="import-count">0 / 0</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div id="import-progress-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 导出功能 -->
+                    <div class="setting-group">
+                        <label>📤 导出功能</label>
+                        <p class="description">将书签数据导出为多种格式。</p>
+                        
+                        <div class="export-section">
+                            <div class="export-format">
+                                <h4>导出格式</h4>
+                                <div class="format-options">
+                                    <label>
+                                        <input type="checkbox" name="export-format" value="json" checked>
+                                        JSON格式 (完整备份)
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="export-format" value="html">
+                                        HTML格式 (浏览器兼容)
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="export-format" value="csv">
+                                        CSV格式 (AI分类)
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="export-format" value="markdown">
+                                        Markdown格式
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="export-options">
+                                <h4>导出选项</h4>
+                                <div class="option-group">
+                                    <label>
+                                        <input type="checkbox" id="include-folders" checked>
+                                        包含文件夹结构
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" id="include-metadata" checked>
+                                        包含元数据
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" id="include-ai-categories">
+                                        包含AI分类
+                                    </label>
+                                </div>
+                                
+                                <div class="export-fields">
+                                    <h5>导出字段</h5>
+                                    <div class="field-selection">
+                                        <label><input type="checkbox" value="title" checked> 标题</label>
+                                        <label><input type="checkbox" value="url" checked> URL</label>
+                                        <label><input type="checkbox" value="dateAdded"> 添加日期</label>
+                                        <label><input type="checkbox" value="lastVisited"> 最后访问</label>
+                                        <label><input type="checkbox" value="visitCount"> 访问次数</label>
+                                        <label><input type="checkbox" value="folder"> 文件夹</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="export-actions">
+                            <button id="export-backup-btn" class="action-btn primary">备份所有书签</button>
+                            <button id="export-selected-btn" class="action-btn">导出选中项</button>
+                            <button id="export-ai-categories-btn" class="action-btn">导出AI分类</button>
+                            <button id="export-custom-btn" class="action-btn">自定义导出</button>
+                        </div>
+                    </div>
+
+                    <!-- 检测报告 -->
+                    <div class="setting-group">
+                        <label>📊 检测报告</label>
+                        <p class="description">查看和管理各种检测报告。</p>
+                        
+                        <div class="report-section">
+                            <div class="report-actions">
+                                <button id="view-duplicate-report-btn" class="action-btn">查看重复书签报告</button>
+                                <button id="view-invalid-report-btn" class="action-btn">查看失效书签报告</button>
+                                <button id="view-cleanup-report-btn" class="action-btn">查看清理报告</button>
+                                <button id="generate-comprehensive-report-btn" class="action-btn primary">生成综合报告</button>
+                            </div>
+                            
+                            <div class="report-history">
+                                <h4>报告历史</h4>
+                                <div id="report-list" class="report-list">
+                                    <!-- 报告列表将在这里动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 数据备份 -->
+                    <div class="setting-group">
+                        <label>💾 数据备份</label>
+                        <p class="description">自动备份和恢复书签数据。</p>
+                        
+                        <div class="backup-section">
+                            <div class="backup-settings">
+                                <h4>备份设置</h4>
+                                <div class="setting-item">
+                                    <label for="auto-backup-frequency">自动备份频率</label>
+                                    <select id="auto-backup-frequency" title="选择自动备份频率">
+                                        <option value="never">从不</option>
+                                        <option value="daily">每天</option>
+                                        <option value="weekly">每周</option>
+                                        <option value="monthly">每月</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label for="backup-retention">保留备份数量</label>
+                                    <input type="number" id="backup-retention" value="10" min="1" max="50" title="设置保留的备份文件数量">
+                                </div>
+                                
+                                <div class="setting-item">
+                                    <label>
+                                        <input type="checkbox" id="encrypt-backups">
+                                        加密备份文件
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="backup-actions">
+                                <button id="create-backup-btn" class="action-btn primary">创建备份</button>
+                                <button id="restore-backup-btn" class="action-btn">恢复备份</button>
+                                <button id="manage-backups-btn" class="action-btn">管理备份</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 个性化设置标签页 -->
+                <div id="tab-personalization" class="tab-content">
+                    <h2>🎨 个性化设置</h2>
+                    <p class="description">自定义界面外观和行为。</p>
+                    
+                    <div class="personalization-section">
+                        <div class="animation-settings">
+                            <h4>动画效果</h4>
+                            <div class="setting-item">
+                                <label for="animation-level">动画级别</label>
+                                <select id="animation-level" title="选择动画效果级别">
+                                    <option value="full">完整动画</option>
+                                    <option value="reduced">减少动画</option>
+                                    <option value="none">无动画</option>
+                                </select>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="enable-ripple" checked>
+                                    启用波纹效果
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="enable-floating" checked>
+                                    启用浮动动画
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="enable-particles">
+                                    启用粒子效果
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="ui-settings">
+                            <h4>界面设置</h4>
+                            <div class="setting-item">
+                                <label for="ui-density">界面密度</label>
+                                <select id="ui-density" title="选择界面元素密度">
+                                    <option value="comfortable">舒适</option>
+                                    <option value="compact">紧凑</option>
+                                    <option value="spacious">宽松</option>
+                                </select>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label for="corner-radius">圆角大小</label>
+                                <input type="range" id="corner-radius" min="4" max="24" value="12" title="调整界面元素圆角大小">
+                                <span id="corner-radius-value">12px</span>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label for="blur-intensity">毛玻璃强度</label>
+                                <input type="range" id="blur-intensity" min="5" max="30" value="15" title="调整毛玻璃模糊效果强度">
+                                <span id="blur-intensity-value">15px</span>
+                            </div>
+                        </div>
+                        
+                        <div class="color-settings">
+                            <h4>颜色主题</h4>
+                            <div class="color-palette">
+                                <div class="color-option active" data-color="blue" style="background: linear-gradient(135deg, #007aff, #5856d6);"></div>
+                                <div class="color-option" data-color="purple" style="background: linear-gradient(135deg, #af52de, #5856d6);"></div>
+                                <div class="color-option" data-color="green" style="background: linear-gradient(135deg, #30d158, #00c896);"></div>
+                                <div class="color-option" data-color="orange" style="background: linear-gradient(135deg, #ff9500, #ff6b35);"></div>
+                                <div class="color-option" data-color="pink" style="background: linear-gradient(135deg, #ff2d92, #ff6b35);"></div>
+                                <div class="color-option" data-color="custom">
+                                    <input type="color" id="custom-color" value="#007aff" title="自定义主题色">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="behavior-settings">
+                            <h4>行为设置</h4>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="auto-save" checked>
+                                    自动保存设置
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="show-notifications" checked>
+                                    显示通知
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="enable-sounds">
+                                    启用音效
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="remember-last-folder" checked>
+                                    记住上次访问的文件夹
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="personalization-actions">
+                        <button id="reset-personalization-btn" class="action-btn">重置为默认</button>
+                        <button id="export-personalization-btn" class="action-btn">导出设置</button>
+                        <button id="import-personalization-btn" class="action-btn">导入设置</button>
                     </div>
                 </div>
 
