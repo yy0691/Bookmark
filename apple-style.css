@@ -892,6 +892,25 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    height: 2.6em; /* 2 lines * 1.3 line-height */
+}
+
+.favicon-container {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    background-color: var(--bg-component-solid);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 8px;
+}
+
+.fallback-icon, .fallback-icon svg {
+    width: 24px;
+    height: 24px;
+    color: var(--text-tertiary);
 }
 
 
@@ -944,7 +963,7 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
     margin: 2px 0;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
     font-weight: 500;
     color: var(--text-secondary);
     white-space: nowrap;
@@ -955,33 +974,68 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 .folder-item:hover {
     background-color: var(--bg-component-hover);
     color: var(--text-primary);
+    transform: translateX(3px);
 }
 .folder-item.active {
     background-color: var(--blue);
     color: var(--text-on-accent);
     font-weight: 600;
 }
+.folder-item.active .folder-icon,
+.folder-item.active .folder-toggle-icon {
+    color: var(--text-on-accent);
+}
+
 .folder-toggle {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
-    text-align: center;
-    line-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-tertiary);
     transition: transform 0.2s ease;
 }
-.folder-toggle.expanded { transform: rotate(90deg); }
-.folder-icon { margin: 0 5px; }
-.folder-name { flex-grow: 1; overflow: hidden; text-overflow: ellipsis; }
+
+li.expanded > .folder-item .folder-toggle-icon { 
+    transform: rotate(90deg); 
+}
+
+.folder-toggle-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+.folder-toggle-placeholder {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.folder-icon { 
+    margin: 0 8px 0 4px; 
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+}
+
+.folder-name { 
+    flex-grow: 1; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
+
 .sub-folders {
     list-style: none;
-    padding-left: 20px;
+    padding-left: 0;
     max-height: 0;
     overflow: hidden;
     transition: max-height 0.3s ease-out;
 }
-.sub-folders.expanded {
-    max-height: 1000px;
+
+li.expanded > .sub-folders {
+    max-height: 1000px; /* Arbitrary large value */
     transition: max-height 0.5s ease-in;
 }
 
@@ -1016,6 +1070,13 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 .folder-item:hover .folder-tooltip {
     opacity: 1;
     visibility: visible;
+}
+
+/* --- General Icon Styles --- */
+i[data-lucide] {
+    width: 1em;
+    height: 1em;
+    stroke-width: 2;
 }
 
 /* --- Advanced Settings Panel --- */

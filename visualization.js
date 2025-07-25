@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let bookmarkTreeRoot = null;
     let currentFolderNode = null;
     let currentBookmarks = [];
-    let currentViewMode = 'card';
+    let currentViewMode = 'icon'; // Default to icon view
     let analysisCategories = {};
     let suggestedCategories = []; // New state for suggested categories
 
@@ -239,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFolderNode = bookmarkTreeRoot;
             renderFolderTree(bookmarkTreeRoot);
             loadAndDisplayBookmarks(currentFolderNode);
+            if (window.lucide) {
+                lucide.createIcons();
+            }
         });
         initializeEventListeners();
         setViewMode(currentViewMode);
@@ -468,6 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         bookmarks.forEach(bookmark => bookmarkContainer.appendChild(createBookmarkElement(bookmark)));
+        if (window.lucide) {
+            lucide.createIcons();
+        }
     }
 
     function createBookmarkElement(bookmark) {
@@ -475,9 +481,16 @@ document.addEventListener('DOMContentLoaded', () => {
         item.className = 'bookmark-item';
         const url = new URL(bookmark.url);
         const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+        
+        // Fallback icon using Lucide
+        const fallbackIcon = `<i data-lucide="globe-2" class="fallback-favicon"></i>`;
+
         item.innerHTML = `
             <a href="${bookmark.url}" target="_blank" title="${bookmark.title}\n${bookmark.url}">
-                <img class="bookmark-favicon" src="${faviconUrl}" onerror="this.src='images/icon.png'">
+                <div class="favicon-container">
+                    <img class="bookmark-favicon" src="${faviconUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                    <span class="fallback-icon" style="display:none;"><i data-lucide="globe-2"></i></span>
+                </div>
                 <span class="bookmark-title">${bookmark.title || url.hostname}</span>
             </a>`;
         return item;
@@ -504,15 +517,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         folderListContainer.innerHTML = '';
         folderListContainer.appendChild(folderList);
+        if (window.lucide) {
+            lucide.createIcons();
+        }
     }
 
     function createFolderNode(node, level, isRoot = false) {
         const listItem = document.createElement('li');
         const hasSubfolders = node.children && node.children.some(child => child.children);
+        
+        const iconName = isRoot ? 'book-marked' : 'folder';
+        const toggleIcon = hasSubfolders ? '<i data-lucide="chevron-right" class="folder-toggle-icon"></i>' : '<span class="folder-toggle-placeholder"></span>';
+
         listItem.innerHTML = `
             <div class="folder-item" style="padding-left: ${level * 15}px;">
-                <span class="folder-toggle ${hasSubfolders ? '' : 'hidden'}">▸</span>
-                <span class="folder-icon">${isRoot ? '📚' : '📁'}</span>
+                <span class="folder-toggle">${toggleIcon}</span>
+                <i data-lucide="${iconName}" class="folder-icon"></i>
                 <span class="folder-name">${isRoot ? '所有书签' : node.title || '未命名文件夹'}</span>
                 <div class="folder-tooltip">${isRoot ? '所有书签' : node.title || '未命名文件夹'}</div>
             </div>`;
@@ -529,8 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
             subFoldersContainer.className = 'sub-folders';
             toggle.addEventListener('click', e => {
                 e.stopPropagation();
-                toggle.classList.toggle('expanded');
-                subFoldersContainer.classList.toggle('expanded');
+                listItem.classList.toggle('expanded');
             });
             node.children.forEach(child => {
                 if (child.children) subFoldersContainer.appendChild(createFolderNode(child, level + 1));
