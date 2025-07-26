@@ -101,9 +101,16 @@ body.theme-light {
   box-sizing: border-box;
 }
 
+/* 优化动画效果 - 减少性能消耗 */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { 
+    opacity: 0; 
+    transform: translateZ(0) translateY(8px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateZ(0) translateY(0); 
+  }
 }
 
 body.visualization-page {
@@ -120,132 +127,159 @@ body.visualization-page {
     transition: background 0.5s ease, color 0.5s ease;
 }
 
-/* 动画效果增强 */
+/* 优化滑动动画 - 使用更高效的属性 */
 @keyframes slideInFromLeft {
     from {
         opacity: 0;
-        transform: translateX(-30px);
+        transform: translateZ(0) translateX(-20px);
     }
     to {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateZ(0) translateX(0);
     }
 }
 
 @keyframes slideInFromRight {
     from {
         opacity: 0;
-        transform: translateX(30px);
+        transform: translateZ(0) translateX(20px);
     }
     to {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateZ(0) translateX(0);
     }
 }
 
 @keyframes slideInFromTop {
     from {
         opacity: 0;
-        transform: translateY(-30px);
+        transform: translateZ(0) translateY(-20px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateZ(0) translateY(0);
     }
 }
 
 @keyframes slideInFromBottom {
     from {
         opacity: 0;
-        transform: translateY(30px);
+        transform: translateZ(0) translateY(20px);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateZ(0) translateY(0);
     }
 }
 
+/* 优化缩放动画 - 减少动画时长 */
 @keyframes scaleIn {
     from {
         opacity: 0;
-        transform: scale(0.8);
+        transform: translateZ(0) scale(0.95);
     }
     to {
         opacity: 1;
-        transform: scale(1);
+        transform: translateZ(0) scale(1);
     }
 }
 
+/* 优化脉冲动画 - 只使用opacity避免重排 */
 @keyframes pulse {
     0%, 100% {
-        transform: scale(1);
+        opacity: 1;
     }
     50% {
-        transform: scale(1.05);
+        opacity: 0.7;
     }
 }
 
+/* 优化闪烁动画 - 减少复杂度 */
 @keyframes shimmer {
     0% {
-        background-position: -200px 0;
+        background-position: -100px 0;
     }
     100% {
-        background-position: calc(200px + 100%) 0;
+        background-position: calc(100px + 100%) 0;
     }
 }
 
-/* 应用动画到元素 */
+/* 应用优化后的动画到元素 - 减少延迟和时长 */
 .folder-item {
-    animation: slideInFromLeft 0.4s ease-out;
+    animation: slideInFromLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 .bookmark-item {
-    animation: scaleIn 0.3s ease-out;
+    animation: scaleIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
+/* 减少动画延迟，提高响应速度 */
 .bookmark-item:nth-child(odd) {
-    animation-delay: 0.1s;
+    animation-delay: 0.05s;
 }
 
 .bookmark-item:nth-child(even) {
-    animation-delay: 0.2s;
+    animation-delay: 0.08s;
 }
 
 .tab-content {
-    animation: slideInFromRight 0.4s ease-out;
+    animation: slideInFromRight 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
 .section {
-    animation: slideInFromTop 0.5s ease-out;
+    animation: slideInFromTop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+    transform: translateZ(0);
 }
 
-/* 悬停动画效果 */
+/* 优化悬停动画效果 - 只保留进入动画，移除离开动画 */
+.bookmark-item {
+    transition: none; /* 移除默认过渡效果 */
+}
+
 .bookmark-item:hover {
-    animation: pulse 0.3s ease-in-out;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateZ(0) translateY(-2px) scale(1.02);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); /* 只设置进入动画 */
+}
+
+.folder-item {
+    transition: none; /* 移除默认过渡效果 */
 }
 
 .folder-item:hover {
-    transform: translateX(5px) scale(1.02);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0) translateX(3px) scale(1.01);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); /* 只设置进入动画 */
 }
 
-/* 按钮点击动画 */
+/* 优化按钮点击动画 - 只保留点击时的动画 */
+.action-btn {
+    transition: none; /* 移除默认过渡效果 */
+}
+
 .action-btn:active {
-    transform: scale(0.95);
-    transition: transform 0.1s ease;
+    transform: translateZ(0) scale(0.98);
+    transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1); /* 只设置点击动画 */
 }
 
-/* 加载动画 */
+/* 优化加载动画 - 减少复杂度 */
 .loading {
     background: linear-gradient(90deg, 
         rgba(255, 255, 255, 0.1) 25%, 
-        rgba(255, 255, 255, 0.3) 50%, 
+        rgba(255, 255, 255, 0.2) 50%, 
         rgba(255, 255, 255, 0.1) 75%);
-    background-size: 200px 100%;
-    animation: shimmer 1.5s infinite;
+    background-size: 100px 100%;
+    animation: shimmer 1s infinite;
+    will-change: background-position;
 }
 
-/* 进度条动画 */
+/* 优化进度条动画 */
 .progress-bar-container {
     overflow: hidden;
     border-radius: 8px;
@@ -253,11 +287,12 @@ body.visualization-page {
 }
 
 #analysis-progress-bar {
-    transition: width 0.3s ease;
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     background: linear-gradient(90deg, #007aff, #5856d6);
     height: 100%;
     border-radius: 8px;
     position: relative;
+    will-change: width;
 }
 
 #analysis-progress-bar::after {
@@ -269,9 +304,10 @@ body.visualization-page {
     bottom: 0;
     background: linear-gradient(90deg, 
         transparent 0%, 
-        rgba(255, 255, 255, 0.3) 50%, 
+        rgba(255, 255, 255, 0.2) 50%, 
         transparent 100%);
-    animation: shimmer 2s infinite;
+    animation: shimmer 1.5s infinite;
+    will-change: background-position;
 }
 
 /* 卡片翻转动画 */
@@ -580,9 +616,9 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 }
 
 .visualization-page #folder-sidebar {
-    width: 280px;
-    min-width: 200px;
-    max-width: 500px;
+    width: 60px;
+    min-width: 60px;
+    max-width: 400px;
     flex-shrink: 0;
     background-color: var(--bg-component);
     backdrop-filter: blur(25px);
@@ -594,6 +630,13 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
     transition: width 0.3s ease, min-width 0.3s ease, background-color 0.3s ease;
     position: relative;
     z-index: 10;
+    border-radius: 0; /* 移除圆角 */
+}
+
+/* 侧边栏展开状态 */
+.visualization-page #folder-sidebar.expanded {
+    width: 220px;
+    min-width: 220px;
 }
 
 .visualization-page #sidebar-resizer {
@@ -616,6 +659,7 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
     padding: 20px;
     overflow: hidden;
     position: relative;
+    border-radius: 0; /* 移除圆角 */
 }
 
 /* --- Search & View Controls --- */
@@ -850,8 +894,8 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 }
 
 #bookmark-container.icon-view {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
 }
 
 #bookmark-container.icon-view .bookmark-item {
@@ -915,41 +959,222 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 
 
 /* --- Sidebar --- */
-#sidebar-controls {
-    display: flex;
-    justify-content: flex-end;
-    padding: 10px;
-    gap: 10px;
-}
-
+/* 侧边栏底部布局 */
 #sidebar-footer {
-    padding: 10px;
+    padding: 6px 4px;
     margin-top: auto; /* Push to the bottom */
     display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid var(--border-component);
+    background: rgba(255, 255, 255, 0.05);
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 视图控制区域 */
+.view-controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 功能控制区域 */
+.function-controls-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 功能按钮行 */
+.function-btn-row {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    padding: 0 2px;
+}
+
+/* 功能按钮样式 */
+.function-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 6px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    flex-shrink: 0;
+}
+
+.function-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.function-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* 美化侧边栏按钮 */
+.view-toggle-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    width: 100%;
+    justify-content: center;
+    min-height: 32px;
+    word-wrap: break-word;
+    white-space: normal;
+    line-height: 1.3;
+}
+
+/* 图标样式优化 */
+.view-toggle-btn i,
+.function-btn i {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.view-toggle-btn svg,
+.function-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* 图标悬停效果 */
+.view-toggle-btn:hover svg,
+.function-btn:hover svg {
+    stroke-width: 2.5;
+    transform: scale(1.1);
+    transition: all 0.2s ease;
+}
+
+/* 60px模式下隐藏按钮文本 */
+.btn-text {
+    display: none;
+}
+
+/* 展开模式下显示按钮文本 */
+.visualization-page #folder-sidebar.expanded .btn-text {
+    display: inline;
+}
+
+/* 60px模式下按钮居中 */
+.visualization-page #folder-sidebar .view-toggle-btn {
     justify-content: center;
 }
 
-#sidebar-controls button {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    width: 30px;
-    height: 30px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 18px;
-    line-height: 1;
-    transition: all 0.2s ease;
+/* 展开模式下按钮左对齐 */
+.visualization-page #folder-sidebar.expanded .view-toggle-btn {
+    justify-content: flex-start;
+    padding: 8px 12px;
 }
-#sidebar-controls button:hover {
-    background: var(--bg-component-hover);
-    color: var(--text-primary);
+
+#sidebar-controls button:hover,
+#sidebar-footer button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#sidebar-controls button:active,
+#sidebar-footer button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 功能按钮样式 - 正方形图标按钮 */
+.function-btn {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    font-size: 16px !important;
+}
+
+.function-btn:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.function-btn:active {
+    transform: translateY(0) !important;
+}
+
+/* 设置按钮特殊样式 */
+#sidebar-controls .settings-btn,
+#sidebar-footer .settings-btn {
+    background: linear-gradient(135deg, #007aff, #5856d6);
+    color: white;
+    border: none;
+}
+
+#sidebar-controls .settings-btn:hover,
+#sidebar-footer .settings-btn:hover {
+    background: linear-gradient(135deg, #0056b3, #4a4bb8);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3);
+}
+
+/* 视图切换按钮样式 */
+.view-toggle-btn {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.view-toggle-btn.active {
+    background: linear-gradient(135deg, #30d158, #34c759) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.view-toggle-btn.active:hover {
+    background: linear-gradient(135deg, #28a745, #2d9d47) !important;
 }
 
 #folder-list-container {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 0 10px;
+    padding: 0 4px;
+    margin: 6px 0;
+    min-height: 0;
 }
 .folder-list {
     list-style: none;
@@ -959,27 +1184,83 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 .folder-item {
     display: flex;
     align-items: center;
-    padding: 8px 10px;
-    margin: 2px 0;
-    border-radius: var(--radius-sm);
+    padding: 8px;
+    margin: 2px 4px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     font-weight: 500;
     color: var(--text-secondary);
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
     position: relative;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid transparent;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 12px;
+    line-height: 1.3;
+    word-wrap: break-word;
+    justify-content: center;
+    min-height: 40px;
+}
+
+/* 60px模式下文件夹样式 */
+.visualization-page #folder-sidebar .folder-item {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+    padding: 6px 4px;
+    justify-content: center;
+}
+
+/* 展开模式下文件夹样式 */
+.visualization-page #folder-sidebar.expanded .folder-item {
+    flex-direction: row;
+    gap: 8px;
+    text-align: left;
+    padding: 8px 8px;
+    justify-content: flex-start;
+}
+
+/* 60px模式下隐藏文件夹名称 */
+.visualization-page #folder-sidebar .folder-name {
+    display: none;
+}
+
+/* 展开模式下显示文件夹名称 */
+.visualization-page #folder-sidebar.expanded .folder-name {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 文件夹图标样式 */
+.folder-item .folder-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .folder-item:hover {
-    background-color: var(--bg-component-hover);
+    background: rgba(255, 255, 255, 0.15);
     color: var(--text-primary);
-    transform: translateX(3px);
+    transform: translateX(5px);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 .folder-item.active {
-    background-color: var(--blue);
-    color: var(--text-on-accent);
+    background: linear-gradient(135deg, #007aff, #5856d6);
+    color: white;
     font-weight: 600;
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
 }
 .folder-item.active .folder-icon,
 .folder-item.active .folder-toggle-icon {
@@ -1040,15 +1321,29 @@ li.expanded > .sub-folders {
 }
 
 /* Sidebar Modes */
-.sidebar-collapsed #folder-sidebar { width: 50px; min-width: 50px; padding: 0; }
+.sidebar-collapsed #folder-sidebar { width: 60px; min-width: 60px; padding: 0; }
 .sidebar-collapsed #folder-list-container,
 .sidebar-collapsed #sidebar-resizer { display: none; }
 .sidebar-collapsed #toggle-sidebar-btn { transform: rotate(180deg); }
-.sidebar-collapsed #sidebar-controls { justify-content: center; }
+.sidebar-collapsed #sidebar-controls { 
+    justify-content: center; 
+    padding: 8px;
+}
+
+.sidebar-collapsed #sidebar-footer { 
+    padding: 8px;
+}
+
+.sidebar-collapsed .function-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 6px !important;
+}
 
 .sidebar-icon-mode .folder-name { display: none; }
 .sidebar-icon-mode .folder-item { justify-content: center; }
-.sidebar-icon-mode #folder-sidebar { width: 80px; min-width: 80px; }
+.sidebar-icon-mode #folder-sidebar { width: 70px; min-width: 70px; }
 
 .folder-tooltip {
     position: absolute;
@@ -1519,33 +1814,70 @@ input:focus, select:focus {
 
 /* 侧边栏折叠时的响应式 */
 @media (max-width: 768px) {
+    .visualization-page #folder-sidebar {
+        width: 60px;
+        min-width: 60px;
+    }
+    
     .sidebar-collapsed #folder-sidebar {
-        width: 100%;
-        min-width: auto;
-        max-height: 60px;
+        width: 50px;
+        min-width: 50px;
     }
     
     .sidebar-collapsed #folder-list-container {
-        display: none;
+        padding: 0 2px;
     }
     
     .sidebar-collapsed #sidebar-footer {
-        display: none;
+        padding: 4px 2px;
+        gap: 4px;
     }
     
     .sidebar-collapsed #sidebar-controls {
-        justify-content: center;
-        padding: 10px;
+        padding: 4px 2px;
     }
     
     .sidebar-collapsed #toggle-sidebar-btn {
-        transform: none;
+        transform: rotate(180deg);
     }
     
     .sidebar-icon-mode #folder-sidebar {
-        width: 100%;
-        min-width: auto;
-        max-height: 80px;
+        width: 70px;
+        min-width: 70px;
+    }
+    
+    /* 移动端功能按钮优化 */
+    .function-btn {
+        width: 28px !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding: 4px !important;
+    }
+    
+    .function-btn-row {
+        gap: 3px !important;
+        padding: 0 1px !important;
+    }
+    
+    #sidebar-controls,
+    #sidebar-footer {
+        padding: 6px 4px;
+        gap: 4px;
+    }
+    
+    /* 移动端文件夹按钮优化 */
+    .folder-item {
+        padding: 6px 3px;
+        margin: 1px 2px;
+        font-size: 11px;
+    }
+    
+    .visualization-page #folder-sidebar .folder-item {
+        padding: 4px 2px;
+    }
+    
+    .visualization-page #folder-sidebar.expanded .folder-item {
+        padding: 6px 6px;
     }
 }
 

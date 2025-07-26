@@ -239,9 +239,20 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFolderNode = bookmarkTreeRoot;
             renderFolderTree(bookmarkTreeRoot);
             loadAndDisplayBookmarks(currentFolderNode);
-            if (window.lucide) {
-                lucide.createIcons();
+                    // 延迟初始化图标，确保DOM完全加载
+        setTimeout(() => {
+            initializeIcons();
+        }, 100);
+        
+        // 额外检查：如果5秒后图标仍未显示，强制重新初始化
+        setTimeout(() => {
+            const icons = document.querySelectorAll('[data-lucide]');
+            const hasSvg = Array.from(icons).some(icon => icon.querySelector('svg'));
+            if (!hasSvg && icons.length > 0) {
+                console.log('🔄 5秒后检测到图标未显示，强制重新初始化...');
+                initializeIcons();
             }
+        }, 5000);
         });
         initializeEventListeners();
         setViewMode(currentViewMode);
@@ -252,22 +263,148 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 处理URL参数
         handleUrlParameters();
+        
+        // 确保图标正确显示
+        initializeIcons();
     }
-
+    
+    // 图标初始化函数
+    function initializeIcons() {
+        console.log('🔄 开始初始化图标...');
+        
+        // 检查Lucide是否可用
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            try {
+                // 清除可能存在的备用图标
+                clearFallbackIcons();
+                
+                // 初始化Lucide图标
+                lucide.createIcons();
+                console.log('✅ Lucide图标初始化成功');
+                
+                // 验证图标是否正确创建
+                const icons = document.querySelectorAll('[data-lucide]');
+                console.log(`📊 找到 ${icons.length} 个图标元素`);
+                
+                let successCount = 0;
+                icons.forEach((icon, index) => {
+                    const iconName = icon.getAttribute('data-lucide');
+                    const hasSvg = icon.querySelector('svg') !== null;
+                    if (hasSvg) {
+                        successCount++;
+                        console.log(`✅ 图标 ${index + 1}: ${iconName} - SVG创建成功`);
+                    } else {
+                        console.warn(`⚠️ 图标 ${index + 1}: ${iconName} - SVG创建失败`);
+                    }
+                });
+                
+                console.log(`📈 图标创建成功率: ${successCount}/${icons.length}`);
+                
+                // 如果所有图标都创建失败，使用备用方案
+                if (successCount === 0 && icons.length > 0) {
+                    console.warn('⚠️ 所有图标创建失败，使用备用图标');
+                    createFallbackIcons();
+                }
+                
+            } catch (error) {
+                console.error('❌ Lucide图标初始化失败:', error);
+                createFallbackIcons();
+            }
+        } else {
+            console.warn('⚠️ Lucide库未加载，使用备用图标');
+            createFallbackIcons();
+        }
+    }
+    
+    // 清除备用图标
+    function clearFallbackIcons() {
+        document.querySelectorAll('[data-lucide]').forEach(element => {
+            // 移除备用图标的文本内容
+            if (element.textContent && element.textContent.length <= 2) {
+                element.textContent = '';
+            }
+            // 移除备用图标的样式
+            element.style.fontSize = '';
+            element.style.display = '';
+            element.style.alignItems = '';
+            element.style.justifyContent = '';
+        });
+    }
+    
+    function createFallbackIcons() {
+        console.log('🔄 创建备用SVG图标...');
+        
+        // 备用SVG图标方案 - 使用内联SVG确保美观统一
+        const svgIcons = {
+            'settings': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+            'chevron-right': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
+            'chevron-left': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
+            'grid': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
+            'square': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>',
+            'list': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>'
+        };
+        
+        document.querySelectorAll('[data-lucide]').forEach(element => {
+            const iconName = element.getAttribute('data-lucide');
+            if (svgIcons[iconName]) {
+                element.innerHTML = svgIcons[iconName];
+                element.style.display = 'flex';
+                element.style.alignItems = 'center';
+                element.style.justifyContent = 'center';
+                console.log(`✅ 创建备用SVG图标: ${iconName}`);
+            }
+                });
+    }
+    
+    // 添加调试按钮
+    function addDebugButton() {
+        const debugBtn = document.createElement('button');
+        debugBtn.textContent = '🔧 重新初始化图标';
+        debugBtn.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0.8;
+        `;
+        debugBtn.addEventListener('click', () => {
+            console.log('🔧 手动重新初始化图标...');
+            initializeIcons();
+        });
+        document.body.appendChild(debugBtn);
+    }
+    
     function initializeEventListeners() {
         // Main UI
         searchInput.addEventListener('input', handleSearch);
-        toggleSidebarBtn.addEventListener('click', toggleSidebarCollapse);
-        iconModeBtn.addEventListener('click', toggleIconMode);
-        listViewBtn.addEventListener('click', () => setViewMode('list'));
-        cardViewBtn.addEventListener('click', () => setViewMode('card'));
-        iconViewBtn.addEventListener('click', () => setViewMode('icon'));
+        toggleSidebarBtn.addEventListener('click', toggleSidebarExpand);
         
-        // 批量操作模式
-        const batchModeBtn = document.getElementById('batch-mode-btn');
-        if (batchModeBtn) {
-            batchModeBtn.addEventListener('click', toggleBatchMode);
-        }
+        // 新的侧边栏视图切换按钮
+        const viewToggleBtns = document.querySelectorAll('.view-toggle-btn');
+        viewToggleBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const view = e.currentTarget.dataset.view;
+                setViewMode(view);
+                
+                // 更新按钮状态
+                viewToggleBtns.forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+            });
+        });
+        
+        // 保留原有的视图按钮（如果存在）
+        if (listViewBtn) listViewBtn.addEventListener('click', () => setViewMode('list'));
+        if (cardViewBtn) cardViewBtn.addEventListener('click', () => setViewMode('card'));
+        if (iconViewBtn) iconViewBtn.addEventListener('click', () => setViewMode('icon'));
+        
+
         
         initResizer(sidebar, resizer);
 
@@ -579,7 +716,32 @@ document.addEventListener('DOMContentLoaded', () => {
         displayBookmarks(currentBookmarks);
     }
 
-    function toggleSidebarCollapse() { body.classList.toggle('sidebar-collapsed'); }
+    function toggleSidebarExpand() { 
+        const sidebar = document.getElementById('folder-sidebar');
+        sidebar.classList.toggle('expanded');
+        
+        // 更新按钮图标
+        const toggleBtn = document.getElementById('toggle-sidebar-btn');
+        const icon = toggleBtn.querySelector('i');
+        if (sidebar.classList.contains('expanded')) {
+            icon.setAttribute('data-lucide', 'chevron-left');
+            toggleBtn.title = '收起侧边栏';
+        } else {
+            icon.setAttribute('data-lucide', 'chevron-right');
+            toggleBtn.title = '展开侧边栏';
+        }
+        
+        // 重新初始化图标
+        setTimeout(() => {
+            initializeIcons();
+        }, 50);
+        
+        // 添加调试按钮（仅在开发模式下）
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            addDebugButton();
+        }
+    }
+    
     function toggleIconMode() { body.classList.toggle('sidebar-icon-mode'); }
 
     function initResizer(sidebarEl, resizerEl) {

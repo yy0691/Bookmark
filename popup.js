@@ -38,6 +38,9 @@ function throttle(func, limit) {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 书签助手 Popup 初始化...');
   
+  // 初始化动画优化器
+  initializeAnimationOptimizer();
+  
   // 初始化统计数据
   loadBookmarkStats();
   
@@ -259,6 +262,72 @@ function checkApiStatus() {
   });
 }
 
+// 初始化动画优化器
+function initializeAnimationOptimizer() {
+  // 加载动画优化器脚本
+  const script = document.createElement('script');
+  script.src = 'animation-optimizer.js';
+  script.onload = () => {
+    console.log('✅ 动画优化器加载完成');
+    // 优化现有动画
+    optimizeExistingAnimations();
+  };
+  document.head.appendChild(script);
+}
+
+// 优化现有动画
+function optimizeExistingAnimations() {
+  // 为所有动画元素添加硬件加速
+  const animatedElements = document.querySelectorAll('.btn, .stat-card, .category');
+  
+  animatedElements.forEach(element => {
+    element.style.willChange = 'transform, opacity';
+    element.style.transform = 'translateZ(0)';
+  });
+  
+  // 优化CSS动画
+  optimizeCSSAnimations();
+}
+
+// 优化CSS动画
+function optimizeCSSAnimations() {
+  const optimizedStyles = `
+    /* 动画性能优化 */
+    .btn, .stat-card, .category {
+      will-change: transform, opacity;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    
+    /* 移除默认过渡效果，只保留必要的动画 */
+    .btn {
+      transition: none; /* 移除默认过渡效果 */
+    }
+    
+    /* 优化悬停效果 - 只保留进入动画 */
+    .btn:hover {
+      transform: translateZ(0) translateY(-1px);
+      transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); /* 只设置进入动画 */
+    }
+    
+    /* 优化点击效果 - 只保留点击动画 */
+    .btn:active {
+      transform: translateZ(0) scale(0.98);
+      transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1); /* 只设置点击动画 */
+    }
+    
+    /* 移除其他元素的默认过渡效果 */
+    .bookmark-item, .folder-item, .action-btn {
+      transition: none;
+    }
+  `;
+  
+  const style = document.createElement('style');
+  style.textContent = optimizedStyles;
+  document.head.appendChild(style);
+}
+
 // 添加优化的按钮加载状态
 function addOptimizedLoadingStates() {
   const buttons = document.querySelectorAll('.btn');
@@ -276,10 +345,10 @@ function addOptimizedLoadingStates() {
       
       // 使用 requestAnimationFrame 确保状态更新
       requestAnimationFrame(() => {
-        // 2秒后移除加载状态（减少等待时间）
+        // 1.5秒后移除加载状态（进一步减少等待时间）
         setTimeout(() => {
           this.classList.remove('loading');
-        }, 2000);
+        }, 1500);
       });
     });
   });

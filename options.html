@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>书签助手 - 设置</title>
   <style>
     * {
@@ -27,8 +28,8 @@
     /* 头部区域 */
     .header {
       background: rgba(255, 255, 255, 0.3);
-      backdrop-filter: blur(25px);
       -webkit-backdrop-filter: blur(25px);
+      backdrop-filter: blur(25px);
       border: 1px solid rgba(255, 255, 255, 0.4);
       border-radius: 24px;
       padding: 32px;
@@ -62,8 +63,8 @@
     /* 区块样式 */
     .section {
       background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.3);
       border-radius: 20px;
       padding: 32px;
@@ -121,8 +122,8 @@
       width: 100%;
       padding: 14px 16px;
       background: rgba(255, 255, 255, 0.4);
-      backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.5);
       border-radius: 12px;
       font-size: 15px;
@@ -148,8 +149,8 @@
     /* 按钮样式 */
     button {
       background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.3);
       border-radius: 12px;
       padding: 12px 20px;
@@ -202,8 +203,8 @@
       margin-top: 20px;
       font-weight: 500;
       font-size: 14px;
-      backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
     }
 
     .success {
@@ -226,8 +227,8 @@
       background: rgba(255, 255, 255, 0.1);
       padding: 12px 16px;
       border-radius: 10px;
-      backdrop-filter: blur(5px);
       -webkit-backdrop-filter: blur(5px);
+      backdrop-filter: blur(5px);
     }
 
     .api-link {
@@ -252,8 +253,8 @@
       margin-top: 24px;
       padding: 20px;
       background: rgba(0, 0, 0, 0.05);
-      backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 16px;
       display: none;
@@ -418,10 +419,10 @@
         <label for="api-key">API密钥</label>
         <input type="password" id="api-key" placeholder="请输入API密钥">
         <div class="api-info" id="api-gemini-info">
-          📎 获取Gemini API密钥：<a href="https://aistudio.google.com/apikey" target="_blank" class="api-link">Google AI Studio</a>
+          📎 获取Gemini API密钥：<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="api-link">Google AI Studio</a>
         </div>
         <div class="api-info hidden" id="api-openai-info">
-          📎 获取OpenAI API密钥：<a href="https://platform.openai.com/api-keys" target="_blank" class="api-link">OpenAI Platform</a>
+          📎 获取OpenAI API密钥：<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="api-link">OpenAI Platform</a>
         </div>
       </div>
       
