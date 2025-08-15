@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书签可视化 - 改进版</title>
+    <link rel="stylesheet" href="apple-style-improved.css">
+    <script src="lucide.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏 - 简化后的导航 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i data-lucide="bookmark" class="logo-icon"></i>
+                    <span class="logo-text">书签</span>
+                </div>
+            </div>
+
+            <!-- 文件夹树形导航 -->
+            <nav class="folder-tree" id="folder-tree">
+                <div class="tree-loading">
+                    <i data-lucide="loader" class="loading-icon"></i>
+                    <span>加载中...</span>
+                </div>
+            </nav>
+
+            <!-- 侧边栏底部操作 -->
+            <div class="sidebar-actions">
+                <button class="action-btn" id="import-btn" title="导入书签">
+                    <i data-lucide="upload"></i>
+                </button>
+                <button class="action-btn" id="export-btn" title="导出书签">
+                    <i data-lucide="download"></i>
+                </button>
+                <button class="action-btn" id="settings-btn" title="设置">
+                    <i data-lucide="settings"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 顶部工具栏 -->
+            <header class="toolbar">
+                <div class="toolbar-left">
+                    <button class="toolbar-btn" id="toggle-sidebar-btn">
+                        <i data-lucide="sidebar"></i>
+                    </button>
+                    <div class="breadcrumb" id="breadcrumb">
+                        <span class="breadcrumb-item">所有书签</span>
+                    </div>
+                </div>
+
+                <div class="toolbar-center">
+                    <div class="search-container">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" 
+                               class="search-input" 
+                               id="search-input" 
+                               placeholder="搜索书签..."
+                               autocomplete="off">
+                        <button class="search-clear" id="search-clear" style="display: none;">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="toolbar-right">
+                    <div class="view-controls">
+                        <button class="view-btn active" id="view-cards" title="卡片视图">
+                            <i data-lucide="grid-3x3"></i>
+                        </button>
+                        <button class="view-btn" id="view-list" title="列表视图">
+                            <i data-lucide="list"></i>
+                        </button>
+                    </div>
+                    <div class="group-controls">
+                        <select class="group-select" id="group-select">
+                            <option value="none">不分组</option>
+                            <option value="domain">按域名分组</option>
+                            <option value="date">按时间分组</option>
+                            <option value="folder">按文件夹分组</option>
+                        </select>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 书签展示区域 -->
+            <section class="bookmark-display" id="bookmark-display">
+                <div class="display-header">
+                    <h2 class="current-folder-title" id="current-folder-title">所有书签</h2>
+                    <div class="display-stats" id="display-stats">
+                        <span class="bookmark-count">0 个书签</span>
+                    </div>
+                </div>
+
+                <!-- 书签容器 -->
+                <div class="bookmark-container" id="bookmark-container">
+                    <div class="loading-state" id="loading-state">
+                        <i data-lucide="loader" class="loading-icon"></i>
+                        <p>正在加载书签...</p>
+                    </div>
+                    
+                    <div class="empty-state" id="empty-state" style="display: none;">
+                        <i data-lucide="bookmark-x" class="empty-icon"></i>
+                        <h3>暂无书签</h3>
+                        <p>开始添加一些书签吧</p>
+                    </div>
+
+                    <!-- 书签网格/列表 -->
+                    <div class="bookmark-grid" id="bookmark-grid">
+                        <!-- 书签卡片将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 设置面板 - 简化版 -->
+    <div class="settings-overlay" id="settings-overlay">
+        <div class="settings-panel" id="settings-panel">
+            <header class="settings-header">
+                <h2>设置</h2>
+                <button class="close-btn" id="close-settings-btn">
+                    <i data-lucide="x"></i>
+                </button>
+            </header>
+
+            <div class="settings-content">
+                <div class="settings-section">
+                    <h3>外观</h3>
+                    <div class="setting-item">
+                        <label>主题</label>
+                        <select id="theme-select">
+                            <option value="auto">跟随系统</option>
+                            <option value="light">浅色</option>
+                            <option value="dark">深色</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>动画效果</label>
+                        <input type="checkbox" id="animations-enabled" checked>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>数据管理</h3>
+                    <div class="setting-actions">
+                        <button class="setting-btn" id="import-bookmarks-btn">
+                            <i data-lucide="upload"></i>
+                            导入书签
+                        </button>
+                        <button class="setting-btn" id="export-bookmarks-btn">
+                            <i data-lucide="download"></i>
+                            导出书签
+                        </button>
+                        <button class="setting-btn danger" id="clear-cache-btn">
+                            <i data-lucide="trash-2"></i>
+                            清除缓存
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>高级功能</h3>
+                    <div class="setting-actions">
+                        <button class="setting-btn" id="find-duplicates-btn">
+                            <i data-lucide="copy"></i>
+                            查找重复书签
+                        </button>
+                        <button class="setting-btn" id="check-broken-links-btn">
+                            <i data-lucide="link-2-off"></i>
+                            检查失效链接
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知系统 -->
+    <div class="notification-container" id="notification-container"></div>
+
+    <script src="visualization-improved.js"></script>
+</body>
+</html>

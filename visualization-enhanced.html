@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书签工作台 - 增强版</title>
+    <link rel="stylesheet" href="visualization-enhanced.css">
+    <script src="lucide.min.js"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="top-nav">
+        <div class="nav-left">
+            <div class="logo">
+                <i data-lucide="bookmark" class="logo-icon"></i>
+                BookmarkHub
+            </div>
+            <div class="search-container">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" class="search-input" id="search-input" placeholder="搜索书签和文件夹... (Ctrl + K)">
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="nav-btn" id="layout-btn" title="布局设置">
+                <i data-lucide="layout-grid"></i>
+            </button>
+            <button class="nav-btn" id="settings-btn" title="设置">
+                <i data-lucide="settings"></i>
+            </button>
+            <button class="nav-btn" id="profile-btn" title="个人资料">
+                <i data-lucide="user"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 问候语区域 -->
+        <div class="greeting-section">
+            <h1 class="greeting-text" id="greeting-text">Good evening! 👋</h1>
+            <p class="greeting-time" id="greeting-time">Friday, August 15, 2025 • 07:38 PM</p>
+        </div>
+
+        <!-- 仪表板网格 -->
+        <div class="dashboard-grid" id="dashboard-grid">
+            <!-- 左侧边栏 -->
+            <div class="widget-container left-sidebar">
+                <!-- 文件夹组件 -->
+                <div class="widget folders-widget" id="folders-widget">
+                    <div class="widget-header">
+                        <div class="widget-title-group">
+                            <i data-lucide="folder" class="widget-icon"></i>
+                            <h3 class="widget-title">文件夹</h3>
+                        </div>
+                        <div class="widget-actions">
+                            <button class="widget-btn" title="刷新">
+                                <i data-lucide="refresh-cw"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="folder-list" id="folder-list">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 时钟组件 -->
+                <div class="widget clock-widget" id="clock-widget">
+                    <div class="widget-header">
+                        <div class="widget-title-group">
+                            <i data-lucide="clock" class="widget-icon"></i>
+                            <h3 class="widget-title">世界时钟</h3>
+                        </div>
+                    </div>
+                    <div class="clock-time" id="current-time">07:38 PM</div>
+                    <div class="clock-date" id="current-date">Fri, Aug 15</div>
+                    <div class="clock-timezone">GMT+8</div>
+                </div>
+
+                <!-- 工具组件 -->
+                <div class="widget tools-widget" id="tools-widget">
+                    <div class="widget-header">
+                        <div class="widget-title-group">
+                            <i data-lucide="wrench" class="widget-icon"></i>
+                            <h3 class="widget-title">快速工具</h3>
+                        </div>
+                    </div>
+                    <div class="tool-grid">
+                        <div class="tool-item" data-action="ai-analyze">
+                            <i data-lucide="brain" class="tool-icon"></i>
+                            <span class="tool-name">AI分析</span>
+                        </div>
+                        <div class="tool-item" data-action="detect-duplicates">
+                            <i data-lucide="copy" class="tool-icon"></i>
+                            <span class="tool-name">重复检测</span>
+                        </div>
+                        <div class="tool-item" data-action="broken-links">
+                            <i data-lucide="link-2-off" class="tool-icon"></i>
+                            <span class="tool-name">失效检测</span>
+                        </div>
+                        <div class="tool-item" data-action="export-data">
+                            <i data-lucide="download" class="tool-icon"></i>
+                            <span class="tool-name">导出数据</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中央书签区域 -->
+            <div class="bookmarks-section">
+                <div class="widget">
+                    <div class="section-header">
+                        <h2 class="section-title" id="current-folder-title">最近书签</h2>
+                        <div class="view-controls">
+                            <div class="view-toggle">
+                                <button class="toggle-btn active" id="view-grid">网格</button>
+                                <button class="toggle-btn" id="view-list">列表</button>
+                            </div>
+                            <select class="group-select" id="group-select">
+                                <option value="none">不分组</option>
+                                <option value="domain">按域名分组</option>
+                                <option value="date">按时间分组</option>
+                                <option value="folder">按文件夹分组</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="bookmarks-grid" id="bookmarks-grid">
+                        <!-- 动态生成书签卡片 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧边栏 -->
+            <div class="widget-container right-sidebar">
+                <!-- 统计组件 -->
+                <div class="widget stats-widget" id="stats-widget">
+                    <div class="widget-header">
+                        <div class="widget-title-group">
+                            <i data-lucide="bar-chart-3" class="widget-icon"></i>
+                            <h3 class="widget-title">统计信息</h3>
+                        </div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-bookmarks">0</div>
+                            <div class="stat-label">总书签</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-folders">0</div>
+                            <div class="stat-label">文件夹</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速笔记组件 -->
+                <div class="widget notes-widget" id="notes-widget">
+                    <div class="widget-header">
+                        <div class="widget-title-group">
+                            <i data-lucide="sticky-note" class="widget-icon"></i>
+                            <h3 class="widget-title">快速笔记</h3>
+                        </div>
+                        <div class="widget-actions">
+                            <button class="widget-btn" id="save-notes" title="保存">
+                                <i data-lucide="save"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <textarea class="notes-textarea" id="notes-textarea" placeholder="记录你的想法..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div class="settings-overlay" id="settings-overlay">
+        <div class="settings-panel">
+            <div class="settings-sidebar">
+                <div class="settings-nav" id="settings-nav">
+                    <div class="settings-nav-item active" data-tab="appearance">
+                        <i data-lucide="palette" class="settings-nav-icon"></i>
+                        <span>外观</span>
+                    </div>
+                    <div class="settings-nav-item" data-tab="tools">
+                        <i data-lucide="wrench" class="settings-nav-icon"></i>
+                        <span>工具</span>
+                    </div>
+                    <div class="settings-nav-item" data-tab="data">
+                        <i data-lucide="database" class="settings-nav-icon"></i>
+                        <span>数据管理</span>
+                    </div>
+                    <div class="settings-nav-item" data-tab="personalization">
+                        <i data-lucide="user-cog" class="settings-nav-icon"></i>
+                        <span>个性化</span>
+                    </div>
+                    <div class="settings-nav-item" data-tab="api">
+                        <i data-lucide="plug" class="settings-nav-icon"></i>
+                        <span>API设置</span>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-content">
+                <div class="settings-header">
+                    <h2 class="settings-title" id="settings-title">外观设置</h2>
+                    <button class="close-btn" id="close-settings">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <div id="settings-content-area">
+                    <!-- 动态加载设置内容 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="settings-manager.js"></script>
+    <script src="visualization-enhanced.js"></script>
+</body>
+</html>

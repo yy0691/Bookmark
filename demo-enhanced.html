@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书签工作台增强版 - 演示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .demo-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .demo-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .demo-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+        
+        .demo-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-description {
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+        
+        .demo-actions {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .demo-btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            margin: 0 0.5rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .demo-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .demo-btn.primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+        }
+        
+        .comparison-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 3rem;
+        }
+        
+        .comparison-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        
+        .comparison-item {
+            text-align: center;
+        }
+        
+        .comparison-label {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        
+        .old-version {
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        .new-version {
+            background: rgba(16, 185, 129, 0.2);
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        
+        .feature-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-list li::before {
+            content: '✓ ';
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .old-version .feature-list li::before {
+            content: '• ';
+            color: #ef4444;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-title {
+                font-size: 2rem;
+            }
+            
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .demo-features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <!-- 演示头部 -->
+        <div class="demo-header">
+            <h1 class="demo-title">📚 书签工作台增强版</h1>
+            <p class="demo-subtitle">
+                融合 Nextab 风格设计，保留所有原有功能，打造现代化书签管理体验
+            </p>
+        </div>
+
+        <!-- 核心功能展示 -->
+        <div class="demo-features">
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3 class="feature-title">现代化 UI 设计</h3>
+                <p class="feature-description">
+                    采用 Nextab 风格的深色主题，模块化组件设计，支持自定义布局和拖拽排列
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🔧</div>
+                <h3 class="feature-title">完整功能保留</h3>
+                <p class="feature-description">
+                    100% 保留原有所有功能：AI分析、重复检测、数据导入导出、个性化设置等
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">性能优化</h3>
+                <p class="feature-description">
+                    优化渲染性能，支持虚拟滚动，智能搜索，快捷键操作，响应更加流畅
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">智能分组</h3>
+                <p class="feature-description">
+                    支持按域名、时间、文件夹多维度分组，智能标签系统，快速定位目标书签
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3 class="feature-title">数据可视化</h3>
+                <p class="feature-description">
+                    实时统计信息，访问频率可视化，书签使用趋势分析，数据一目了然
+                </p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🛠️</div>
+                <h3 class="feature-title">强大工具集</h3>
+                <p class="feature-description">
+                    集成 AI 智能分析、重复书签检测、失效链接检查、批量管理等专业工具
+                </p>
+            </div>
+        </div>
+
+        <!-- 对比展示 -->
+        <div class="comparison-section">
+            <h2 class="comparison-title">🔄 升级对比</h2>
+            <div class="comparison-grid">
+                <div class="comparison-item">
+                    <div class="comparison-label old-version">原版本</div>
+                    <ul class="feature-list">
+                        <li>传统苹果风格设计</li>
+                        <li>单一布局模式</li>
+                        <li>功能分散在多个面板</li>
+                        <li>基础搜索和过滤</li>
+                        <li>静态书签展示</li>
+                        <li>设置面板复杂</li>
+                    </ul>
+                </div>
+                
+                <div class="comparison-item">
+                    <div class="comparison-label new-version">增强版</div>
+                    <ul class="feature-list">
+                        <li>现代 Nextab 风格设计</li>
+                        <li>可自定义模块化布局</li>
+                        <li>统一工作台界面</li>
+                        <li>智能搜索和多维分组</li>
+                        <li>动态交互和数据可视化</li>
+                        <li>直观的设置中心</li>
+                        <li>实时时钟和快速笔记</li>
+                        <li>拖拽式组件管理</li>
+                        <li>响应式设计适配</li>
+                        <li>性能优化和快捷键</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="demo-actions">
+            <a href="visualization-enhanced.html" class="demo-btn primary">🚀 体验增强版</a>
+            <a href="visualization.html" class="demo-btn">📖 查看原版本</a>
+            <a href="#" class="demo-btn" onclick="showTechnicalDetails()">🔍 技术详情</a>
+        </div>
+
+        <!-- 技术实现说明 -->
+        <div class="comparison-section" id="technical-details" style="display: none;">
+            <h2 class="comparison-title">🛠️ 技术实现详情</h2>
+            
+            <div style="text-align: left; max-width: 800px; margin: 0 auto;">
+                <h3>🎨 UI/UX 改进</h3>
+                <ul class="feature-list">
+                    <li><strong>深色主题系统：</strong>采用现代深色配色方案，减少视觉疲劳</li>
+                    <li><strong>模块化组件：</strong>可拖拽的组件系统，支持自定义布局</li>
+                    <li><strong>响应式设计：</strong>适配各种屏幕尺寸，移动端友好</li>
+                    <li><strong>微交互动画：</strong>流畅的过渡效果和悬停反馈</li>
+                </ul>
+
+                <h3>⚡ 性能优化</h3>
+                <ul class="feature-list">
+                    <li><strong>虚拟滚动：</strong>大量书签时的性能优化</li>
+                    <li><strong>智能缓存：</strong>减少重复数据处理</li>
+                    <li><strong>懒加载：</strong>按需加载组件和图片</li>
+                    <li><strong>防抖搜索：</strong>优化搜索性能</li>
+                </ul>
+
+                <h3>🔧 功能增强</h3>
+                <ul class="feature-list">
+                    <li><strong>多维分组：</strong>按域名、时间、文件夹智能分组</li>
+                    <li><strong>智能标签：</strong>自动生成和管理书签标签</li>
+                    <li><strong>快速工具：</strong>一键访问常用功能</li>
+                    <li><strong>实时统计：</strong>动态更新的数据统计</li>
+                </ul>
+
+                <h3>🎯 用户体验</h3>
+                <ul class="feature-list">
+                    <li><strong>快捷键支持：</strong>Ctrl+K 快速搜索等</li>
+                    <li><strong>自动保存：</strong>设置和笔记自动保存</li>
+                    <li><strong>智能问候：</strong>根据时间显示不同问候语</li>
+                    <li><strong>一键导出：</strong>支持多种格式数据导出</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 底部信息 -->
+        <div style="text-align: center; margin-top: 3rem; opacity: 0.7;">
+            <p>🎉 基于原有功能完整保留的前提下，打造现代化书签管理体验</p>
+            <p>💡 所有原有设置、工具、数据管理功能均已完整迁移并优化</p>
+        </div>
+    </div>
+
+    <script>
+        function showTechnicalDetails() {
+            const details = document.getElementById('technical-details');
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                details.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                details.style.display = 'none';
+            }
+        }
+
+        // 添加一些交互效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为功能卡片添加悬停效果
+            const cards = document.querySelectorAll('.feature-card');
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // 添加页面加载动画
+            const elements = document.querySelectorAll('.feature-card, .comparison-section');
+            elements.forEach((el, index) => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    el.style.transition = 'all 0.6s ease';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
