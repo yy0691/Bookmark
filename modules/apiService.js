@@ -18,6 +18,104 @@ export class ApiService {
     }
   }
 
+  // 检查网络连接状态
+  async checkNetworkConnection() {
+    try {
+      // 使用多个可靠的检测地址，提高成功率
+      const testUrls = [
+        'https://httpbin.org/status/200',  // 可靠的HTTP测试服务
+        'https://api.github.com/zen',      // GitHub API
+        'https://jsonplaceholder.typicode.com/posts/1', // 测试API
+        'https://www.baidu.com/favicon.ico', // 百度（国内可访问）
+        'https://www.qq.com/favicon.ico'   // 腾讯（国内可访问）
+      ];
+
+      for (const url of testUrls) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+          
+          const response = await fetch(url, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          this.log(`网络连接检测成功: ${url}`, 'success');
+          return true;
+        } catch (urlError) {
+          this.log(`尝试 ${url} 失败: ${urlError.message}`, 'debug');
+          continue; // 尝试下一个URL
+        }
+      }
+
+      // 如果所有URL都失败，尝试本地网络检测
+      if (navigator.onLine !== undefined) {
+        if (navigator.onLine) {
+          this.log('本地网络状态检测：在线', 'info');
+          return true;
+        } else {
+          this.log('本地网络状态检测：离线', 'warning');
+          return false;
+        }
+      }
+
+      // 最后的备用方案：检查是否有可用的网络接口
+      if ('connection' in navigator) {
+        const connection = navigator.connection;
+        if (connection.effectiveType && connection.effectiveType !== 'none') {
+          this.log(`网络连接类型: ${connection.effectiveType}`, 'info');
+          return true;
+        }
+      }
+
+      this.log('所有网络检测方法都失败', 'warning');
+      return false;
+    } catch (error) {
+      this.log(`网络连接检测失败: ${error.message}`, 'warning');
+      return false;
+    }
+  }
+
+  // 检查API密钥格式
+  validateApiKey(apiKey, provider) {
+    if (!apiKey || apiKey.trim() === '') {
+      return { valid: false, error: 'API密钥不能为空' };
+    }
+    
+    switch (provider) {
+      case 'gemini':
+        // Gemini API密钥通常是39个字符的字符串
+        if (apiKey.length < 30) {
+          return { valid: false, error: 'Gemini API密钥格式可能不正确' };
+        }
+        break;
+      case 'openai':
+        // OpenAI API密钥以sk-开头
+        if (!apiKey.startsWith('sk-')) {
+          return { valid: false, error: 'OpenAI API密钥格式不正确，应以sk-开头' };
+        }
+        break;
+    }
+    
+    return { valid: true };
+  }
+
+  // 检查API连接状态
+  checkApiStatus() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(['apiProvider', 'apiKey'], (result) => {
+        const isConnected = !!(result.apiProvider && result.apiKey);
+        resolve({
+          connected: isConnected,
+          provider: result.apiProvider || null
+        });
+      });
+    });
+  }
+
   // 获取API设置
   async getApiSettings() {
     if (!this.isExtensionContext) {
@@ -72,67 +170,98 @@ export class ApiService {
     });
   }
 
-  // 检查API连接状态
-  checkApiStatus() {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get(['apiProvider', 'apiKey'], (result) => {
-        const isConnected = !!(result.apiProvider && result.apiKey);
-        resolve({
-          connected: isConnected,
-          provider: result.apiProvider || null
-        });
-      });
-    });
-  }
-
   // 调用Gemini API
   async callGeminiApi(prompt, apiKey, model) {
-    try {
-      const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
-      const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
-      
-      this.log(`正在调用Gemini API，模型: ${model}`, 'info');
-      
-      const requestData = {
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048
+    const maxRetries = 3;
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
+        const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
+        
+        this.log(`正在调用Gemini API，模型: ${model} (第${attempt}次尝试)`, 'info');
+        
+        const requestData = {
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 2048
+          }
+        };
+        
+        // 添加超时控制
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+        
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData),
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            this.log(`Gemini API错误: ${response.status} ${response.statusText}`, 'error');
+            throw new Error(`API错误: ${response.status} ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          if (!data.candidates || data.candidates.length === 0) {
+            this.log(`Gemini API返回无效数据，没有candidates`, 'error');
+            throw new Error('API返回数据无效，没有candidates');
+          }
+          
+          const responseText = data.candidates[0].content.parts[0].text;
+          this.log(`成功获取API响应，内容长度: ${responseText.length}字符`, 'success');
+          
+          return this.parseJsonResponse(responseText);
+          
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          
+          if (fetchError.name === 'AbortError') {
+            throw new Error('请求超时 (30秒)');
+          }
+          
+          // 重新抛出其他fetch错误
+          throw fetchError;
         }
-      };
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestData)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        this.log(`Gemini API错误: ${response.status} ${response.statusText}`, 'error');
-        throw new Error(`API错误: ${response.status} ${response.statusText}`);
+        
+      } catch (error) {
+        lastError = error;
+        this.log(`Gemini API调用失败 (第${attempt}次): ${error.message}`, 'error');
+        
+        // 如果不是最后一次尝试，等待后重试
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
+          this.log(`等待${delay}ms后重试...`, 'info');
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-      
-      const data = await response.json();
-      
-      if (!data.candidates || data.candidates.length === 0) {
-        this.log(`Gemini API返回无效数据，没有candidates`, 'error');
-        throw new Error('API返回数据无效，没有candidates');
-      }
-      
-      const responseText = data.candidates[0].content.parts[0].text;
-      this.log(`成功获取API响应，内容长度: ${responseText.length}字符`, 'success');
-      
-      return this.parseJsonResponse(responseText);
-    } catch (error) {
-      this.log(`Gemini API调用失败: ${error.message}`, 'error');
-      throw new Error(`Gemini API调用失败: ${error.message}`);
+    }
+    
+    // 所有重试都失败了
+    this.log(`Gemini API调用失败，已重试${maxRetries}次`, 'error');
+    
+    // 提供更详细的错误信息
+    if (lastError.message.includes('Failed to fetch')) {
+      throw new Error(`网络连接失败: ${lastError.message}。请检查网络连接、防火墙设置或API密钥是否正确。`);
+    } else if (lastError.message.includes('超时')) {
+      throw new Error(`请求超时: ${lastError.message}。网络可能较慢，请稍后重试。`);
+    } else {
+      throw new Error(`Gemini API调用失败: ${lastError.message}`);
     }
   }
 

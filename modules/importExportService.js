@@ -5,10 +5,28 @@
 export class ImportExportService {
   constructor() {
     this.logCallback = null;
+    this.isExtensionContext = typeof chrome !== 'undefined' && chrome.bookmarks;
+    this.supportedFormats = ['json', 'html', 'csv'];
   }
 
   setLogCallback(callback) {
     this.logCallback = callback;
+  }
+
+  /**
+   * 初始化导入导出服务
+   */
+  async initialize() {
+    try {
+      this.log('正在初始化导入导出服务...', 'info');
+      
+      // 初始化完成
+      this.log('导入导出服务初始化完成', 'success');
+      return true;
+    } catch (error) {
+      this.log(`导入导出服务初始化失败: ${error.message}`, 'error');
+      return false;
+    }
   }
 
   log(message, type = 'info') {

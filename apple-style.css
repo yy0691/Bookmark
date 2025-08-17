@@ -805,6 +805,13 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
     height: 16px;
     margin-right: 8px;
     border-radius: 2px;
+    object-fit: contain;
+    background-color: transparent;
+    transition: all 0.2s ease;
+}
+
+.bookmark-favicon:hover {
+    transform: scale(1.1);
 }
 
 #bookmark-container.card-view {
@@ -3273,4 +3280,228 @@ input[type="range"]::-moz-range-thumb {
 .radius-20 { border-radius: 20px; }
 .radius-22 { border-radius: 22px; }
 .radius-24 { border-radius: 24px; }
+
+/* --- Favicon Styles --- */
+.bookmark-favicon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    border-radius: 2px;
+    object-fit: contain;
+    background-color: transparent;
+    transition: all 0.2s ease;
+}
+
+.bookmark-favicon:hover {
+    transform: scale(1.1);
+}
+
+/* 卡片视图下的favicon */
+#bookmark-container.card-view .bookmark-favicon {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* 列表视图下的favicon */
+#bookmark-container.list-view .bookmark-favicon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    border-radius: 3px;
+}
+
+/* 图标视图下的favicon */
+#bookmark-container.icon-view .bookmark-favicon {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border-radius: var(--radius-sm);
+}
+
+/* 备用图标样式 */
+.fallback-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    background-color: var(--bg-component);
+    border-radius: 2px;
+    padding: 2px;
+}
+
+.fallback-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* 卡片视图下的备用图标 */
+#bookmark-container.card-view .fallback-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    border-radius: var(--radius-sm);
+    padding: 8px;
+}
+
+#bookmark-container.card-view .fallback-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* 列表视图下的备用图标 */
+#bookmark-container.list-view .fallback-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+#bookmark-container.list-view .fallback-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* 图标视图下的备用图标 */
+#bookmark-container.icon-view .fallback-icon {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border-radius: var(--radius-sm);
+    padding: 4px;
+}
+
+#bookmark-container.icon-view .fallback-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* --- Bookmark Icon Container --- */
+.bookmark-icon-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+/* --- Favicon Styles --- */
+.bookmark-favicon {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    object-fit: contain;
+    background-color: transparent;
+    transition: all 0.2s ease;
+    display: block;
+}
+
+.bookmark-favicon:hover {
+    transform: scale(1.1);
+}
+
+/* 卡片视图下的favicon */
+#bookmark-container.card-view .bookmark-icon-container {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+}
+
+#bookmark-container.card-view .bookmark-favicon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* 列表视图下的favicon */
+#bookmark-container.list-view .bookmark-icon-container {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+}
+
+#bookmark-container.list-view .bookmark-favicon {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+}
+
+/* 图标视图下的favicon */
+#bookmark-container.icon-view .bookmark-icon-container {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+}
+
+#bookmark-container.icon-view .bookmark-favicon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+}
+
+/* 备用图标样式 */
+.fallback-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    background-color: var(--bg-component);
+    border-radius: 2px;
+    padding: 2px;
+}
+
+.fallback-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* 卡片视图下的备用图标 */
+#bookmark-container.card-view .fallback-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    padding: 8px;
+}
+
+#bookmark-container.card-view .fallback-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* 列表视图下的备用图标 */
+#bookmark-container.list-view .fallback-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+#bookmark-container.list-view .fallback-icon svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* 图标视图下的备用图标 */
+#bookmark-container.icon-view .fallback-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    padding: 4px;
+}
+
+#bookmark-container.icon-view .fallback-icon svg {
+    width: 16px;
+    height: 16px;
+}
 

@@ -5,11 +5,33 @@
 export class VisualizationService {
   constructor() {
     this.logCallback = null;
-    this.chartInstances = new Map();
+    this.isExtensionContext = typeof chrome !== 'undefined' && chrome.bookmarks;
+    this.cache = {
+      wordcloudData: null,
+      treeviewData: null,
+      chartsData: null,
+      lastUpdate: null
+    };
   }
 
   setLogCallback(callback) {
     this.logCallback = callback;
+  }
+
+  /**
+   * 初始化可视化服务
+   */
+  async initialize() {
+    try {
+      this.log('正在初始化可视化服务...', 'info');
+      
+      // 初始化完成
+      this.log('可视化服务初始化完成', 'success');
+      return true;
+    } catch (error) {
+      this.log(`可视化服务初始化失败: ${error.message}`, 'error');
+      return false;
+    }
   }
 
   log(message, type = 'info') {

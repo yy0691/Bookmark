@@ -516,6 +516,33 @@
             height: 32px;
             border-radius: var(--radius-small);
             margin-bottom: var(--spacing-sm);
+            object-fit: contain;
+            background-color: transparent;
+        }
+
+        .bookmark-icon-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .fallback-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #8E8E93;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-small);
+        }
+
+        .fallback-icon i {
+            width: 20px;
+            height: 20px;
         }
 
         .bookmark-title {
@@ -1115,7 +1142,7 @@
             <div class="panel-sidebar">
                 <div class="panel-sidebar-header">
                     <h3>设置中心</h3>
-                </div>
+    </div>
                 <div class="panel-tabs">
                     <button class="tab-btn active" data-tab="appearance">
                         <i data-lucide="palette"></i>

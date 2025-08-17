@@ -979,20 +979,170 @@ class SettingsManager {
      * 测试API连接
      */
     async testApiConnection() {
+        const provider = document.getElementById('api-provider').value;
         const apiKey = document.getElementById('api-key').value;
+        
         if (!apiKey) {
             this.showNotification('请先输入API密钥', 'error');
             return;
         }
 
-        this.showNotification('正在测试API连接...', 'info');
+        this.showNotification('正在测试网络连接和API...', 'info');
         
         try {
-            // 这里可以添加实际的API测试逻辑
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            this.showNotification('API连接测试成功', 'success');
+            // 第一步：测试网络连接
+            this.showNotification('步骤1: 检测网络连接...', 'info');
+            const networkConnected = await this.checkNetworkConnection();
+            
+            if (!networkConnected) {
+                this.showNotification('网络连接失败，请检查网络设置', 'error');
+                return;
+            }
+            
+            this.showNotification('网络连接正常', 'success');
+            
+            // 第二步：测试API连接
+            this.showNotification('步骤2: 测试API连接...', 'info');
+            
+            let apiTestResult = false;
+            switch (provider) {
+                case 'gemini':
+                    apiTestResult = await this.testGeminiApi(apiKey);
+                    break;
+                case 'openai':
+                    apiTestResult = await this.testOpenAiApi(apiKey);
+                    break;
+                case 'custom':
+                    const customUrl = document.getElementById('custom-api-url').value;
+                    if (!customUrl) {
+                        this.showNotification('自定义API需要提供URL', 'error');
+                        return;
+                    }
+                    apiTestResult = await this.testCustomApi(apiKey, customUrl);
+                    break;
+                default:
+                    this.showNotification('不支持的API提供商', 'error');
+                    return;
+            }
+            
+            if (apiTestResult) {
+                this.showNotification('API连接测试成功！', 'success');
+            } else {
+                this.showNotification('API连接测试失败，请检查密钥和设置', 'error');
+            }
+            
         } catch (error) {
-            this.showNotification('API连接测试失败', 'error');
+            this.showNotification(`测试失败: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 检查网络连接
+     */
+    async checkNetworkConnection() {
+        try {
+            const testUrls = [
+                'https://httpbin.org/status/200',
+                'https://api.github.com/zen',
+                'https://www.baidu.com/favicon.ico'
+            ];
+
+            for (const url of testUrls) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(url, {
+                        method: 'HEAD',
+                        mode: 'no-cors',
+                        cache: 'no-cache',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    return true;
+                } catch (urlError) {
+                    continue;
+                }
+            }
+            
+            return navigator.onLine || false;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
+     * 测试Gemini API
+     */
+    async testGeminiApi(apiKey) {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: "Hello, this is a test message."
+                        }]
+                    }]
+                })
+            });
+            
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
+     * 测试OpenAI API
+     */
+    async testOpenAiApi(apiKey) {
+        try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [{
+                        role: 'user',
+                        content: 'Hello, this is a test message.'
+                    }],
+                    max_tokens: 10
+                })
+            });
+            
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    /**
+     * 测试自定义API
+     */
+    async testCustomApi(apiKey, customUrl) {
+        try {
+            const response = await fetch(customUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: 'Hello, this is a test message.'
+                })
+            });
+            
+            return response.ok;
+        } catch (error) {
+            return false;
         }
     }
 

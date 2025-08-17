@@ -78,6 +78,7 @@
             right: 0;
             height: 60px;
             background: rgba(15, 23, 42, 0.8);
+            -webkit-backdrop-filter: blur(12px);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border-primary);
             display: flex;
@@ -249,11 +250,12 @@
             border-radius: var(--radius-md);
             cursor: pointer;
             transition: all 0.2s ease;
-            group: hover;
+            /* group: hover; */
         }
         
         .folder-item:hover {
-            background: var(--bg-card-hover);
+            background: var(--bg-card-hover) !important; 
+            color: var(--text-primary) !important;
         }
         
         .folder-icon {
@@ -542,7 +544,7 @@
     <div class="main-container">
         <!-- 问候语区域 -->
         <div class="greeting-section">
-            <h1 class="greeting-text">Good evening! 👋</h1>
+            <h1 class="greeting-text">Good evening! <span class="emoji"></span>👋</span></h1>
             <p class="greeting-time">Friday, August 15, 2025 • 07:38 PM</p>
         </div>
 

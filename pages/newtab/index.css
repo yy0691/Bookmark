@@ -40,10 +40,25 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
+  --radius-full: 9999px; /* 新增：用于圆形或全圆角场景 */
 
   /* 字体 */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+
+  /* emoji */
+    /* 浅色主题下，让 emoji 颜色更贴近白色背景的显示 */
+    --emoji-color-light: initial; 
+    /* 深色主题下，贴近深色背景的显示 */
+    --emoji-color-dark: initial; 
+  }
+
+  [data-theme="light"] .emoji {
+    color: var(--emoji-color-light);
+  }
+
+  [data-theme="dark"] .emoji {
+    color: var(--emoji-color-dark);
+  }
 
 /* 浅色主题 */
 [data-theme="light"] {
@@ -59,9 +74,9 @@
   --border-primary: #dee2e6;
   --border-secondary: #ced4da;
   --border-color: #dee2e6;
-  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.1);
-  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.05);
 }
 
 /* 主题色变量 */
@@ -81,9 +96,11 @@
 
 body { 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; 
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
-  background-attachment: fixed;
-  color: var(--text-primary); 
+  /* background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%); */
+  background-color: var(--bg-primary);
+  /* background-attachment: fixed; */
+  color: var(--text-primary);
+  transition: background-color 0.3s ease; /* 平滑过渡平滑过渡 */
   line-height: 1.6; 
   overflow-x: hidden; 
   animation: fadeIn 0.6s ease-out;
@@ -113,7 +130,8 @@ html {
 /* --- 顶部导航栏 --- */
 .top-nav {
   position: fixed; top: 0; left: 0; right: 0; height: 60px;
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-card);
+  -webkit-backdrop-filter: blur(12px); /* 新增前缀属性 */
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-primary);
   display: flex; align-items: center; justify-content: space-between;
@@ -143,21 +161,41 @@ html {
 
 /* --- 问候语区域 --- */
 .greeting-section { margin-bottom: var(--space-8); }
-.greeting-text { font-size: 2rem; font-weight: 600; margin-bottom: var(--space-2); background: linear-gradient(135deg, var(--text-primary), var(--text-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.greeting-text { 
+  font-size: 2rem; 
+  font-weight: 600; 
+  margin-bottom: var(--space-2); 
+  color: var(--text-primary);
+}
+
+.greeting-text .emoji {
+  /* 确保emoji保持原始颜色，不受父元素影响 */
+  color: initial !important;
+  -webkit-text-fill-color: initial !important;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  /* 使用支持彩色Emoji的字体 */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif !important;
+  /* 防止任何滤镜效果改变颜色 */
+  filter: none !important;
+  /* 确保完全不透明 */
+  opacity: 1 !important;
+}
 .greeting-time { color: var(--text-tertiary); font-size: 0.875rem; }
 
 /* --- 网格布局系统 --- */
 .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: var(--space-6); min-height: 600px; }
 
 /* --- 左侧边栏 --- */
-.left-sidebar { display: flex; flex-direction: column; gap: var(--space-6); }
+.left-sidebar { display: flex; flex-direction: column; gap: var(--space-6); border-right: 1px solid var(--border-primary); padding-right: var(--space-6); }
 
 /* --- 文件夹组件 --- */
-.folders-widget { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: var(--radius-xl); padding: var(--space-5); box-shadow: var(--shadow-card); transition: all 0.3s ease; }
+.folders-widget { background: var(--bg-card); border: 1px var(--border-primary); border-radius: var(--radius-xl); padding: var(--space-5); box-shadow: var(--shadow-card); transition: all 0.3s ease; }
 .folders-widget:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
 
 /* --- 标签组件 --- */
-.tags-widget { background: var(--bg-card); border: 1px solid var(--border-primary); border-radius: var(--radius-xl); padding: var(--space-5); box-shadow: var(--shadow-card); transition: all 0.3s ease; }
+.tags-widget { background: var(--bg-card); border: 1px var(--border-primary); border-radius: var(--radius-xl); padding: var(--space-5); box-shadow: var(--shadow-card); transition: all 0.3s ease; }
 .tags-widget:hover { box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
 .clear-tags-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.25rem; border-radius: var(--radius-sm); transition: all 0.2s ease; }
 .clear-tags-btn:hover { color: var(--text-primary); background: var(--bg-secondary); }
@@ -196,18 +234,23 @@ html {
 }
 
 .folder-content:hover { 
-  background: var(--bg-hover); 
-  transform: translateX(2px);
+  background: var(--accent-orange) !important;
+  color: var(--text-primary) !important;
+  /* transform: translateX(2px); */
 }
 
 .folder-item.active > .folder-content {
-  background: var(--accent-primary, var(--accent-blue));
-  color: white;
+  background: var(--accent-orange) !important;
+  color: var(--text-primary) !important;
 }
 
+.folder-item:hover > .folder-content .folder-name,
+.folder-item:hover > .folder-content .folder-icon,
+.folder-item:hover > .folder-content .bookmark-count,
 .folder-item.active > .folder-content .folder-name,
-.folder-item.active > .folder-content .folder-icon {
-  color: white;
+.folder-item.active > .folder-content .folder-icon,
+.folder-item.active > .folder-content .bookmark-count{
+  color: var(--text-primary) !important;
 }
 
 .folder-toggle-icon {
@@ -281,8 +324,7 @@ html {
 }
 
 /* --- 中央书签区域 --- */
-.bookmarks-section { display: flex; flex-direction: column; gap: var(--space-6); }
-.section-header { display: flex; align-items: center; justify-content: space-between; }
+.bookmarks-section { display: flex; flex-direction: column; gap: var(--space-4);min-height: 300px;justify-content: flex-start; }
 .section-title { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); }
 .view-toggle { display: flex; background: var(--bg-secondary); border-radius: var(--radius-md); padding: 0.125rem; }
 .toggle-btn { padding: var(--space-2) var(--space-3); border: none; background: transparent; color: var(--text-tertiary); font-size: 0.75rem; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s ease; }
@@ -293,13 +335,16 @@ html {
   gap: 1.25rem; 
   padding: 1.25rem; 
   overflow-y: auto; 
-  height: 100%; 
+  /* height: 100%;  */
+  max-height: 1080px; /* 内容超过 1080px 就滚动，数值自己调 */
+  overflow-y: auto; 
 }
 
 /* List View Styles */
 .bookmarks-grid.list-view {
   grid-template-columns: 1fr; /* Single column for list view */
   gap: 0.5rem;
+  max-width: 700px; /* 限制列表模式下的最大宽度，可根据需求调整 */
 }
 
 .list-view .bookmark-item {
@@ -307,13 +352,28 @@ html {
   align-items: center;
   padding: 0.5rem 0.75rem;
   height: auto;
-  background-color: transparent;
+  background-color: transparent !important;
   border-bottom: 1px solid var(--border-primary);
   border-radius: 0;
+  width: 100%;        /* 占满父容器，但受 max-width 限制 */
+  max-width: 100%;    /* 配合父容器限制 */
+  min-width: 280px;   /* 最小宽度，避免过窄 */
+  min-height: 48px;
+  box-sizing: border-box; /* 盒模型计算更合理 */
+  overflow: hidden;   /* 隐藏超出内容（或用 auto 显示滚动条） */
 }
-
+/* 列表视图下的标题/描述等文本 */
+.list-view .bookmark-url{
+  display: none;
+}
+.list-view .bookmark-title,
+.list-view .bookmark-description {
+  white-space: nowrap;   /* 文本不换行（可选，保持一行） */
+  overflow: hidden;      /* 隐藏超出部分 */
+  text-overflow: ellipsis; /* 超出显示省略号 */
+}
 .list-view .bookmark-item:hover {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-secondary) !important;
 }
 
 .favicon {
@@ -326,24 +386,31 @@ html {
   border: 1px solid var(--border-primary);
   transition: all 0.2s ease;
 }
-
+/* 网格视图下的favicon */
+.bookmarks-grid:not(.list-view) .favicon,
+.bookmarks-grid:not(.list-view) .bookmark-favicon {
+  width: 48px;
+  height: 48px;
+  margin-right: 1rem;
+}
+/* 列表视图下的favicon */
 .list-view .favicon {
   width: 24px;
   height: 24px;
   margin-right: 1rem;
 }
-
+/* 列表视图下的favicon hover */
 .bookmark-item:hover .favicon {
   transform: scale(1.05);
   box-shadow: var(--shadow-sm);
 }
-
+/* 列表视图下的bookmark-info */
 .list-view .bookmark-info {
   flex-direction: row;
   align-items: baseline;
   gap: 1rem;
 }
-
+/* 列表视图下的bookmark-title */
 .list-view .bookmark-title {
   font-size: 0.9rem;
   font-weight: 500;
@@ -351,13 +418,13 @@ html {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
+/* 列表视图下的bookmark-url */
 .list-view .bookmark-url {
   font-size: 0.8rem;
   color: var(--text-secondary);
   white-space: nowrap;
 }
-
+/* 卡片视图下的bookmark-card */
 .bookmark-card { 
   background: var(--bg-card); 
   border: 1px solid var(--border-primary); 
@@ -367,6 +434,8 @@ html {
   transition: all 0.3s ease; 
   position: relative; 
   overflow: hidden; 
+  /* 添加最大高度限制（根据需求调整数值） */
+  max-height: 48px; /* 例如限制最大高度为180px */
 }
 .bookmark-card::before { 
   content: ""; 
@@ -407,7 +476,7 @@ html {
   flex: 1; 
   min-width: 0; 
 }
-.bookmark-title { 
+/* .bookmark-title { 
   font-size: 0.875rem; 
   font-weight: 600; 
   color: var(--text-primary); 
@@ -431,7 +500,9 @@ html {
   overflow: hidden; 
   text-overflow: ellipsis; 
   white-space: nowrap; 
-}
+} */
+ 
+/* 卡片视图下的bookmark-title */
 .bookmark-title { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bookmark-description { font-size: 0.75rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bookmark-url { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; margin-top: var(--space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -587,6 +658,7 @@ html {
 
 .settings-group {
   background: var(--bg-glass);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
@@ -864,18 +936,18 @@ html {
 /* --- 主要组件样式 - 毛玻璃效果 --- */
 .ai-tools-widget { 
   background: var(--bg-card);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1); 
+  backdrop-filter: blur(20px);
+  border: var(--border-primary); /* 原：rgba(255, 255, 255, 0.1) */
   border-radius: var(--radius-xl); 
   padding: var(--space-5); 
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05); 
+  box-shadow: var(--shadow-lg); 
   transition: all 0.3s ease; 
   margin-bottom: var(--space-6);
 }
 .ai-tools-widget:hover { 
-  background: rgba(26, 26, 26, 0.8);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1); 
+  background: var(--bg-card); /* 原：rgba(26, 26, 26, 0.8) */
+  box-shadow: var(--shadow-lg); 
   transform: translateY(-2px); 
 }
 
@@ -901,8 +973,8 @@ html {
   gap: 0.5rem;
   padding: 1rem 0.75rem;
   background: var(--bg-glass);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -1017,19 +1089,19 @@ html {
 /* --- 数据统计组件 --- */
 .stats-widget { 
   background: var(--bg-card);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1); 
   border-radius: var(--radius-xl); 
   padding: var(--space-5); 
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05); 
+  box-shadow: var(--shadow-lg); 
   transition: all 0.3s ease; 
   margin-bottom: var(--space-6);
 }
 .stats-widget:hover { 
-  background: rgba(26, 26, 26, 0.8);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1); 
-  transform: translateY(-2px); 
+  background: var(--bg-card); /* 原：rgba(26, 26, 26, 0.8) */
+  box-shadow: var(--shadow-lg); 
+  transform: translateY(-2px);
 }
 
 .stats-action-btn {
@@ -1058,8 +1130,8 @@ html {
   text-align: center;
   padding: 0.75rem;
   background: var(--bg-glass);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   transition: all 0.2s ease;
@@ -1134,17 +1206,17 @@ html {
 /* --- 快速笔记组件 --- */
 .notes-widget { 
   background: var(--bg-card);
-  backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1); 
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-primary); 
   border-radius: var(--radius-xl); 
   padding: var(--space-5); 
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05); 
+  box-shadow: var(--shadow-lg); 
   transition: all 0.3s ease; 
 }
 .notes-widget:hover { 
-  background: rgba(26, 26, 26, 0.8);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1); 
+  background: var(--bg-card);
+  box-shadow: var(--shadow-lg); 
   transform: translateY(-2px); 
 }
 .widget-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
@@ -1262,17 +1334,17 @@ html {
 }
 
 .modal-overlay:not(.hidden) .modal-content {
-  animation: modalSlideIn 0.3s ease-out;
+  animation: fadeIn 0.3s ease-out; /* 原：modalSlideIn */
 }
 
 @keyframes modalSlideIn {
   from { 
     opacity: 0; 
-    transform: scale(0.95) translateY(20px); 
+    transform: translateY(20px); 
   }
   to { 
     opacity: 1; 
-    transform: scale(1) translateY(0); 
+    transform: translateY(0); 
   }
 }
 
@@ -1647,4 +1719,34 @@ html {
   .main-container { padding: 80px var(--space-4) var(--space-4); }
   .search-container { width: 250px; }
   .bookmarks-grid { grid-template-columns: 1fr; }
+  .dashboard-grid {
+    grid-template-columns: 1fr; /* 小屏幕单列布局 */
+  }
+  
+  .search-container {
+    width: 100%; /* 搜索框占满宽度 */
+    max-width: 300px;
+  }
+  
+  .bookmarks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); /* 缩小卡片宽度 */
+  }
+  
+  .ai-tools-grid, .stats-grid {
+    grid-template-columns: 1fr; /* 工具和统计改为单列 */
+  }
 }
+
+/* 通用Emoji样式 - 保持原始颜色 */
+span.emoji {
+  /* 关键：使用初始颜色，不受父元素文字颜色影响 */
+  color: initial !important;
+  /* 确保使用支持彩色Emoji的字体 */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", sans-serif !important;
+  /* 防止任何滤镜效果改变颜色 */
+  filter: none !important;
+  /* 确保完全不透明 */
+  opacity: 1 !important;
+}
+
+

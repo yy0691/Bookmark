@@ -139,6 +139,52 @@ export class BookmarkService {
       return this.getMockCategorizedResults(bookmarks);
     }
     
+    // 检查网络连接
+    this.log(`检查网络连接状态...`, 'info');
+    try {
+      const networkConnected = await apiService.checkNetworkConnection();
+      if (!networkConnected) {
+        this.log(`网络连接检测失败，将使用预分类作为备用方案`, 'warning');
+        this.log(`备用方案说明：基于域名和常见关键词进行智能预分类`, 'info');
+        
+        const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
+          title: b.title || '未命名书签',
+          url: b.url || '',
+          domain: this.extractDomain(b.url)
+        })));
+        
+        this.log(`预分类完成，共生成${Object.keys(preCategorized).length}个分类`, 'success');
+        return preCategorized;
+      } else {
+        this.log(`网络连接正常，可以调用AI服务`, 'success');
+      }
+    } catch (networkError) {
+      this.log(`网络连接检测异常: ${networkError.message}`, 'error');
+      this.log(`将使用预分类作为备用方案`, 'info');
+      
+      const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
+        title: b.title || '未命名书签',
+        url: b.url || '',
+        domain: this.extractDomain(b.url)
+      })));
+      
+      this.log(`预分类完成，共生成${Object.keys(preCategorized).length}个分类`, 'success');
+      return preCategorized;
+    }
+    
+    // 验证API密钥格式
+    const keyValidation = apiService.validateApiKey(settings.apiKey, settings.provider);
+    if (!keyValidation.valid) {
+      this.log(`API密钥验证失败: ${keyValidation.error}`, 'error');
+      this.log(`将使用预分类作为备用方案`, 'info');
+      const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
+        title: b.title || '未命名书签',
+        url: b.url || '',
+        domain: this.extractDomain(b.url)
+      })));
+      return preCategorized;
+    }
+    
     // 统计有效书签数量
     const validBookmarks = bookmarks.filter(b => b.title && b.url).length;
     const totalBookmarks = bookmarks.length;
@@ -475,6 +521,19 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
     return null;
   }
 
+  // 提取域名
+  extractDomain(url) {
+    try {
+      if (url) {
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace(/^www\./, '');
+      }
+    } catch (e) {
+      // URL解析失败，忽略
+    }
+    return '';
+  }
+
   // 获取模拟书签数据用于浏览器测试
   getMockBookmarks() {
     return [
@@ -631,5 +690,18 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
         }
       });
     });
+  }
+
+  // 提取域名
+  extractDomain(url) {
+    try {
+      if (url) {
+      const urlObj = new URL(url);
+      return urlObj.hostname.replace(/^www\./, '');
+      }
+    } catch (e) {
+      // URL解析失败，忽略
+    }
+    return '';
   }
 }

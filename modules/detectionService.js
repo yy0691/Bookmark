@@ -22,6 +22,28 @@ export class DetectionService {
     this.logCallback = callback;
   }
 
+  /**
+   * 初始化检测服务
+   */
+  async initialize() {
+    try {
+      this.log('正在初始化检测服务...', 'info');
+      
+      // 加载缓存
+      if (this.isExtensionContext) {
+        await this.loadCacheFromStorage();
+        this.log('检测服务缓存已加载', 'success');
+      }
+      
+      // 初始化完成
+      this.log('检测服务初始化完成', 'success');
+      return true;
+    } catch (error) {
+      this.log(`检测服务初始化失败: ${error.message}`, 'error');
+      return false;
+    }
+  }
+
   log(message, type = 'info') {
     if (this.logCallback) {
       this.logCallback(message, type);

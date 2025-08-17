@@ -36,6 +36,7 @@ let analysisState = {
 // SVG图标系统 - 替代Lucide图标库
 const icons = {
   'chevron-right': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,18 15,12 9,6"></polyline></svg>',
+  'chevron-down': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"></polyline></svg>',
   'folder': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
   'bookmark': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>',
   'tag': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>',
@@ -82,6 +83,15 @@ function initIcons() {
       element.removeAttribute('data-lucide');
     }
   });
+}
+
+// Update folder toggle icon based on expanded state
+function updateFolderToggleIcon(folderItem) {
+  const toggleIcon = folderItem.querySelector('.folder-toggle-icon');
+  if (toggleIcon) {
+    const isExpanded = folderItem.classList.contains('expanded');
+    toggleIcon.innerHTML = isExpanded ? icons['chevron-down'] : icons['chevron-right'];
+  }
 }
 
 function formatTime(date) {
@@ -1265,19 +1275,25 @@ function wireInteractions() {
   folderListEl.addEventListener('click', (e) => {
     const toggleIcon = e.target.closest('.folder-toggle-icon');
     const folderContent = e.target.closest('.folder-content');
+    const folderItem = e.target.closest('.folder-item');
 
+    // Handle toggle icon click (expand/collapse)
     if (toggleIcon) {
       e.stopPropagation(); // Prevent folder from loading
-      const folderItem = toggleIcon.closest('.folder-item');
       if (folderItem) {
         folderItem.classList.toggle('expanded');
+        updateFolderToggleIcon(folderItem);
       }
       return;
     }
 
+    // Handle folder content click (expand/collapse + load bookmarks)
     if (folderContent) {
-      const folderItem = folderContent.closest('.folder-item');
       if (folderItem) {
+        // Toggle expanded state
+        folderItem.classList.toggle('expanded');
+        updateFolderToggleIcon(folderItem);
+        
         // Clear active state from all folders
         document.querySelectorAll('.folder-item').forEach(item => item.classList.remove('active'));
         // Set current folder to active

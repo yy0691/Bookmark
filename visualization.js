@@ -403,24 +403,89 @@ document.addEventListener('DOMContentLoaded', () => {
         return groups;
     }
 
-    // --- 创建书签卡片 ---
+    // --- 智能获取网站图标 ---
+    function getFaviconUrl(domain) {
+        // 多个favicon源，按优先级排序
+        const faviconSources = [
+            `https://${domain}/favicon.ico`,                    // 网站自己的favicon.ico
+            `https://${domain}/favicon.png`,                    // 网站自己的favicon.png
+            `https://${domain}/apple-touch-icon.png`,           // Apple设备图标
+            `https://${domain}/apple-touch-icon-precomposed.png`, // Apple预合成图标
+            `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=32`, // Google备用服务
+            `https://icons.duckduckgo.com/ip3/${domain}.ico`,   // DuckDuckGo图标服务
+            `https://www.google.com/s2/favicons?domain=${domain}&sz=32` // Google服务（最后尝试）
+        ];
+        
+        return faviconSources[0]; // 返回第一个（最可靠的）
+    }
+
+    // --- 简化版favicon加载 ---
+    function loadSimpleFavicon(imgElement, domain) {
+        console.log(`🔍 加载favicon: ${domain}`);
+        
+        // 先尝试网站自己的favicon
+        const faviconUrl = `https://${domain}/favicon.ico`;
+        console.log(`🔄 尝试: ${faviconUrl}`);
+        
+        imgElement.onerror = function() {
+            console.log(`❌ 加载失败: ${faviconUrl}`);
+            // 显示备用图标
+            imgElement.style.display = 'none';
+            const fallbackIcon = imgElement.nextElementSibling;
+            if (fallbackIcon && fallbackIcon.classList.contains('fallback-icon')) {
+                fallbackIcon.style.display = 'block';
+                console.log(`✅ 显示备用图标`);
+            }
+        };
+        
+        imgElement.onload = function() {
+            console.log(`✅ 加载成功: ${faviconUrl}`);
+        };
+        
+        imgElement.src = faviconUrl;
+    }
+
+    // --- 创建书签卡片（优化版） ---
     function createBookmarkCard(bookmark) {
+        console.log(`🔍 创建书签卡片: ${bookmark.title}`);
+        
         const card = document.createElement('div');
         card.className = 'bookmark-card fade-in';
         card.dataset.bookmarkId = bookmark.id;
         card.draggable = true;
         
         const url = new URL(bookmark.url);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+        console.log(`🔗 URL: ${bookmark.url}, 域名: ${url.hostname}`);
         
         card.innerHTML = `
-            <img class="bookmark-favicon" src="${faviconUrl}" 
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <div class="fallback-icon" style="display:none;">
-                <i data-lucide="globe"></i>
+            <div class="bookmark-icon-container">
+                <img class="bookmark-favicon" src="" alt="${url.hostname}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="fallback-icon" style="display:block;">
+                    🌐
+                </div>
             </div>
             <div class="bookmark-title">${bookmark.title || url.hostname}</div>
         `;
+        
+        console.log(`📝 生成的HTML:`, card.innerHTML);
+        
+        // 强制显示备用图标进行测试
+        const fallbackIcon = card.querySelector('.fallback-icon');
+        if (fallbackIcon) {
+            fallbackIcon.style.display = 'block';
+            console.log(`🔧 强制显示备用图标`);
+        }
+        
+        // 使用渐进式加载策略加载favicon
+        const faviconImg = card.querySelector('.bookmark-favicon');
+        if (faviconImg) {
+            console.log(`✅ 找到favicon元素，开始加载`);
+            // 暂时隐藏favicon，只显示备用图标
+            faviconImg.style.display = 'none';
+            loadSimpleFavicon(faviconImg, url.hostname);
+        } else {
+            console.error('❌ 找不到favicon元素');
+        }
         
         // 添加点击事件
         card.addEventListener('click', () => {
@@ -519,16 +584,25 @@ document.addEventListener('DOMContentLoaded', () => {
         card.draggable = true;
         
         const url = new URL(bookmark.url);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
         
         card.innerHTML = `
-            <img class="bookmark-favicon" src="${faviconUrl}" 
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <div class="fallback-icon" style="display:none;">
+            <div class="bookmark-icon-container">
+                <img class="bookmark-favicon" src="" alt="${url.hostname}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div class="fallback-icon" style="display:block;">
                 <i data-lucide="globe"></i>
+            </div>
             </div>
             <div class="bookmark-title">${bookmark.title || url.hostname}</div>
         `;
+        
+        // 使用渐进式加载策略加载favicon
+        const faviconImg = card.querySelector('.bookmark-favicon');
+        if (faviconImg) {
+            console.log(`✅ 找到favicon元素，开始加载`);
+            loadSimpleFavicon(faviconImg, url.hostname);
+        } else {
+            console.error('❌ 找不到favicon元素');
+        }
         
         // 添加点击事件
         card.addEventListener('click', () => {
@@ -1504,6 +1578,43 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`  - 图标SVG: ${icon && icon.querySelector('svg') ? '存在' : '不存在'}`);
         });
     }
+
+    // --- 测试favicon加载 ---
+    function testFaviconLoading() {
+        console.log('🧪 开始测试favicon加载...');
+        
+        // 测试一些常见的网站
+        const testDomains = [
+            'github.com',
+            'stackoverflow.com',
+            'developer.mozilla.org',
+            'www.google.com',
+            'www.baidu.com'
+        ];
+        
+        testDomains.forEach(domain => {
+            const testImg = document.createElement('img');
+            testImg.style.display = 'none';
+            document.body.appendChild(testImg);
+            
+            testImg.onload = function() {
+                console.log(`✅ ${domain} favicon加载成功`);
+                document.body.removeChild(testImg);
+            };
+            
+            testImg.onerror = function() {
+                console.log(`❌ ${domain} favicon加载失败`);
+                document.body.removeChild(testImg);
+            };
+            
+            testImg.src = `https://${domain}/favicon.ico`;
+        });
+    }
+
+    // 在页面加载完成后测试
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(testFaviconLoading, 2000); // 延迟2秒测试
+    });
 
     // --- 启动应用 ---
     initialize();

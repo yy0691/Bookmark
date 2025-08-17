@@ -5,13 +5,30 @@
 export class BookmarkManager {
   constructor() {
     this.logCallback = null;
-    this.bookmarkTree = null;
-    this.selectedNodes = new Set();
-    this.draggedNode = null;
+    this.isExtensionContext = typeof chrome !== 'undefined' && chrome.bookmarks;
+    this.bookmarks = [];
+    this.folders = [];
+    this.currentFolder = null;
   }
 
   setLogCallback(callback) {
     this.logCallback = callback;
+  }
+
+  /**
+   * 初始化书签管理器
+   */
+  async initialize() {
+    try {
+      this.log('正在初始化书签管理器...', 'info');
+      
+      // 初始化完成
+      this.log('书签管理器初始化完成', 'success');
+      return true;
+    } catch (error) {
+      this.log(`书签管理器初始化失败: ${error.message}`, 'error');
+      return false;
+    }
   }
 
   log(message, type = 'info') {
