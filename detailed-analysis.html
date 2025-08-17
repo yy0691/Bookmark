@@ -4,7 +4,855 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>详细分析 - 书签助手</title>
-    <link rel="stylesheet" href="apple-style.css">
+    <link rel="stylesheet" href="visualization-enhanced.css">
+    <style>
+        /* 日志样式 - 适配主题色 */
+        .log-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            max-height: 300px;
+            overflow-y: auto;
+            padding: var(--space-4);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 4px 8px;
+            border-radius: 3px;
+            line-height: 1.4;
+        }
+
+        .log-time {
+            color: var(--text-tertiary);
+            font-size: 0.8rem;
+            margin-right: 8px;
+        }
+
+        .log-message {
+            color: var(--text-primary);
+        }
+
+        .log-info {
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .log-success {
+            color: var(--success-color, #4ade80);
+            background: var(--success-bg, rgba(74, 222, 128, 0.1));
+        }
+
+        .log-warning {
+            color: var(--warning-color, #fbbf24);
+            background: var(--warning-bg, rgba(251, 191, 36, 0.1));
+        }
+
+        .log-error {
+            color: var(--error-color, #f87171);
+            background: var(--error-bg, rgba(248, 113, 113, 0.1));
+        }
+
+        /* 详细分析页面样式增强 */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            height: fit-content;
+            position: sticky;
+            top: 100px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .sidebar-header {
+            margin-bottom: var(--space-6);
+            padding-bottom: var(--space-4);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .sidebar-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--space-1);
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-6);
+        }
+
+        .nav-section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+        }
+
+        /* 导航项样式 */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid transparent;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-secondary);
+        }
+
+        .nav-item.active {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .nav-item .icon {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .nav-item .badge {
+            background: var(--accent-secondary);
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: auto;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .nav-item.active .badge {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 内容区域样式 */
+        .content-section {
+            display: none;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            border: 1px solid var(--border-primary);
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .section-header {
+            margin-bottom: var(--space-6);
+            padding-bottom: var(--space-4);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--space-2);
+        }
+
+        .section-description {
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* 按钮组样式 */
+        .button-group {
+            display: flex;
+            gap: var(--space-3);
+            flex-wrap: wrap;
+            margin-bottom: var(--space-4);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-secondary);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger-primary);
+            color: white;
+            border-color: var(--danger-primary);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger-hover);
+            border-color: var(--danger-hover);
+        }
+
+        .btn-success {
+            background: var(--success-primary);
+            color: white;
+            border-color: var(--success-primary);
+        }
+
+        .btn-success:hover {
+            background: var(--success-hover);
+            border-color: var(--success-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 进度条样式 */
+        .progress-container {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            margin: var(--space-4) 0;
+            border: 1px solid var(--border-primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-hover);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-bottom: var(--space-2);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-primary);
+            transition: width 0.3s ease;
+            border-radius: var(--radius-sm);
+        }
+
+        .progress-status {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* 日志容器样式 */
+        .log-container {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            max-height: 300px;
+            overflow-y: auto;
+            margin: var(--space-4) 0;
+        }
+
+        .log-entry {
+            padding: var(--space-2) var(--space-3);
+            border-bottom: 1px solid var(--border-secondary);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-info {
+            color: var(--text-secondary);
+        }
+
+        .log-success {
+            color: var(--success-primary);
+        }
+
+        .log-warning {
+            color: var(--warning-primary);
+        }
+
+        .log-error {
+            color: var(--danger-primary);
+        }
+
+        /* 书签项样式 */
+        .bookmark-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            margin-bottom: var(--space-2);
+            transition: all 0.2s ease;
+        }
+
+        .bookmark-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-secondary);
+        }
+
+        .bookmark-item.selected {
+            background: var(--accent-light);
+            border-color: var(--accent-primary);
+        }
+
+        .bookmark-checkbox {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-primary);
+        }
+
+        .bookmark-favicon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .bookmark-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bookmark-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bookmark-url {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bookmark-actions {
+            display: flex;
+            gap: var(--space-2);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .bookmark-item:hover .bookmark-actions {
+            opacity: 1;
+        }
+
+        .bookmark-action {
+            padding: var(--space-1);
+            border: none;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .bookmark-action:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        /* 统计卡片样式 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-1);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* 空状态样式 */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-8);
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto var(--space-4);
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin-bottom: var(--space-2);
+            color: var(--text-primary);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: static;
+                margin-bottom: var(--space-4);
+            }
+
+            .sidebar-nav {
+                flex-direction: row;
+                overflow-x: auto;
+                gap: var(--space-2);
+            }
+
+            .nav-item {
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            .button-group {
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .content-section.active {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* 滚动条样式 */
+        .log-container::-webkit-scrollbar,
+        .bookmark-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-container::-webkit-scrollbar-track,
+        .bookmark-list::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+        }
+
+        .log-container::-webkit-scrollbar-thumb,
+        .bookmark-list::-webkit-scrollbar-thumb {
+            background: var(--border-secondary);
+            border-radius: 3px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb:hover,
+        .bookmark-list::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--space-2);
+            padding: 0 var(--space-3);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            transform: translateX(2px);
+        }
+
+        .nav-item.active {
+            background: var(--accent-blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .nav-item-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .nav-item-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .nav-item-badge {
+            background: var(--accent-red);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .layout-container {
+            display: flex;
+            gap: var(--space-6);
+            min-height: calc(100vh - 160px);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-6);
+        }
+
+        .content-section {
+            display: none;
+            flex-direction: column;
+            gap: var(--space-6);
+        }
+
+        .content-section.active {
+            display: flex;
+        }
+
+        .content-header {
+            padding-bottom: var(--space-4);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .content-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--space-2);
+        }
+
+        .content-description {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .data-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            border: 1px solid var(--border-primary);
+        }
+
+        .data-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-4);
+            padding-bottom: var(--space-3);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .data-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .data-controls {
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        .data-control-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .data-control-btn:hover {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+
+        .feature-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+            padding: var(--space-3) var(--space-5);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .feature-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feature-btn.primary {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+        }
+
+        .feature-btn.primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .analysis-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-3);
+            margin-bottom: var(--space-4);
+        }
+
+        .progress-container {
+            margin-top: var(--space-4);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: var(--space-2);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-status {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .log-container {
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-primary);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-content {
+            padding: var(--space-4);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: var(--space-2);
+            padding: var(--space-2);
+            border-radius: var(--radius-sm);
+        }
+
+        .log-entry.log-info {
+            color: var(--text-secondary);
+        }
+
+        .log-entry.log-success {
+            color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .log-entry.log-warning {
+            color: var(--accent-orange);
+            background: rgba(249, 158, 11, 0.1);
+        }
+
+        .log-entry.log-error {
+            color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            padding: var(--space-5);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            border: 1px solid var(--border-primary);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            margin-bottom: var(--space-1);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .visualization-area {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-primary);
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .placeholder-text {
+            color: var(--text-tertiary);
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .api-status-display {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-3) var(--space-4);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-primary);
+        }
+
+        .api-status-display.connected {
+            border-color: var(--accent-green);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .layout-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+            
+            .analysis-controls {
+                flex-direction: column;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
     <script src="lucide.min.js"></script>
 </head>
 <body class="visualization-page">
@@ -316,6 +1164,27 @@
                             <button class="feature-btn primary" id="detect-duplicates-btn">🔄 开始检测</button>
                             <button class="feature-btn" id="remove-duplicates-btn" style="display: none;">🗑️ 移除重复</button>
                         </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="duplicates-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="duplicates-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="duplicates-status" class="progress-status">准备检测...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测日志 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测日志</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-duplicates-log-btn">清空日志</button>
+                            </div>
+                        </div>
+                        <div id="duplicates-log-container" class="log-container">
+                            <div id="duplicates-log" class="log-content"></div>
+                        </div>
                     </div>
                     
                     <!-- 检测结果 -->
@@ -347,6 +1216,27 @@
                             <button class="feature-btn primary" id="detect-invalid-btn">❌ 开始检测</button>
                             <button class="feature-btn" id="remove-invalid-btn" style="display: none;">🗑️ 删除失效</button>
                         </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="invalid-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="invalid-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="invalid-status" class="progress-status">准备检测...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测日志 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测日志</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-invalid-log-btn">清空日志</button>
+                            </div>
+                        </div>
+                        <div id="invalid-log-container" class="log-container">
+                            <div id="invalid-log" class="log-content"></div>
+                        </div>
                     </div>
                     
                     <!-- 检测结果 -->
@@ -377,6 +1267,27 @@
                         <div class="detection-controls">
                             <button class="feature-btn primary" id="detect-empty-folders-btn">📁 开始检测</button>
                             <button class="feature-btn" id="remove-empty-folders-btn" style="display: none;">🗑️ 删除空文件夹</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="empty-folders-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="empty-folders-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="empty-folders-status" class="progress-status">准备检测...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测日志 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测日志</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-empty-folders-log-btn">清空日志</button>
+                            </div>
+                        </div>
+                        <div id="empty-folders-log-container" class="log-container">
+                            <div id="empty-folders-log" class="log-content"></div>
                         </div>
                     </div>
                     
@@ -567,7 +1478,7 @@
                             <div class="data-title">重新生成控制</div>
                         </div>
                         <div class="analysis-controls">
-                            <button class="feature-btn primary" id="regenerate-categories-btn">🔄 重新生成分类</button>
+                            <button class="feature-btn primary" id="regenerate-categories-alt-btn">🔄 重新生成分类</button>
                             <button class="feature-btn" id="regenerate-settings-btn">⚙️ 调整参数</button>
                         </div>
                         
@@ -614,9 +1525,6 @@
             </div>
         </div>
     </div>
-    <script src="detailed-analysis.js"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+    <script type="module" src="detailed-analysis.js"></script>
 </body>
 </html>

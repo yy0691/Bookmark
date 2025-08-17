@@ -6,6 +6,8 @@ let processingBatch = false;
 let currentBatchIndex = 0;
 let batchSize = 50;
 let totalBookmarksCount = 0;
+let analysisSession = null; // 分析会话ID
+let resumeData = null; // 恢复数据
 let logVisible = false;
 const MAX_LOG_ENTRIES = 500; // 最大日志条目数
 let bookmarkWorker = null; // Web Worker引用
@@ -195,78 +197,97 @@ function openOptions() {
 
 // 分析书签
 async function analyzeBookmarks() {
-  if (!apiStatus) {
-    showStatus('请先在设置中配置API连接', 'error');
-    addLogEntry('API未连接，请先在设置中配置API连接', 'error');
-    return;
-  }
-  
-  // 清空之前的日志
-  clearLog();
-  
-  // 显示加载动画和进度条
-  showLoading(true);
-  showProgress(true);
-  showStatus('正在获取书签...');
-  addLogEntry('开始书签分析过程...', 'info');
-  
-  // 显示取消按钮，隐藏分析按钮
-  toggleAnalyzeButtons(true);
-  
   try {
-    // 重置状态
-    categories = {};
-    currentBatchIndex = 0;
-    processingBatch = false;
+    // 检查API状态
+    if (!apiStatus) {
+      showStatus('请先设置API密钥', 'error');
+      return;
+    }
+
+    // 检查是否有未完成的分析进度
+    const savedProgress = await loadAnalysisProgress();
+    let shouldResume = false;
     
-    // 获取所有书签
-    addLogEntry('正在获取所有书签...', 'info');
-    bookmarks = await getAllBookmarks();
-    totalBookmarksCount = bookmarks.length;
-    
-    // 添加标签层级统计
-    addLogEntry('开始分析书签结构...', 'info');
-    const folderStructure = {};
-    
-    bookmarks.forEach(bookmark => {
-      if (bookmark.parentId) {
-        folderStructure[bookmark.parentId] = folderStructure[bookmark.parentId] || [];
-        folderStructure[bookmark.parentId].push(bookmark.id);
+    if (savedProgress) {
+      const resumeConfirm = confirm(
+        `发现未完成的分析进度:\n` +
+        `已处理: ${savedProgress.processedCount}/${savedProgress.totalBookmarksCount} 个书签\n` +
+        `保存时间: ${new Date(savedProgress.timestamp).toLocaleString()}\n\n` +
+        `是否继续上次的分析？\n` +
+        `点击"确定"继续，点击"取消"重新开始`
+      );
+      
+      if (resumeConfirm) {
+        shouldResume = true;
+        // 恢复状态
+        categories = savedProgress.categories || {};
+        currentBatchIndex = savedProgress.currentBatchIndex || 0;
+        totalBookmarksCount = savedProgress.totalBookmarksCount;
+        batchSize = savedProgress.batchSize || 50;
+        bookmarks = savedProgress.bookmarks || [];
+        analysisSession = savedProgress.sessionId;
+        
+        addLogEntry(`恢复分析进度: 从第 ${currentBatchIndex + 1} 批次开始`, 'info');
+        showStatus(`恢复分析中... (${savedProgress.processedCount}/${totalBookmarksCount})`);
+      } else {
+        // 用户选择重新开始，清理旧进度
+        await clearAnalysisProgress();
       }
-    });
+    }
     
-    // 统计书签所在的文件夹分布
-    const folderDistribution = Object.entries(folderStructure)
-      .map(([folderId, bookmarkIds]) => ({
-        folderId,
-        count: bookmarkIds.length
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+    if (!shouldResume) {
+      // 重置状态，开始新的分析
+      categories = {};
+      currentBatchIndex = 0;
+      processingBatch = false;
+      analysisSession = Date.now().toString(); // 生成新的会话ID
+      
+      // 获取所有书签
+      addLogEntry('正在获取所有书签...', 'info');
+      showStatus('正在获取书签...');
+      showLoading(true);
+      
+      bookmarks = await getAllBookmarks();
+      totalBookmarksCount = bookmarks.length;
+      
+      if (bookmarks.length === 0) {
+        showStatus('没有找到书签', 'warning');
+        showLoading(false);
+        return;
+      }
+      
+      addLogEntry(`获取到 ${bookmarks.length} 个书签`, 'success');
+    }
     
-    addLogEntry('书签文件夹分布(TOP5):', 'info');
-    folderDistribution.forEach(folder => {
-      addLogEntry(`  - 文件夹ID ${folder.folderId}: 包含${folder.count}个书签`, 'info');
-    });
+    showStatus(`开始分析 ${bookmarks.length} 个书签...`);
     
-    addLogEntry(`成功获取 ${totalBookmarksCount} 个书签`, 'success');
-    showStatus(`已获取 ${totalBookmarksCount} 个书签，正在分批分析...`);
+    // 显示进度条
+    showProgress(true);
+    updateProgress(currentBatchIndex * batchSize, bookmarks.length);
     
-    // 获取API设置和批处理大小
-    addLogEntry('正在获取API设置...', 'info');
-    const settings = await getApiSettings();
-    batchSize = settings.batchSize;
-    
-    addLogEntry(`API提供商: ${settings.provider}, 模型: ${settings.model}`, 'info');
-    addLogEntry(`批处理大小: ${batchSize}`, 'info');
-    
-    // 开始批处理
+    // 开始批量处理
     processingBatch = true;
-    addLogEntry('开始批量处理书签...', 'info');
+    toggleAnalyzeButtons(true);
+    
+    // 获取设置
+    const settings = await getAnalysisSettings();
+    
+    // 开始批量处理
     await processBatches(settings);
     
+    // 处理完成
+    if (processingBatch) {
+      addLogEntry('所有书签分析完成！', 'success');
+      showStatus('分析完成');
+      showResults();
+      // 清理完成的进度
+      await clearAnalysisProgress();
+    } else {
+      addLogEntry('分析被用户取消', 'warning');
+      showStatus('分析已取消');
+    }
+    
   } catch (error) {
-    console.error('分析书签时出错:', error);
     addLogEntry(`分析出错: ${error.message}`, 'error');
     showStatus(`分析出错: ${error.message}`, 'error');
     showLoading(false);
@@ -278,8 +299,73 @@ async function analyzeBookmarks() {
 // 取消分析
 function cancelAnalyze() {
   processingBatch = false;
-  addLogEntry('用户请求取消分析，正在中断处理...', 'warning');
-  showStatus('正在取消分析...');
+  
+  // 保存当前进度
+  saveAnalysisProgress();
+  
+  addLogEntry('用户请求取消分析，进度已保存...', 'warning');
+  showStatus('分析已取消，进度已保存');
+}
+
+// 保存分析进度
+async function saveAnalysisProgress() {
+  if (!analysisSession) return;
+  
+  const progressData = {
+    sessionId: analysisSession,
+    timestamp: Date.now(),
+    currentBatchIndex: currentBatchIndex,
+    totalBookmarksCount: totalBookmarksCount,
+    batchSize: batchSize,
+    categories: categories,
+    bookmarks: bookmarks,
+    processedCount: currentBatchIndex * batchSize
+  };
+  
+  try {
+    await chrome.storage.local.set({ 
+      analysisProgress: progressData 
+    });
+    addLogEntry(`进度已保存: 已处理 ${progressData.processedCount}/${totalBookmarksCount} 个书签`, 'info');
+  } catch (error) {
+    addLogEntry(`保存进度失败: ${error.message}`, 'error');
+  }
+}
+
+// 加载分析进度
+async function loadAnalysisProgress() {
+  try {
+    const result = await chrome.storage.local.get(['analysisProgress']);
+    if (result.analysisProgress) {
+      const progress = result.analysisProgress;
+      
+      // 检查进度是否在24小时内
+      const hoursSinceLastSave = (Date.now() - progress.timestamp) / (1000 * 60 * 60);
+      if (hoursSinceLastSave > 24) {
+        addLogEntry('发现过期的分析进度，已清理', 'info');
+        await clearAnalysisProgress();
+        return null;
+      }
+      
+      resumeData = progress;
+      addLogEntry(`发现未完成的分析进度: ${progress.processedCount}/${progress.totalBookmarksCount} 个书签已处理`, 'info');
+      return progress;
+    }
+  } catch (error) {
+    addLogEntry(`加载进度失败: ${error.message}`, 'error');
+  }
+  return null;
+}
+
+// 清理分析进度
+async function clearAnalysisProgress() {
+  try {
+    await chrome.storage.local.remove(['analysisProgress']);
+    resumeData = null;
+    analysisSession = null;
+  } catch (error) {
+    addLogEntry(`清理进度失败: ${error.message}`, 'error');
+  }
 }
 
 // 切换分析/取消按钮

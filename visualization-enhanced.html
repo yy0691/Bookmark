@@ -24,11 +24,11 @@
             <button class="nav-btn" id="layout-btn" title="布局设置">
                 <i data-lucide="layout-grid"></i>
             </button>
+            <button class="nav-btn" id="view-toggle-btn" title="切换视图">
+                <i data-lucide="grid-3x3"></i>
+            </button>
             <button class="nav-btn" id="settings-btn" title="设置">
                 <i data-lucide="settings"></i>
-            </button>
-            <button class="nav-btn" id="profile-btn" title="个人资料">
-                <i data-lucide="user"></i>
             </button>
         </div>
     </nav>
@@ -38,16 +38,398 @@
         <!-- 问候语区域 -->
         <div class="greeting-section">
             <h1 class="greeting-text" id="greeting-text">Good evening! 👋</h1>
-            <p class="greeting-time" id="greeting-time">Friday, August 15, 2025 • 07:38 PM</p>
+            <p class="greeting-time" id="greeting-time">Friday, August 15, 2025 • 22:29 PM</p>
         </div>
 
         <!-- 仪表板网格 -->
         <div class="dashboard-grid" id="dashboard-grid">
             <!-- 左侧边栏 -->
             <div class="widget-container left-sidebar">
-                <!-- 文件夹组件 -->
+                <!-- 文件夹导航组件 -->
                 <div class="widget folders-widget" id="folders-widget">
                     <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i data-lucide="folder" class="widget-icon"></i>
+                            文件夹导航
+                        </h3>
+                        <button class="widget-action" id="refresh-folders" title="刷新">
+                            <i data-lucide="refresh-cw"></i>
+                        </button>
+                    </div>
+                    <div class="widget-content">
+                        <div class="folder-tree" id="folder-tree">
+                            <!-- 文件夹树将在这里动态生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 实时时钟组件 -->
+                <div class="widget clock-widget" id="clock-widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i data-lucide="clock" class="widget-icon"></i>
+                            实时时钟
+                        </h3>
+                    </div>
+                    <div class="widget-content">
+                        <div class="clock-display">
+                            <div class="time-display" id="time-display">22:29:07</div>
+                            <div class="date-display" id="date-display">2025年8月15日 星期四</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速工具组件 -->
+                <div class="widget tools-widget" id="tools-widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i data-lucide="wrench" class="widget-icon"></i>
+                            快速工具
+                        </h3>
+                    </div>
+                    <div class="widget-content">
+                        <div class="tool-buttons">
+                            <button class="tool-btn" id="ai-analyze-btn">
+                                <i data-lucide="brain"></i>
+                                <span>AI分析</span>
+                            </button>
+                            <button class="tool-btn" id="detect-duplicates-btn">
+                                <i data-lucide="copy"></i>
+                                <span>重复检测</span>
+                            </button>
+                            <button class="tool-btn" id="detect-invalid-btn">
+                                <i data-lucide="alert-triangle"></i>
+                                <span>失效检测</span>
+                            </button>
+                            <button class="tool-btn" id="export-data-btn">
+                                <i data-lucide="download"></i>
+                                <span>数据导出</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 中央内容区 -->
+            <div class="widget-container main-content">
+                <!-- 控制面板 -->
+                <div class="content-controls">
+                    <div class="controls-left">
+                        <div class="group-selector">
+                            <label for="group-by">分组方式:</label>
+                            <select id="group-by" class="control-select">
+                                <option value="none">无分组</option>
+                                <option value="folder">按文件夹</option>
+                                <option value="domain">按域名</option>
+                                <option value="date">按时间</option>
+                            </select>
+                        </div>
+                        <div class="sort-selector">
+                            <label for="sort-by">排序方式:</label>
+                            <select id="sort-by" class="control-select">
+                                <option value="title">按标题</option>
+                                <option value="date">按时间</option>
+                                <option value="url">按URL</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="controls-right">
+                        <div class="view-controls">
+                            <button class="view-btn active" id="grid-view-btn" title="网格视图">
+                                <i data-lucide="grid-3x3"></i>
+                            </button>
+                            <button class="view-btn" id="list-view-btn" title="列表视图">
+                                <i data-lucide="list"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 书签展示区域 -->
+                <div class="bookmarks-container" id="bookmarks-container">
+                    <div class="bookmarks-grid" id="bookmarks-grid">
+                        <!-- 书签将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧边栏 -->
+            <div class="widget-container right-sidebar">
+                <!-- 统计信息组件 -->
+                <div class="widget stats-widget" id="stats-widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i data-lucide="bar-chart-3" class="widget-icon"></i>
+                            统计信息
+                        </h3>
+                    </div>
+                    <div class="widget-content">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="total-bookmarks">0</div>
+                                <div class="stat-label">总书签数</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="total-folders">0</div>
+                                <div class="stat-label">文件夹数</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="unique-domains">0</div>
+                                <div class="stat-label">不同域名</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="recent-bookmarks">0</div>
+                                <div class="stat-label">本周新增</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 快速笔记组件 -->
+                <div class="widget notes-widget" id="notes-widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i data-lucide="sticky-note" class="widget-icon"></i>
+                            快速笔记
+                        </h3>
+                        <button class="widget-action" id="save-notes" title="保存">
+                            <i data-lucide="save"></i>
+                        </button>
+                    </div>
+                    <div class="widget-content">
+                        <textarea 
+                            class="notes-textarea" 
+                            id="notes-textarea" 
+                            placeholder="在这里记录你的想法和笔记..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <!-- 最近访问组件 -->
+                <div class="widget recent-widget" id="recent-widget">
+                    <div class="widget-header">
+                        <h3 class="widget-title">
+                            <i data-lucide="history" class="widget-icon"></i>
+                            最近访问
+                        </h3>
+                    </div>
+                    <div class="widget-content">
+                        <div class="recent-list" id="recent-list">
+                            <!-- 最近访问的书签将在这里显示 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title">设置中心</h2>
+                <button class="modal-close" id="close-settings">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="settings-nav">
+                    <button class="settings-nav-btn active" data-tab="general">
+                        <i data-lucide="settings"></i>
+                        常规设置
+                    </button>
+                    <button class="settings-nav-btn" data-tab="appearance">
+                        <i data-lucide="palette"></i>
+                        外观设置
+                    </button>
+                    <button class="settings-nav-btn" data-tab="layout">
+                        <i data-lucide="layout"></i>
+                        布局设置
+                    </button>
+                    <button class="settings-nav-btn" data-tab="api">
+                        <i data-lucide="cloud"></i>
+                        API配置
+                    </button>
+                    <button class="settings-nav-btn" data-tab="data">
+                        <i data-lucide="database"></i>
+                        数据管理
+                    </button>
+                </div>
+                <div class="settings-content">
+                    <!-- 常规设置 -->
+                    <div class="settings-panel active" id="general-panel">
+                        <h3>常规设置</h3>
+                        <div class="setting-group">
+                            <label class="setting-label">
+                                <input type="checkbox" id="auto-refresh" class="setting-checkbox">
+                                <span class="checkmark"></span>
+                                自动刷新书签
+                            </label>
+                            <p class="setting-description">定期自动刷新书签数据</p>
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">
+                                <input type="checkbox" id="show-tooltips" class="setting-checkbox">
+                                <span class="checkmark"></span>
+                                显示工具提示
+                            </label>
+                            <p class="setting-description">在悬停时显示详细信息</p>
+                        </div>
+                    </div>
+
+                    <!-- 外观设置 -->
+                    <div class="settings-panel" id="appearance-panel">
+                        <h3>外观设置</h3>
+                        <div class="setting-group">
+                            <label class="setting-label">主题选择</label>
+                            <select id="theme-select" class="setting-select">
+                                <option value="dark">深色主题</option>
+                                <option value="light">浅色主题</option>
+                                <option value="auto">跟随系统</option>
+                            </select>
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">书签卡片大小</label>
+                            <input type="range" id="card-size" class="setting-range" min="120" max="200" value="160">
+                            <span class="range-value">160px</span>
+                        </div>
+                    </div>
+
+                    <!-- 布局设置 -->
+                    <div class="settings-panel" id="layout-panel">
+                        <h3>布局设置</h3>
+                        <div class="setting-group">
+                            <label class="setting-label">默认布局</label>
+                            <select id="default-layout" class="setting-select">
+                                <option value="three-column">三栏布局</option>
+                                <option value="two-column">两栏布局</option>
+                                <option value="single-column">单栏布局</option>
+                            </select>
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">
+                                <input type="checkbox" id="show-left-sidebar" class="setting-checkbox">
+                                <span class="checkmark"></span>
+                                显示左侧边栏
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">
+                                <input type="checkbox" id="show-right-sidebar" class="setting-checkbox">
+                                <span class="checkmark"></span>
+                                显示右侧边栏
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- API配置 -->
+                    <div class="settings-panel" id="api-panel">
+                        <h3>API配置</h3>
+                        <div class="setting-group">
+                            <label class="setting-label">API提供商</label>
+                            <select id="api-provider" class="setting-select">
+                                <option value="gemini">Google Gemini</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="custom">自定义API</option>
+                            </select>
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">API密钥</label>
+                            <input type="password" id="api-key" class="setting-input" placeholder="输入您的API密钥">
+                        </div>
+                        <div class="setting-group">
+                            <label class="setting-label">模型选择</label>
+                            <select id="api-model" class="setting-select">
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                <option value="gpt-4">GPT-4</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 数据管理 -->
+                    <div class="settings-panel" id="data-panel">
+                        <h3>数据管理</h3>
+                        <div class="setting-group">
+                            <button class="setting-btn primary" id="export-settings">
+                                <i data-lucide="download"></i>
+                                导出设置
+                            </button>
+                            <p class="setting-description">导出当前所有设置配置</p>
+                        </div>
+                        <div class="setting-group">
+                            <button class="setting-btn" id="import-settings">
+                                <i data-lucide="upload"></i>
+                                导入设置
+                            </button>
+                            <p class="setting-description">从文件导入设置配置</p>
+                        </div>
+                        <div class="setting-group">
+                            <button class="setting-btn danger" id="reset-settings">
+                                <i data-lucide="rotate-ccw"></i>
+                                重置设置
+                            </button>
+                            <p class="setting-description">恢复所有设置到默认值</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 布局选择模态框 -->
+    <div class="modal-overlay" id="layout-modal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title">布局设置</h2>
+                <button class="modal-close" id="close-layout">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-content">
+                <div class="layout-options">
+                    <div class="layout-option" data-layout="three-column">
+                        <div class="layout-preview three-col">
+                            <div class="preview-sidebar"></div>
+                            <div class="preview-main"></div>
+                            <div class="preview-sidebar"></div>
+                        </div>
+                        <h4>三栏布局</h4>
+                        <p>左侧工具栏 + 中央内容 + 右侧信息</p>
+                    </div>
+                    <div class="layout-option" data-layout="two-column">
+                        <div class="layout-preview two-col">
+                            <div class="preview-sidebar"></div>
+                            <div class="preview-main"></div>
+                        </div>
+                        <h4>两栏布局</h4>
+                        <p>左侧工具栏 + 中央内容</p>
+                    </div>
+                    <div class="layout-option" data-layout="single-column">
+                        <div class="layout-preview single-col">
+                            <div class="preview-main"></div>
+                        </div>
+                        <h4>单栏布局</h4>
+                        <p>全宽内容区域</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p class="loading-text">正在加载书签数据...</p>
+        </div>
+    </div>
+
+    <!-- 脚本文件 -->
+    <script type="module" src="analyze_modular.js"></script>
+    <script src="visualization-enhanced.js"></script>
+</body>
+</html>
                         <div class="widget-title-group">
                             <i data-lucide="folder" class="widget-icon"></i>
                             <h3 class="widget-title">文件夹</h3>
@@ -213,6 +595,14 @@
     </div>
 
     <script src="settings-manager.js"></script>
-    <script src="visualization-enhanced.js"></script>
+    <script type="module" src="visualization-enhanced-clean.js"></script>
+    
+    <!-- 加载状态覆盖层 -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div class="loading-text">正在加载...</div>
+        </div>
+    </div>
 </body>
 </html>

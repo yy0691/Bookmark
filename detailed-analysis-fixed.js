@@ -33,17 +33,15 @@ class DetailedAnalysisApp {
         
         // 绑定日志回调
         this.setupLogCallbacks();
-        this.detectionService.setLogCallback((message, type) => {
-            this.uiManager.addLog(message, type);
-        });
     }
     
     // 设置日志回调
     setupLogCallbacks() {
-        const logCallback = (message, type) => this.uiManager.addLog(message, type);
+        const logCallback = (message, type) => this.uiManager.addLogEntry(message, type);
         
         this.apiService.setLogCallback(logCallback);
         this.bookmarkService.setLogCallback(logCallback);
+        this.detectionService.setLogCallback(logCallback);
         this.visualizationService.setLogCallback(logCallback);
         this.importExportService.setLogCallback(logCallback);
         this.bookmarkManager.setLogCallback(logCallback);
@@ -73,9 +71,6 @@ class DetailedAnalysisApp {
             // 初始化UI管理器
             this.uiManager.initialize();
             
-            // 自动切换到分析日志页面以显示日志
-            this.switchSection('analysis-log-section');
-            
             // 处理URL参数
             this.handleUrlParameters();
             
@@ -91,11 +86,11 @@ class DetailedAnalysisApp {
             // 初始化各个功能模块
             await this.initializeModules();
             
-            this.uiManager.addLog('详细分析页面初始化完成', 'success');
+            this.uiManager.addLogEntry('详细分析页面初始化完成', 'success');
             
         } catch (error) {
             console.error('初始化失败:', error);
-            this.uiManager.addLog(`初始化失败: ${error.message}`, 'error');
+            this.uiManager.addLogEntry(`初始化失败: ${error.message}`, 'error');
         }
     }
     
@@ -217,19 +212,19 @@ class DetailedAnalysisApp {
                     statusElement.textContent = 'API已配置';
                     statusElement.parentElement.className = 'api-status-display connected';
                 }
-                this.uiManager.addLog('API配置检查成功', 'success');
+                this.uiManager.addLogEntry('API配置检查成功', 'success');
                 return true;
             } else {
                 if (statusElement) {
                     statusElement.textContent = 'API未配置';
                     statusElement.parentElement.className = 'api-status-display';
                 }
-                this.uiManager.addLog('API未配置，请在设置中配置', 'warning');
+                this.uiManager.addLogEntry('API未配置，请在设置中配置', 'warning');
                 return false;
             }
         } catch (error) {
             console.error('API状态检查失败:', error);
-            this.uiManager.addLog(`API状态检查失败: ${error.message}`, 'error');
+            this.uiManager.addLogEntry(`API状态检查失败: ${error.message}`, 'error');
             return false;
         }
     }
@@ -237,43 +232,43 @@ class DetailedAnalysisApp {
     // --- AI智能分析功能 ---
     async analyzeBookmarks() {
         if (this.isProcessing) {
-            this.uiManager.addLog('分析正在进行中...', 'warning');
+            this.uiManager.addLogEntry('分析正在进行中...', 'warning');
             return;
         }
         
         try {
             this.isProcessing = true;
-            this.uiManager.showLoading('正在进行AI分析...');
-            this.uiManager.addLog('开始AI智能分析...', 'info');
+            this.uiManager.showProgress(true);
+            this.uiManager.addLogEntry('开始AI智能分析...', 'info');
             
             // 获取所有书签
             const bookmarks = await this.bookmarkService.getAllBookmarks();
             if (bookmarks.length === 0) {
-                this.uiManager.addLog('没有找到书签', 'warning');
+                this.uiManager.addLogEntry('没有找到书签', 'warning');
                 return;
             }
             
             // 获取API设置
             const settings = await this.apiService.getApiSettings();
             if (!settings || !settings.apiKey) {
-                this.uiManager.addLog('请先配置API设置', 'error');
+                this.uiManager.addLogEntry('请先配置API设置', 'error');
                 return;
             }
             
             // 批量处理书签分析
-            const results = await this.bookmarkService.categorizeBookmarks(bookmarks, settings, this.apiService);
+            const results = await this.bookmarkService.analyzeBookmarks(bookmarks, settings);
             
             // 显示分析结果
             this.displayAnalysisResults(results);
             
-            this.uiManager.addLog('AI分析完成', 'success');
+            this.uiManager.addLogEntry('AI分析完成', 'success');
             
         } catch (error) {
             console.error('分析失败:', error);
-            this.uiManager.addLog(`分析失败: ${error.message}`, 'error');
+            this.uiManager.addLogEntry(`分析失败: ${error.message}`, 'error');
         } finally {
             this.isProcessing = false;
-            this.uiManager.hideLoading();
+            this.uiManager.showProgress(false);
         }
     }
     
@@ -330,39 +325,6 @@ class DetailedAnalysisApp {
     bindEvents() {
         console.log('🔧 开始绑定事件...');
         
-        // 绑定清空日志按钮
-        const clearLogBtn = document.getElementById('clear-log-btn');
-        if (clearLogBtn) {
-            clearLogBtn.addEventListener('click', () => {
-                this.uiManager.clearLog();
-            });
-        }
-
-        // 绑定各检测页面的清空日志按钮
-        const clearDuplicatesLogBtn = document.getElementById('clear-duplicates-log-btn');
-        if (clearDuplicatesLogBtn) {
-            clearDuplicatesLogBtn.addEventListener('click', () => {
-                const container = document.getElementById('duplicates-log');
-                if (container) container.innerHTML = '';
-            });
-        }
-
-        const clearInvalidLogBtn = document.getElementById('clear-invalid-log-btn');
-        if (clearInvalidLogBtn) {
-            clearInvalidLogBtn.addEventListener('click', () => {
-                const container = document.getElementById('invalid-log');
-                if (container) container.innerHTML = '';
-            });
-        }
-
-        const clearEmptyFoldersLogBtn = document.getElementById('clear-empty-folders-log-btn');
-        if (clearEmptyFoldersLogBtn) {
-            clearEmptyFoldersLogBtn.addEventListener('click', () => {
-                const container = document.getElementById('empty-folders-log');
-                if (container) container.innerHTML = '';
-            });
-        }
-
         // 顶部导航栏事件
         const refreshBtn = document.getElementById('refresh-btn');
         if (refreshBtn) {
@@ -409,21 +371,15 @@ class DetailedAnalysisApp {
             console.warn('❌ 找不到AI分析按钮');
         }
         
-        // 生成图表事件
-        document.getElementById('generate-charts-btn')?.addEventListener('click', () => {
-            console.log('生成图表按钮被点击');
-            this.generateCharts();
-        });
-        
-        // 重新生成分类事件
         document.getElementById('regenerate-categories-btn')?.addEventListener('click', () => {
-            console.log('重新生成分类按钮被点击');
             this.regenerateCategories();
         });
         
-        // 整理到文件夹事件
-        document.getElementById('organize-folders-btn')?.addEventListener('click', () => {
-            console.log('整理到文件夹按钮被点击');
+        document.getElementById('regenerate-categories-alt-btn')?.addEventListener('click', () => {
+            this.regenerateCategories();
+        });
+        
+        document.getElementById('organize-bookmarks-btn')?.addEventListener('click', () => {
             this.organizeBookmarksToFolders();
         });
         
@@ -525,116 +481,38 @@ class DetailedAnalysisApp {
     
     // --- 书签检测功能 ---
     async detectDuplicateBookmarks() {
-        if (this.isProcessing) return;
-        this.isProcessing = true;
-        
         try {
-            // 设置专用日志容器
-            this.uiManager.setLogContainer('duplicates-log');
-            
-            this.uiManager.showLoading('正在检测重复书签...');
-            this.uiManager.addLog('开始检测重复书签...', 'info');
-            
-            // 获取所有书签
-            this.uiManager.addLog('正在获取书签数据...', 'info');
-            const bookmarks = await this.bookmarkService.getAllBookmarks();
-            this.uiManager.updateProgress(1, 3, '书签数据获取完成');
-            
-            // 执行重复检测
-            this.uiManager.addLog('正在分析重复书签...', 'info');
-            const duplicates = await this.detectionService.detectDuplicateBookmarks();
-            this.uiManager.updateProgress(2, 3, '重复检测完成');
-            
-            // 显示结果
+            this.uiManager.addLogEntry('开始检测重复书签...', 'info');
+            const duplicates = await this.detectionService.detectDuplicates();
             this.displayDuplicateResults(duplicates);
             this.switchSection('duplicates');
-            this.uiManager.updateProgress(3, 3, '结果显示完成');
-            
-            this.uiManager.addLog(`检测完成，发现 ${duplicates.urlDuplicateCount + duplicates.titleDuplicateCount} 个重复书签`, 'success');
+            this.uiManager.addLogEntry(`检测完成，发现 ${duplicates.length} 组重复书签`, 'success');
         } catch (error) {
-            this.uiManager.addLog(`检测重复书签失败: ${error.message}`, 'error');
-        } finally {
-            this.isProcessing = false;
-            this.uiManager.hideLoading();
-            this.uiManager.resetProgress();
-            // 恢复默认日志容器
-            this.uiManager.setLogContainer('analysis-log');
+            this.uiManager.addLogEntry(`检测重复书签失败: ${error.message}`, 'error');
         }
     }
     
     async detectInvalidBookmarks() {
-        if (this.isProcessing) return;
-        
         try {
-            this.isProcessing = true;
-            // 设置专用日志容器
-            this.uiManager.setLogContainer('invalid-log');
-            
-            this.uiManager.showLoading('正在检测失效书签...');
-            this.uiManager.addLog('开始检测失效书签...', 'info');
-            
-            // 获取所有书签
-            this.uiManager.addLog('正在获取书签数据...', 'info');
-            const bookmarks = await this.bookmarkService.getAllBookmarks();
-            this.uiManager.updateProgress(1, 4, '书签数据获取完成');
-            
-            // 执行失效检测
-            this.uiManager.addLog('正在检测失效链接...', 'info');
-            const invalid = await this.detectionService.detectInvalidBookmarks();
-            this.uiManager.updateProgress(3, 4, '失效检测完成');
-            
-            // 显示结果
+            this.uiManager.addLogEntry('开始检测失效书签...', 'info');
+            const invalid = await this.detectionService.detectInvalid();
             this.displayInvalidResults(invalid);
             this.switchSection('invalid');
-            this.uiManager.updateProgress(4, 4, '结果显示完成');
-            
-            this.uiManager.addLog(`检测完成，发现 ${invalid.invalid} 个失效书签`, 'success');
+            this.uiManager.addLogEntry(`检测完成，发现 ${invalid.length} 个失效书签`, 'success');
         } catch (error) {
-            this.uiManager.addLog(`检测失效书签失败: ${error.message}`, 'error');
-        } finally {
-            this.isProcessing = false;
-            this.uiManager.hideLoading();
-            this.uiManager.resetProgress();
-            // 恢复默认日志容器
-            this.uiManager.setLogContainer('analysis-log');
+            this.uiManager.addLogEntry(`检测失效书签失败: ${error.message}`, 'error');
         }
     }
     
     async detectEmptyFolders() {
-        if (this.isProcessing) return;
-        
         try {
-            this.isProcessing = true;
-            // 设置专用日志容器
-            this.uiManager.setLogContainer('empty-folders-log');
-            
-            this.uiManager.showLoading('正在检测空文件夹...');
-            this.uiManager.addLog('开始检测空文件夹...', 'info');
-            
-            // 获取书签树结构
-            this.uiManager.addLog('正在获取书签树结构...', 'info');
-            const bookmarkTree = await this.bookmarkService.getTree();
-            this.uiManager.updateProgress(1, 3, '书签树获取完成');
-            
-            // 执行空文件夹检测
-            this.uiManager.addLog('正在分析空文件夹...', 'info');
+            this.uiManager.addLogEntry('开始检测空文件夹...', 'info');
             const emptyFolders = await this.detectionService.detectEmptyFolders();
-            this.uiManager.updateProgress(2, 3, '空文件夹检测完成');
-            
-            // 显示结果
             this.displayEmptyFolderResults(emptyFolders);
             this.switchSection('empty-folders');
-            this.uiManager.updateProgress(3, 3, '结果显示完成');
-            
-            this.uiManager.addLog(`检测完成，发现 ${emptyFolders.count} 个空文件夹`, 'success');
+            this.uiManager.addLogEntry(`检测完成，发现 ${emptyFolders.length} 个空文件夹`, 'success');
         } catch (error) {
-            this.uiManager.addLog(`检测空文件夹失败: ${error.message}`, 'error');
-        } finally {
-            this.isProcessing = false;
-            this.uiManager.hideLoading();
-            this.uiManager.resetProgress();
-            // 恢复默认日志容器
-            this.uiManager.setLogContainer('analysis-log');
+            this.uiManager.addLogEntry(`检测空文件夹失败: ${error.message}`, 'error');
         }
     }
     
@@ -650,99 +528,34 @@ class DetailedAnalysisApp {
         window.open(url, '_blank');
     }
     
-    async generateCharts() {
-        if (this.isProcessing) return;
-        
-        try {
-            this.isProcessing = true;
-            this.uiManager.showLoading('正在生成图表...');
-            this.uiManager.addLog('开始生成分析图表...', 'info');
-            
-            if (!this.analysisResults.categories || Object.keys(this.analysisResults.categories).length === 0) {
-                this.uiManager.addLog('请先进行AI分析', 'warning');
-                return;
-            }
-            
-            // 准备图表数据
-            this.uiManager.addLog('正在准备图表数据...', 'info');
-            this.uiManager.updateProgress(1, 3, '数据准备完成');
-            
-            // 生成图表
-            this.uiManager.addLog('正在渲染图表...', 'info');
-            await this.visualizationService.generateCharts(this.analysisResults.categories);
-            this.uiManager.updateProgress(2, 3, '图表生成完成');
-            
-            // 切换到图表页面
-            this.switchSection('charts');
-            this.uiManager.updateProgress(3, 3, '图表显示完成');
-            
-            this.uiManager.addLog('图表生成完成', 'success');
-        } catch (error) {
-            this.uiManager.addLog(`生成图表失败: ${error.message}`, 'error');
-        } finally {
-            this.isProcessing = false;
-            this.uiManager.hideLoading();
-            this.uiManager.resetProgress();
-        }
+    setupApi() {
+        window.open('options.html', '_blank');
     }
     
     async regenerateCategories() {
-        if (this.isProcessing) return;
-        
         if (!this.analysisResults.categories || Object.keys(this.analysisResults.categories).length === 0) {
-            this.uiManager.addLog('请先进行AI分析', 'warning');
+            this.uiManager.addLogEntry('请先进行AI分析', 'warning');
             return;
         }
         
         const confirm = window.confirm('确定要重新生成分类吗？这将覆盖当前的分类结果。');
         if (confirm) {
-            try {
-                this.isProcessing = true;
-                this.uiManager.showLoading('正在重新生成分类...');
-                this.uiManager.addLog('开始重新生成分类...', 'info');
-                
-                this.analysisResults = {};
-                await this.analyzeBookmarks();
-                
-                this.uiManager.addLog('重新生成分类完成', 'success');
-            } catch (error) {
-                this.uiManager.addLog(`重新生成分类失败: ${error.message}`, 'error');
-            } finally {
-                this.isProcessing = false;
-                this.uiManager.hideLoading();
-            }
+            this.analysisResults = {};
+            await this.analyzeBookmarks();
         }
     }
     
     async organizeBookmarksToFolders() {
-        if (this.isProcessing) return;
+        if (!this.analysisResults.categories) {
+            this.uiManager.addLogEntry('请先进行AI分析', 'warning');
+            return;
+        }
         
         try {
-            this.isProcessing = true;
-            this.uiManager.showLoading('正在整理书签到文件夹...');
-            this.uiManager.addLog('开始整理书签到文件夹...', 'info');
-            
-            if (!this.analysisResults.categories) {
-                this.uiManager.addLog('请先进行AI分析', 'warning');
-                return;
-            }
-            
-            // 创建文件夹并整理书签
-            this.uiManager.addLog('正在创建分类文件夹...', 'info');
-            this.uiManager.updateProgress(1, 3, '创建文件夹中');
-            
-            this.uiManager.addLog('正在移动书签到对应文件夹...', 'info');
             await this.bookmarkService.organizeToFolders(this.analysisResults.categories);
-            this.uiManager.updateProgress(2, 3, '书签移动完成');
-            
-            this.uiManager.updateProgress(3, 3, '整理完成');
-            this.uiManager.addLog('书签整理完成', 'success');
+            this.uiManager.addLogEntry('书签整理完成', 'success');
         } catch (error) {
-            this.uiManager.addLog(`书签整理失败: ${error.message}`, 'error');
-        } finally {
-            this.isProcessing = false;
-            this.uiManager.hideLoading();
-            this.uiManager.resetProgress();
+            this.uiManager.addLogEntry(`书签整理失败: ${error.message}`, 'error');
         }
     }
     
