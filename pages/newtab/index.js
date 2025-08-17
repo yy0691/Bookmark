@@ -146,18 +146,47 @@ const faviconService = {
         return this.cache.get(domain);
       }
       
-      // Try multiple favicon sources in order of preference
+          // 渐进式尝试多个favicon源
+      const tryFaviconSource = async (url) => {
+        try {
+          const response = await fetch(url, { method: 'HEAD' });
+          if (response.ok) return url;
+          return null;
+        } catch {
+          return null;
+        }
+      };
+
+      // 按优先级排序的图标源
       const faviconSources = [
-        `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
         `https://${domain}/favicon.ico`,
         `https://${domain}/favicon.png`,
-        `https://${domain}/apple-touch-icon.png`
+        `https://${domain}/apple-touch-icon.png`,
+        `https://${domain}/apple-touch-icon-precomposed.png`,
+        `https://icons.duckduckgo.com/ip3/${domain}.ico`
       ];
       
-      // Use Google's favicon service as primary (most reliable)
-      const faviconUrl = faviconSources[0];
-      this.cache.set(domain, faviconUrl);
-      return faviconUrl;
+      // 尝试第一个可用的图标源
+      return new Promise(async (resolve) => {
+        for (const source of faviconSources) {
+          const result = await tryFaviconSource(source);
+          if (result) {
+            this.cache.set(domain, result);
+            resolve(result);
+            return;
+          }
+        }
+        
+        // 如果所有源都失败，使用 DuckDuckGo 的服务作为最后的备选
+        const duckduckgoUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+        this.cache.set(domain, duckduckgoUrl);
+        resolve(duckduckgoUrl);
+      });
+      
+      // 如果所有源都失败,使用 DuckDuckGo 的服务作为最后的备选
+      const duckduckgoUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+      this.cache.set(domain, duckduckgoUrl);
+      return duckduckgoUrl;
     } catch (error) {
       console.warn('Failed to get favicon for URL:', url, error);
       return null;
@@ -176,9 +205,27 @@ const faviconService = {
       favicon.src = faviconUrl;
       
       // Fallback to generic icon if favicon fails to load
-      favicon.onerror = () => {
-        favicon.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzM3NDE1MSIvPgo8cGF0aCBkPSJNMTYgOEMxMi42ODYzIDggMTAgMTAuNjg2MyAxMCAxNEMxMCAxNy4zMTM3IDEyLjY4NjMgMjAgMTYgMjBDMTkuMzEzNyAyMCAyMiAxNy4zMTM3IDIyIDE0QzIyIDEwLjY4NjMgMTkuMzEzNyA4IDE2IDhaIiBmaWxsPSIjNjM2NjcwIi8+CjxwYXRoIGQ9Ik0xNiAyNEMxMy43OTA5IDI0IDEyIDIyLjIwOTEgMTIgMjBIMjBDMjAgMjIuMjA5MSAxOC4yMDkxIDI0IDE2IDI0WiIgZmlsbD0iIzYzNjY3MCIvPgo8L3N2Zz4K';
-        favicon.onerror = null; // Prevent infinite loop
+      // 添加加载状态指示
+      favicon.classList.add('loading');
+      
+      // 错误处理和降级策略
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      favicon.onerror = async () => {
+        retryCount++;
+        favicon.classList.remove('loading');
+        
+        if (retryCount <= maxRetries) {
+          // 重试使用 DuckDuckGo 的服务
+          const domain = new URL(url).hostname;
+          favicon.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+        } else {
+          // 使用本地备用图标
+          favicon.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTIgMTJoMjAiLz48cGF0aCBkPSJNMTIgMmE5LjkgOS45IDAgMCAxIDggOHY0YTkuOSA5LjkgMCAwIDEtOCA4IDkuOSA5LjkgMCAwIDEtOC04di00YTkuOSA5LjkgMCAwIDEgOC04eiIvPjwvc3ZnPg==';
+          favicon.classList.add('fallback');
+          favicon.onerror = null; // 防止无限循环
+        }
       };
     } else {
       // Use generic icon as fallback

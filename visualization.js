@@ -404,45 +404,91 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 智能获取网站图标 ---
-    function getFaviconUrl(domain) {
-        // 多个favicon源，按优先级排序
+    async function getFaviconUrl(domain) {
+        // 多个favicon源，按优先级排序，优先使用高分辨率图标
         const faviconSources = [
-            `https://${domain}/favicon.ico`,                    // 网站自己的favicon.ico
-            `https://${domain}/favicon.png`,                    // 网站自己的favicon.png
-            `https://${domain}/apple-touch-icon.png`,           // Apple设备图标
+            `https://${domain}/apple-touch-icon.png`,           // Apple设备图标 (通常是180x180)
             `https://${domain}/apple-touch-icon-precomposed.png`, // Apple预合成图标
-            `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=32`, // Google备用服务
-            `https://icons.duckduckgo.com/ip3/${domain}.ico`,   // DuckDuckGo图标服务
-            `https://www.google.com/s2/favicons?domain=${domain}&sz=32` // Google服务（最后尝试）
+            `https://${domain}/favicon-192x192.png`,            // 高分辨率PNG图标
+            `https://${domain}/favicon-128x128.png`,            // 中等分辨率PNG图标
+            `https://${domain}/favicon-96x96.png`,              // 中等分辨率PNG图标
+            `https://${domain}/favicon-64x64.png`,              // 中等分辨率PNG图标
+            `https://${domain}/favicon-32x32.png`,              // 标准PNG图标
+            `https://${domain}/favicon.png`,                    // 网站自己的favicon.png
+            `https://${domain}/favicon.ico`,                    // 网站自己的favicon.ico
+            `https://icons.duckduckgo.com/ip2/${domain}.ico?size=128`    // DuckDuckGo图标服务（请求大尺寸图标）
         ];
-        
-        return faviconSources[0]; // 返回第一个（最可靠的）
+
+        // 检查图标是否可访问
+        async function checkFaviconAvailability(url) {
+            try {
+                const response = await fetch(url, { method: 'HEAD', timeout: 3000 });
+                return response.ok;
+            } catch {
+                return false;
+            }
+        }
+
+        // 尝试所有图标源
+        for (const source of faviconSources) {
+            if (await checkFaviconAvailability(source)) {
+                return source;
+            }
+        }
+
+        // 如果所有源都失败，返回 DuckDuckGo 的服务作为后备
+        return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
     }
 
-    // --- 简化版favicon加载 ---
-    function loadSimpleFavicon(imgElement, domain) {
+    // --- 增强版favicon加载 ---
+    async function loadEnhancedFavicon(imgElement, domain) {
         console.log(`🔍 加载favicon: ${domain}`);
         
-        // 先尝试网站自己的favicon
-        const faviconUrl = `https://${domain}/favicon.ico`;
-        console.log(`🔄 尝试: ${faviconUrl}`);
+        // 添加加载状态
+        imgElement.classList.add('loading');
         
-        imgElement.onerror = function() {
-            console.log(`❌ 加载失败: ${faviconUrl}`);
-            // 显示备用图标
-            imgElement.style.display = 'none';
-            const fallbackIcon = imgElement.nextElementSibling;
-            if (fallbackIcon && fallbackIcon.classList.contains('fallback-icon')) {
-                fallbackIcon.style.display = 'block';
-                console.log(`✅ 显示备用图标`);
-            }
-        };
-        
-        imgElement.onload = function() {
-            console.log(`✅ 加载成功: ${faviconUrl}`);
-        };
-        
-        imgElement.src = faviconUrl;
+        try {
+            // 获取可用的图标URL
+            const faviconUrl = await getFaviconUrl(domain);
+            console.log(`🔄 尝试: ${faviconUrl}`);
+            
+            // 设置错误处理
+            let retryCount = 0;
+            const maxRetries = 2;
+            
+            imgElement.onerror = async function() {
+                console.log(`❌ 加载失败: ${faviconUrl}`);
+                retryCount++;
+                
+                if (retryCount <= maxRetries) {
+                    // 重试使用 DuckDuckGo 的服务
+                    console.log(`🔄 重试 ${retryCount}/${maxRetries}: 使用DuckDuckGo服务`);
+                    imgElement.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+                } else {
+                    // 使用本地备用图标
+                    console.log(`⚠️ 所有重试失败，使用备用图标`);
+                    imgElement.classList.add('fallback');
+                    imgElement.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTIgMTJoMjAiLz48cGF0aCBkPSJNMTIgMmE5LjkgOS45IDAgMCAxIDggOHY0YTkuOSA5LjkgMCAwIDEtOCA4IDkuOSA5LjkgMCAwIDEtOC04di00YTkuOSA5LjkgMCAwIDEgOC04eiIvPjwvc3ZnPg==';
+                    imgElement.onerror = null; // 防止无限循环
+                }
+                
+                imgElement.classList.remove('loading');
+            };
+            
+            imgElement.onload = function() {
+                console.log(`✅ 加载成功: ${faviconUrl}`);
+                imgElement.classList.remove('loading');
+            };
+            
+            // 设置图标URL
+            imgElement.src = faviconUrl;
+            
+        } catch (error) {
+            console.error(`❌ 图标加载过程出错:`, error);
+            imgElement.classList.remove('loading');
+            imgElement.classList.add('fallback');
+            imgElement.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTIgMTJoMjAiLz48cGF0aCBkPSJNMTIgMmE5LjkgOS45IDAgMCAxIDggOHY0YTkuOSA5LjkgMCAwIDEtOCA4IDkuOSA5LjkgMCAwIDEtOC04di00YTkuOSA5LjkgMCAwIDEgOC04eiIvPjwvc3ZnPg==';
+        }
     }
 
     // --- 创建书签卡片（优化版） ---
@@ -577,7 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 创建书签卡片 ---
-    function createBookmarkCard(bookmark) {
+    async function createBookmarkCard(bookmark) {
         const card = document.createElement('div');
         card.className = 'bookmark-card fade-in';
         card.dataset.bookmarkId = bookmark.id;
@@ -587,19 +633,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         card.innerHTML = `
             <div class="bookmark-icon-container">
-                <img class="bookmark-favicon" src="" alt="${url.hostname}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                            <div class="fallback-icon" style="display:block;">
-                <i data-lucide="globe"></i>
-            </div>
+                <img class="bookmark-favicon loading" src="" alt="${url.hostname}">
             </div>
             <div class="bookmark-title">${bookmark.title || url.hostname}</div>
         `;
         
-        // 使用渐进式加载策略加载favicon
+        // 使用增强版favicon加载策略
         const faviconImg = card.querySelector('.bookmark-favicon');
         if (faviconImg) {
             console.log(`✅ 找到favicon元素，开始加载`);
-            loadSimpleFavicon(faviconImg, url.hostname);
+            await loadEnhancedFavicon(faviconImg, url.hostname);
         } else {
             console.error('❌ 找不到favicon元素');
         }

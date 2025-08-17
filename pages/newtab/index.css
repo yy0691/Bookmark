@@ -380,11 +380,61 @@ html {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
-  object-fit: cover;
+  object-fit: contain; /* 改为contain以保持图标比例 */
   flex-shrink: 0;
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
   transition: all 0.2s ease;
+  position: relative;
+  image-rendering: -webkit-optimize-contrast; /* 优化Webkit浏览器中的图标渲染 */
+  image-rendering: crisp-edges; /* 使用清晰边缘渲染 */
+  -webkit-backface-visibility: hidden; /* 防止变换时的模糊 */
+  backface-visibility: hidden;
+  transform: translateZ(0); /* 启用GPU加速 */
+  padding: 2px; /* 添加内边距防止图标贴边 */
+}
+
+/* 高DPI屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .favicon {
+    image-rendering: pixelated; /* 在高DPI屏幕上使用像素化渲染 */
+  }
+}
+
+/* 图标加载状态 */
+.favicon.loading {
+  animation: pulse 1.5s infinite;
+  opacity: 0.7;
+  backdrop-filter: blur(0); /* 防止加载动画时的模糊 */
+}
+
+/* 图标加载失败状态 */
+.favicon.fallback {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+  padding: 6px;
+  opacity: 0.8;
+}
+
+/* 图标加载中动画 */
+@keyframes pulse {
+  0% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.95); }
+  100% { opacity: 0.7; transform: scale(1); }
+}
+
+/* 网格视图下的favicon尺寸优化 */
+.bookmarks-grid:not(.list-view) .favicon {
+  width: 48px;
+  height: 48px;
+  padding: 3px;
+}
+
+/* 列表视图下的favicon尺寸优化 */
+.list-view .favicon {
+  width: 24px;
+  height: 24px;
+  padding: 2px;
 }
 /* 网格视图下的favicon */
 .bookmarks-grid:not(.list-view) .favicon,

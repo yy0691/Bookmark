@@ -3325,7 +3325,6 @@ input[type="range"]::-moz-range-thumb {
 .fallback-icon {
     width: 16px;
     height: 16px;
-    margin-right: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3333,6 +3332,8 @@ input[type="range"]::-moz-range-thumb {
     background-color: var(--bg-component);
     border-radius: 2px;
     padding: 2px;
+    font-size: 12px;
+    line-height: 1;
 }
 
 .fallback-icon svg {
@@ -3344,9 +3345,9 @@ input[type="range"]::-moz-range-thumb {
 #bookmark-container.card-view .fallback-icon {
     width: 48px;
     height: 48px;
-    margin: 0;
     border-radius: var(--radius-sm);
     padding: 8px;
+    font-size: 24px;
 }
 
 #bookmark-container.card-view .fallback-icon svg {
@@ -3358,9 +3359,9 @@ input[type="range"]::-moz-range-thumb {
 #bookmark-container.list-view .fallback-icon {
     width: 20px;
     height: 20px;
-    margin-right: 12px;
     border-radius: 3px;
     padding: 2px;
+    font-size: 14px;
 }
 
 #bookmark-container.list-view .fallback-icon svg {
@@ -3372,9 +3373,9 @@ input[type="range"]::-moz-range-thumb {
 #bookmark-container.icon-view .fallback-icon {
     width: 32px;
     height: 32px;
-    margin: 0;
     border-radius: var(--radius-sm);
     padding: 4px;
+    font-size: 18px;
 }
 
 #bookmark-container.icon-view .fallback-icon svg {
