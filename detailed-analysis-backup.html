@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>详细分析 - 书签助手</title>
+    <link rel="stylesheet" href="styles/index.css">
+    <style>
+        /* 页面专用样式增强 - 基于标准样式系统 */
+
+        /* 详细分析页面专用布局 */
+        .analysis-layout {
+            display: flex;
+            gap: var(--space-6);
+            min-height: calc(100vh - 120px);
+            margin-top: var(--space-6);
+        }
+        
+        .analysis-sidebar {
+            width: 280px;
+            position: sticky;
+            top: 80px;
+            height: fit-content;
+        }
+        
+        .analysis-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-6);
+        }
+
+        /* 分析页面内容区域 */
+        .analysis-content-section {
+            display: none;
+        }
+        
+        .analysis-content-section.active {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-6);
+        }
+
+        /* 特殊功能按钮样式 */
+        .analysis-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-3);
+        }
+
+        /* 分析进度显示 */
+        .analysis-progress-container {
+            margin: var(--space-4) 0;
+        }
+
+        /* 分析日志样式 */
+        .analysis-log {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+        }
+
+        /* 分析结果项样式 */
+        .analysis-result-item {
+            position: relative;
+        }
+        
+        .analysis-result-item .bookmark-actions {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .analysis-result-item:hover .bookmark-actions {
+            opacity: 1;
+        }
+
+        /* 分析统计样式 */
+        .analysis-stats {
+            margin-bottom: var(--space-6);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .analysis-layout {
+                flex-direction: column;
+            }
+            
+            .analysis-sidebar {
+                width: 100%;
+                position: static;
+            }
+        }
+
+        /* 页面特定的功能按钮样式 */
+        .analysis-content-section {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        /* 专用组件样式 */
+        .nav-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--space-2);
+            padding: 0 var(--space-3);
+        }
+        
+        .nav-section {
+            margin-bottom: var(--space-4);
+        }
+        
+        .nav-item {
+            width: 100%;
+            justify-content: flex-start;
+            text-align: left;
+            margin-bottom: var(--space-1);
+        }
+        
+        .nav-item.active {
+            background: var(--accent-primary, var(--accent-blue));
+            color: white;
+        }
+        
+        .widget-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-4);
+        }
+        
+        .visualization-canvas {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: var(--space-4);
+            opacity: 0.5;
+        }
+    </style>
+    <script src="lucide.min.js"></script>
+</head>
+<body class="visualization-page">
+    <!-- 顶部导航栏 -->
+    <nav class="top-nav">
+        <div class="nav-left">
+            <div class="logo">
+                <i data-lucide="search"></i>
+                详细分析
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="nav-btn" id="refresh-btn">
+                <i data-lucide="refresh-cw"></i>
+            </button>
+            <button class="nav-btn" id="export-btn">
+                <i data-lucide="upload"></i>
+            </button>
+            <button class="nav-btn" id="back-btn">
+                <i data-lucide="arrow-left"></i>
+            </button>
+        </div>
+    </nav>
+    
+    <!-- 主容器 -->
+    <div class="main-container">        
+        <!-- 主布局 -->
+        <div class="analysis-layout">
+            <!-- 侧边栏 -->
+            <div class="analysis-sidebar">
+                <div class="widget">
+                    <div class="widget-header">
+                        <i data-lucide="settings" class="widget-icon"></i>
+                        <h3 class="widget-title">分析功能</h3>
+                    </div>
+                    <p class="widget-description">选择要使用的分析工具</p>
+                    
+                    <div class="sidebar-nav">
+                    <!-- 数据可视化 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">📊 数据可视化</div>
+                        <button class="btn btn-ghost nav-item active" data-section="wordcloud">
+                            <i data-lucide="cloud"></i>
+                            词云展示
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="treeview">
+                            <i data-lucide="git-merge"></i>
+                            树状图展示
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="charts">
+                            <i data-lucide="bar-chart-2"></i>
+                            统计图表
+                        </button>
+                    </div>
+                    
+                    <!-- AI智能分析 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">🤖 AI智能分析</div>
+                        <button class="btn btn-ghost nav-item" data-section="ai-analysis">
+                            <i data-lucide="search"></i>
+                            分析并分类书签
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="regenerate">
+                            <i data-lucide="refresh-cw"></i>
+                            重新生成分类建议
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="analysis-log">
+                            <i data-lucide="file-text"></i>
+                            分析日志
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="analysis-results">
+                            <i data-lucide="bar-chart-2"></i>
+                            分析结果
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="export-csv">
+                            <i data-lucide="upload"></i>
+                            导出CSV
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="history">
+                            <i data-lucide="history"></i>
+                            历史版本
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="organize">
+                            <i data-lucide="folder"></i>
+                            整理到文件夹
+                        </button>
+                    </div>
+                    
+                    <!-- 书签管理器 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">📂 书签管理器</div>
+                        <button class="btn btn-ghost nav-item" data-section="batch-operations">
+                            <i data-lucide="zap"></i>
+                            批量处理
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="duplicates">
+                            <i data-lucide="copy"></i>
+                            重复书签整理
+                            <span class="tag" id="duplicate-badge" style="display: none;">0</span>
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="invalid">
+                            <i data-lucide="x-circle"></i>
+                            失效书签整理
+                            <span class="tag" id="invalid-badge" style="display: none;">0</span>
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="empty-folders">
+                            <i data-lucide="folder-x"></i>
+                            空文件夹整理
+                        </button>
+                    </div>
+                    
+                    <!-- 数据管理 -->
+                    <div class="nav-section">
+                        <div class="nav-section-title">📦 数据管理</div>
+                        <button class="btn btn-ghost nav-item" data-section="import">
+                            <i data-lucide="download"></i>
+                            导入功能
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="export">
+                            <i data-lucide="upload"></i>
+                            导出功能
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="backup">
+                            <i data-lucide="save"></i>
+                            备份恢复
+                        </button>
+                        <button class="btn btn-ghost nav-item" data-section="reports">
+                            <i data-lucide="clipboard-list"></i>
+                            检测报告
+                        </button>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 主内容区域 -->
+            <div class="analysis-main">
+                <!-- 默认显示词云展示 -->
+                <div id="wordcloud-section" class="analysis-content-section active">
+                    <div class="card">
+                        <div class="widget-header">
+                            <i data-lucide="cloud" class="widget-icon"></i>
+                            <h2 class="widget-title">词云展示</h2>
+                        </div>
+                        <p class="widget-description">基于书签标题和分类生成交互式词云，直观展示书签内容分布</p>
+                    </div>
+                    
+                    <!-- 统计信息 -->
+                    <div class="stats-grid analysis-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-bookmarks">-</div>
+                            <div class="stat-label">总书签数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-folders">-</div>
+                            <div class="stat-label">文件夹数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="unique-words">-</div>
+                            <div class="stat-label">唯一词汇</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="avg-length">-</div>
+                            <div class="stat-label">平均长度</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 词云控制 -->
+                    <div class="glass-card">
+                        <div class="widget-header">
+                            <h3 class="widget-title">词云设置</h3>
+                            <div class="flex gap-2">
+                                <button class="btn btn-primary" id="generate-wordcloud-btn">生成词云</button>
+                                <button class="btn" id="export-wordcloud-btn">导出图片</button>
+                                <button class="btn" id="refresh-wordcloud-btn">刷新数据</button>
+                            </div>
+                        </div>
+                        <div id="wordcloud-container" class="visualization-canvas">
+                            <div class="empty-state">
+                                <i data-lucide="cloud" class="empty-icon"></i>
+                                <h3>词云未生成</h3>
+                                <p>点击"生成词云"开始分析书签内容</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- AI智能分析 -->
+                <div id="ai-analysis-section" class="analysis-content-section">
+                    <div class="card">
+                        <div class="widget-header">
+                            <i data-lucide="brain" class="widget-icon"></i>
+                            <h2 class="widget-title">AI智能分析</h2>
+                        </div>
+                        <p class="widget-description">使用AI分析并分类书签，生成智能分类建议</p>
+                    </div>
+                    
+                    <!-- API状态 -->
+                    <div class="glass-card">
+                        <div class="widget-header">
+                            <h3 class="widget-title">API连接状态</h3>
+                            <button class="btn" id="setup-api-btn">设置API</button>
+                        </div>
+                        <div class="api-status-display">
+                            <span id="api-status-text">检查中...</span>
+                            <span id="api-provider-text"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- 分析控制 -->
+                    <div class="glass-card">
+                        <div class="widget-header">
+                            <h3 class="widget-title">分析控制</h3>
+                        </div>
+                        <div class="analysis-controls">
+                            <button class="btn btn-primary" id="analyze-bookmarks-btn">
+                                <i data-lucide="search"></i>
+                                开始分析
+                            </button>
+                            <button class="btn btn-danger" id="cancel-analyze-btn" style="display: none;">
+                                <i data-lucide="x"></i>
+                                取消分析
+                            </button>
+                            <button class="btn" id="regenerate-categories-btn">
+                                <i data-lucide="refresh-cw"></i>
+                                重新生成分类
+                            </button>
+                            <button class="btn" id="organize-bookmarks-btn">
+                                <i data-lucide="folder"></i>
+                                整理到文件夹
+                            </button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="analysis-progress" class="analysis-progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="analysis-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="analysis-status" class="progress-status">准备分析...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 分析日志 -->
+                    <div class="glass-card">
+                        <div class="widget-header">
+                            <h3 class="widget-title">分析日志</h3>
+                            <div class="flex gap-2">
+                                <button class="btn btn-sm" id="clear-log-btn">清空日志</button>
+                                <button class="btn btn-sm" id="toggle-log-btn">显示/隐藏</button>
+                            </div>
+                        </div>
+                        <div id="analysis-log-container" class="analysis-log">
+                            <div id="analysis-log" class="log-content"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 分析结果 -->
+                    <div id="analysis-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">分析结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="export-csv-btn">导出CSV</button>
+                                <button class="data-control-btn" id="view-history-btn">历史版本</button>
+                            </div>
+                        </div>
+                        <div id="results-preview" class="results-content"></div>
+                    </div>
+                </div>
+                
+                <!-- 书签管理器 -->
+                <div id="bookmark-manager-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">书签管理器</div>
+                        <div class="content-description">批量处理书签，支持增删查改、导入导出等操作</div>
+                    </div>
+                    
+                    <!-- 管理器工具栏 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">工具栏</div>
+                        </div>
+                        <div class="manager-controls">
+                            <button class="feature-btn" id="expand-all-folders-btn">📂 展开全部</button>
+                            <button class="feature-btn" id="collapse-all-folders-btn">📁 折叠全部</button>
+                            <button class="feature-btn" id="create-folder-btn">➕ 新建文件夹</button>
+                            <button class="feature-btn" id="refresh-manager-btn">🔄 刷新</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 批量操作工具栏 -->
+                    <div id="batch-operations" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">批量操作</div>
+                        </div>
+                        <div class="batch-toolbar">
+                            <div class="batch-info">
+                                <span id="selected-count">已选择 0 项</span>
+                            </div>
+                            <div class="batch-actions">
+                                <button class="feature-btn" id="batch-delete-btn">🗑️ 批量删除</button>
+                                <button class="feature-btn" id="batch-rename-btn">📝 批量重命名</button>
+                                <button class="feature-btn" id="batch-move-btn">📁 批量移动</button>
+                                <button class="feature-btn" id="batch-export-btn">📤 导出选中</button>
+                                <button class="feature-btn" id="select-all-btn">☑️ 全选</button>
+                                <button class="feature-btn" id="deselect-all-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 书签树 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">书签树结构</div>
+                        </div>
+                        <div id="bookmark-tree" class="bookmark-tree"></div>
+                    </div>
+                </div>
+                
+                <!-- 重复书签检测 -->
+                <div id="duplicates-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">重复书签检测</div>
+                        <div class="content-description">检测并清理重复的书签，支持URL和标题相似度检测</div>
+                    </div>
+                    
+                    <!-- 检测控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测控制</div>
+                        </div>
+                        <div class="detection-controls">
+                            <button class="feature-btn primary" id="detect-duplicates-btn">🔄 开始检测</button>
+                            <button class="feature-btn" id="remove-duplicates-btn" style="display: none;">🗑️ 移除重复</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="duplicates-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="duplicates-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="duplicates-status" class="progress-status">准备检测...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测日志 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测日志</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-duplicates-log-btn">清空日志</button>
+                            </div>
+                        </div>
+                        <div id="duplicates-log-container" class="log-container">
+                            <div id="duplicates-log" class="log-content"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测结果 -->
+                    <div id="duplicate-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">检测结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="select-all-duplicates-btn">☑️ 全选</button>
+                                <button class="data-control-btn" id="deselect-all-duplicates-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                        <div id="duplicate-list" class="detection-list"></div>
+                    </div>
+                </div>
+                
+                <!-- 失效书签检测 -->
+                <div id="invalid-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">失效书签检测</div>
+                        <div class="content-description">检测并清理失效的书签链接</div>
+                    </div>
+                    
+                    <!-- 检测控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测控制</div>
+                        </div>
+                        <div class="detection-controls">
+                            <button class="feature-btn primary" id="detect-invalid-btn">❌ 开始检测</button>
+                            <button class="feature-btn" id="remove-invalid-btn" style="display: none;">🗑️ 删除失效</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="invalid-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="invalid-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="invalid-status" class="progress-status">准备检测...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测日志 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测日志</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-invalid-log-btn">清空日志</button>
+                            </div>
+                        </div>
+                        <div id="invalid-log-container" class="log-container">
+                            <div id="invalid-log" class="log-content"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测结果 -->
+                    <div id="invalid-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">检测结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="select-all-invalid-btn">☑️ 全选</button>
+                                <button class="data-control-btn" id="deselect-all-invalid-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                        <div id="invalid-list" class="detection-list"></div>
+                    </div>
+                </div>
+                
+                <!-- 空文件夹检测 -->
+                <div id="empty-folders-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">空文件夹检测</div>
+                        <div class="content-description">检测并清理空的书签文件夹</div>
+                    </div>
+                    
+                    <!-- 检测控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测控制</div>
+                        </div>
+                        <div class="detection-controls">
+                            <button class="feature-btn primary" id="detect-empty-folders-btn">📁 开始检测</button>
+                            <button class="feature-btn" id="remove-empty-folders-btn" style="display: none;">🗑️ 删除空文件夹</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="empty-folders-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="empty-folders-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="empty-folders-status" class="progress-status">准备检测...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测日志 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">检测日志</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-empty-folders-log-btn">清空日志</button>
+                            </div>
+                        </div>
+                        <div id="empty-folders-log-container" class="log-container">
+                            <div id="empty-folders-log" class="log-content"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 检测结果 -->
+                    <div id="empty-folders-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">检测结果</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="select-all-empty-folders-btn">☑️ 全选</button>
+                                <button class="data-control-btn" id="deselect-all-empty-folders-btn">☐ 取消全选</button>
+                            </div>
+                        </div>
+                        <div id="empty-folders-list" class="detection-list"></div>
+                    </div>
+                </div>
+                
+                <!-- 导入功能 -->
+                <div id="import-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">导入功能</div>
+                        <div class="content-description">从多种格式文件导入书签数据</div>
+                    </div>
+                    
+                    <!-- 导入选项 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">导入选项</div>
+                        </div>
+                        <div class="import-options">
+                            <div class="option-group">
+                                <label>
+                                    <input type="radio" name="import-strategy" value="merge" checked>
+                                    合并现有书签
+                                </label>
+                                <label>
+                                    <input type="radio" name="import-strategy" value="overwrite">
+                                    覆盖现有书签
+                                </label>
+                                <label>
+                                    <input type="radio" name="import-strategy" value="selective">
+                                    选择性导入
+                                </label>
+                            </div>
+                            
+                            <div class="conflict-handling">
+                                <h5>冲突处理策略</h5>
+                                <select id="conflict-strategy">
+                                    <option value="skip">跳过重复项</option>
+                                    <option value="rename">重命名</option>
+                                    <option value="replace">替换</option>
+                                    <option value="ask">询问用户</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="import-actions">
+                            <button class="feature-btn primary" id="import-file-btn">选择文件导入</button>
+                            <button class="feature-btn" id="import-url-btn">从URL导入</button>
+                            <input type="file" id="import-file-input" accept=".html,.json,.csv" class="hidden">
+                        </div>
+                        
+                        <div id="import-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="import-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="import-status" class="progress-status">准备导入...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 导出功能 -->
+                <div id="export-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">导出功能</div>
+                        <div class="content-description">将书签数据导出为多种格式</div>
+                    </div>
+                    
+                    <!-- 导出选项 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">导出选项</div>
+                        </div>
+                        <div class="export-options">
+                            <button class="feature-btn" id="export-backup-btn">💾 备份所有书签 (JSON)</button>
+                            <button class="feature-btn" id="export-ai-categories-btn">📊 导出AI分类 (CSV)</button>
+                            <button class="feature-btn" id="export-custom-btn">📤 自定义导出</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 备份恢复 -->
+                <div id="backup-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">备份恢复</div>
+                        <div class="content-description">管理书签备份和恢复功能</div>
+                    </div>
+                    
+                    <!-- 备份控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">备份控制</div>
+                        </div>
+                        <div class="backup-controls">
+                            <button class="feature-btn" id="create-backup-btn">💾 创建备份</button>
+                            <button class="feature-btn" id="restore-backup-btn">📥 恢复备份</button>
+                            <button class="feature-btn" id="manage-backups-btn">📋 管理备份</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 检测报告 -->
+                <div id="reports-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">检测报告</div>
+                        <div class="content-description">查看和管理各种检测报告</div>
+                    </div>
+                    
+                    <!-- 报告选项 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">报告选项</div>
+                        </div>
+                        <div class="report-options">
+                            <button class="feature-btn" id="view-duplicate-report-btn">🔄 重复书签报告</button>
+                            <button class="feature-btn" id="view-invalid-report-btn">❌ 失效书签报告</button>
+                            <button class="feature-btn" id="view-cleanup-report-btn">🧹 清理报告</button>
+                            <button class="feature-btn" id="generate-comprehensive-report-btn">📋 生成综合报告</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 树状图展示 -->
+                <div id="treeview-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">树状图展示</div>
+                        <div class="content-description">以树状结构展示书签的层级关系，支持展开/折叠操作</div>
+                    </div>
+                    
+                    <!-- 树状图控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">树状图设置</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="expand-all-tree-btn">展开全部</button>
+                                <button class="data-control-btn" id="collapse-all-tree-btn">折叠全部</button>
+                                <button class="data-control-btn" id="refresh-tree-btn">刷新数据</button>
+                            </div>
+                        </div>
+                        <div id="treeview-container" class="visualization-area">
+                            <div class="placeholder-text">正在加载树状图...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 统计图表 -->
+                <div id="charts-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">统计图表</div>
+                        <div class="content-description">通过图表直观展示书签数据的统计信息</div>
+                    </div>
+                    
+                    <!-- 图表控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">图表设置</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="generate-charts-btn">生成图表</button>
+                                <button class="data-control-btn" id="export-charts-btn">导出图表</button>
+                                <button class="data-control-btn" id="refresh-charts-btn">刷新数据</button>
+                            </div>
+                        </div>
+                        <div id="charts-container" class="visualization-area">
+                            <div class="placeholder-text">点击"生成图表"开始分析</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 重新生成分类建议 -->
+                <div id="regenerate-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">重新生成分类建议</div>
+                        <div class="content-description">基于新的参数重新生成AI分类建议</div>
+                    </div>
+                    
+                    <!-- 重新生成控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">重新生成控制</div>
+                        </div>
+                        <div class="analysis-controls">
+                            <button class="feature-btn primary" id="regenerate-categories-alt-btn">🔄 重新生成分类</button>
+                            <button class="feature-btn" id="regenerate-settings-btn">⚙️ 调整参数</button>
+                        </div>
+                        
+                        <!-- 进度显示 -->
+                        <div id="regenerate-progress" class="progress-container" style="display: none;">
+                            <div class="progress-bar">
+                                <div id="regenerate-progress-bar" class="progress-fill"></div>
+                            </div>
+                            <div id="regenerate-status" class="progress-status">准备重新生成...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 重新生成结果 -->
+                    <div id="regenerate-results" class="data-section" style="display: none;">
+                        <div class="data-header">
+                            <div class="data-title">重新生成结果</div>
+                        </div>
+                        <div id="regenerate-preview" class="results-content"></div>
+                    </div>
+                </div>
+                
+                <!-- 分析日志 -->
+                <div id="analysis-log-section" class="content-section">
+                    <div class="content-header">
+                        <div class="content-title">分析日志</div>
+                        <div class="content-description">查看AI分析的详细日志记录</div>
+                    </div>
+                    
+                    <!-- 日志控制 -->
+                    <div class="data-section">
+                        <div class="data-header">
+                            <div class="data-title">日志控制</div>
+                            <div class="data-controls">
+                                <button class="data-control-btn" id="clear-analysis-log-btn">清空日志</button>
+                                <button class="data-control-btn" id="export-analysis-log-btn">导出日志</button>
+                                <button class="data-control-btn" id="toggle-analysis-log-btn">显示/隐藏</button>
+                            </div>
+                        </div>
+                        <div id="analysis-log-container" class="log-container">
+                            <div id="analysis-log" class="log-content"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+    
+    <script type="module" src="detailed-analysis.js"></script>
+</body>
+</html>

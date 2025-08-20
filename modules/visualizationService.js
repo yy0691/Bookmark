@@ -586,13 +586,13 @@ export class VisualizationService {
       const tagsHtml = tags.length > 0 ? 
         `<div class="bookmark-tags">${tags.map(tag => `<span class="bookmark-tag">${tag}</span>`).join('')}</div>` : '';
 
-      // Create favicon using the favicon service from the main page
+      // Create favicon using DuckDuckGo's favicon service (more reliable than Google)
       const faviconContainer = document.createElement('div');
       faviconContainer.className = 'favicon-container';
       
-      // Use Google's favicon service for better reliability
+      // Use DuckDuckGo's favicon service for better reliability and privacy
       const domain = new URL(bookmark.url).hostname;
-      const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+      const faviconUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
       
       item.innerHTML = `
         <img src="${faviconUrl}" alt="" class="favicon" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzM3NDE1MSIvPgo8cGF0aCBkPSJNMTYgOEMxMi42ODYzIDggMTAgMTAuNjg2MyAxMCAxNEMxMCAxNy4zMTM3IDEyLjY4NjMgMjAgMTYgMjBDMTkuMzEzNyAyMCAyMiAxNy4zMTM3IDIyIDE0QzIyIDEwLjY4NjMgMTkuMzEzNyA4IDE2IDhaIiBmaWxsPSIjNjM2NjcwIi8+CjxwYXRoIGQ9Ik0xNiAyNEMxMy43OTA5IDI0IDEyIDIyLjIwOTEgMTIgMjBIMjBDMjAgMjIuMjA5MSAxOC4yMDkxIDI0IDE2IDI0WiIgZmlsbD0iIzYzNjY3MCIvPgo8L3N2Zz4K'"/>

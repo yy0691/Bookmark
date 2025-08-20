@@ -2478,7 +2478,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <input type="checkbox" data-bookmark-id="${bookmark.id}">
             </div>
             <div class="bookmark-favicon">
-                <img src="chrome://favicon/${bookmark.url}" alt="" onerror="this.style.display='none'">
+                <img src="https://icons.duckduckgo.com/ip3/${new URL(bookmark.url).hostname}.ico" alt="" onerror="this.style.display='none'">
             </div>
             <div class="bookmark-title" contenteditable="false">${bookmark.title}</div>
             <div class="bookmark-url">${bookmark.url}</div>
@@ -3019,7 +3019,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <input type="checkbox" data-group="${index}" data-bookmark="${bookmarkIndex}" data-bookmark-id="${bookmark.id}">
                             </div>
                             <div class="duplicate-favicon">
-                                <img src="chrome://favicon/${bookmark.url}" alt="" onerror="this.style.display='none'">
+                                <img src="https://icons.duckduckgo.com/ip3/${new URL(bookmark.url).hostname}.ico" alt="" onerror="this.style.display='none'">
                             </div>
                             <div class="duplicate-info">
                                 <div class="duplicate-title">${bookmark.title}</div>
@@ -3364,7 +3364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <input type="checkbox" data-bookmark-id="${bookmark.id}" data-type="${type}">
                             </div>
                             <div class="invalid-favicon">
-                                <img src="chrome://favicon/${bookmark.url}" alt="" onerror="this.style.display='none'">
+                                <img src="https://icons.duckduckgo.com/ip3/${new URL(bookmark.url).hostname}.ico" alt="" onerror="this.style.display='none'">
                             </div>
                             <div class="invalid-info">
                                 <div class="invalid-title">${bookmark.title}</div>

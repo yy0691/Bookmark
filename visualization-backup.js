@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.draggable = true;
         
         const url = new URL(bookmark.url);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+        const faviconUrl = `https://icons.duckduckgo.com/ip3/${url.hostname}.ico`;
         
         card.innerHTML = `
             <img class="bookmark-favicon" src="${faviconUrl}" 
@@ -503,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.draggable = true;
         
         const url = new URL(bookmark.url);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+        const faviconUrl = `https://icons.duckduckgo.com/ip3/${url.hostname}.ico`;
         
         card.innerHTML = `
             <img class="bookmark-favicon" src="${faviconUrl}" 

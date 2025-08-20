@@ -1,0 +1,406 @@
+/* ======================================
+   书签助手 - 统一UI样式标准入口文件
+   基于 pages/newtab/index.css 建立的全局标准
+   ====================================== */
+
+/* 导入全局样式标准 */
+@import url('./global-ui-standards.css');
+
+/* 导入组件样式标准 */
+@import url('./component-standards.css');
+
+/* 导入页面专用样式标准 */
+@import url('./page-standards.css');
+
+/* ======================================
+   项目特定的扩展样式
+   ====================================== */
+
+/* --- 自定义主题扩展 --- */
+:root {
+  /* 项目专用色彩变量 */
+  --brand-primary: #3b82f6;
+  --brand-secondary: #8b5cf6;
+  --brand-success: #10b981;
+  --brand-warning: #f59e0b;
+  --brand-danger: #ef4444;
+  
+  /* 书签专用变量 */
+  --bookmark-hover: rgba(59, 130, 246, 0.1);
+  --folder-active: var(--accent-orange);
+  --tag-bg: rgba(59, 130, 246, 0.2);
+  
+  /* 动画时长变量 */
+  --animation-duration-fast: 0.15s;
+  --animation-duration-normal: 0.3s;
+  --animation-duration-slow: 0.6s;
+}
+
+/* --- 项目特定组件增强 --- */
+
+/* 书签项增强悬停效果 */
+.bookmark-item {
+  transition: all var(--transition-slow);
+  transform-origin: center;
+}
+
+.bookmark-item:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-card);
+  background: var(--bookmark-hover);
+}
+
+/* 文件夹项活跃状态增强 */
+.folder-item.active > .folder-content,
+.folder-item:hover > .folder-content {
+  background: var(--folder-active) !important;
+  color: var(--text-primary) !important;
+}
+
+.folder-item.active > .folder-content .folder-name,
+.folder-item.active > .folder-content .folder-icon,
+.folder-item.active > .folder-content .bookmark-count,
+.folder-item:hover > .folder-content .folder-name,
+.folder-item:hover > .folder-content .folder-icon,
+.folder-item:hover > .folder-content .bookmark-count {
+  color: var(--text-primary) !important;
+}
+
+/* 标签过滤器增强动画 */
+.filter-tag {
+  transition: all var(--transition-normal);
+}
+
+.filter-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-tag.active {
+  animation: pulse var(--animation-duration-normal) ease-out;
+}
+
+/* 搜索框聚焦增强 */
+.search-input:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px var(--bookmark-hover);
+}
+
+/* --- 性能优化样式 --- */
+
+/* 硬件加速 */
+.bookmark-item,
+.folder-content,
+.nav-btn,
+.btn,
+.card,
+.glass-card,
+.widget {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* 优化动画性能 */
+.bookmark-item:hover,
+.card:hover,
+.glass-card:hover,
+.widget:hover {
+  will-change: transform, box-shadow;
+}
+
+/* --- 书签管理器专用样式增强 --- */
+.bookmark-manager-container {
+  background: var(--bg-primary);
+  min-height: 100vh;
+}
+
+.bookmark-manager-header {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-primary);
+  padding: var(--space-4) var(--space-6);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.bookmark-manager-content {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: calc(100vh - 80px);
+}
+
+.bookmark-manager-sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-primary);
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+.bookmark-manager-main {
+  padding: var(--space-6);
+  overflow-y: auto;
+}
+
+/* --- 可视化页面专用样式增强 --- */
+.visualization-canvas {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  position: relative;
+}
+
+.visualization-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--text-muted);
+}
+
+.visualization-loading::after {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-primary);
+  border-top: 3px solid var(--accent-primary, var(--accent-blue));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* --- AI 工具增强样式 --- */
+.ai-analysis-panel {
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  margin-top: var(--space-6);
+}
+
+.ai-progress {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: var(--space-4) 0;
+}
+
+.ai-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+  border-radius: var(--radius-sm);
+  transition: width var(--transition-normal);
+  animation: shimmer 1.5s infinite;
+}
+
+/* --- 主题切换动画 --- */
+[data-theme="light"] {
+  transition: all var(--transition-slow);
+}
+
+[data-theme="dark"] {
+  transition: all var(--transition-slow);
+}
+
+/* 主题切换时的平滑过渡 */
+* {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: var(--transition-slow);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- 特殊效果增强 --- */
+
+/* 毛玻璃效果增强 */
+.glass-enhanced {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 渐变边框效果 */
+.gradient-border {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: linear-gradient(45deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
+  border-radius: inherit;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+}
+
+/* 悬浮阴影效果 */
+.floating-shadow {
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 8px 16px rgba(0, 0, 0, 0.1),
+    0 16px 32px rgba(0, 0, 0, 0.1);
+}
+
+.floating-shadow:hover {
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.15),
+    0 16px 32px rgba(0, 0, 0, 0.15),
+    0 32px 64px rgba(0, 0, 0, 0.15);
+}
+
+/* --- 调试和开发辅助样式 --- */
+.debug-mode * {
+  outline: 1px solid rgba(255, 0, 0, 0.3) !important;
+}
+
+.debug-mode .widget {
+  outline: 2px solid rgba(0, 255, 0, 0.5) !important;
+}
+
+.debug-mode .btn {
+  outline: 2px solid rgba(0, 0, 255, 0.5) !important;
+}
+
+/* --- 打印优化 --- */
+@media print {
+  /* 隐藏交互元素 */
+  .btn,
+  .nav-btn,
+  .toggle-btn,
+  .ai-tool-btn,
+  .bookmark-action-btn {
+    display: none !important;
+  }
+  
+  /* 简化样式 */
+  .glass-card,
+  .widget {
+    background: white !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  
+  /* 确保文本可读 */
+  .text-primary,
+  .text-secondary,
+  .text-tertiary {
+    color: black !important;
+  }
+  
+  /* 保持结构 */
+  .dashboard-grid {
+    display: block !important;
+  }
+  
+  .card,
+  .widget {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+}
+
+/* --- 高对比度模式支持 --- */
+@media (prefers-contrast: high) {
+  :root {
+    --border-primary: #000000;
+    --border-secondary: #333333;
+    --text-muted: #666666;
+  }
+  
+  .btn {
+    border-width: 2px;
+  }
+  
+  .card,
+  .glass-card,
+  .widget {
+    border-width: 2px;
+  }
+}
+
+/* --- 减少动画模式 --- */
+@media (prefers-reduced-motion: reduce) {
+  .bookmark-item:hover,
+  .card:hover,
+  .glass-card:hover,
+  .widget:hover {
+    transform: none !important;
+  }
+  
+  .ai-progress-bar {
+    animation: none !important;
+  }
+  
+  .loading-spinner::after {
+    animation: none !important;
+  }
+}
+
+/* --- 大字体支持 --- */
+@media (prefers-font-size: large) {
+  :root {
+    font-size: 18px;
+  }
+  
+  .btn {
+    padding: var(--space-4) var(--space-5);
+    font-size: 1rem;
+  }
+  
+  .bookmark-title {
+    font-size: 1rem;
+  }
+  
+  .folder-name {
+    font-size: 1rem;
+  }
+}
+
+/* --- 兼容性后备样式 --- */
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-card,
+  .widget,
+  .top-nav {
+    background: var(--bg-card) !important;
+  }
+}
+
+@supports not (display: grid) {
+  .dashboard-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .bookmarks-grid {
+    display: flex;
+    flex-wrap: wrap;
+  }
+}
+
+/* --- 自定义属性回退 --- */
+.btn {
+  background: #2a2a2a; /* 回退颜色 */
+  background: var(--bg-secondary);
+}
+
+.card {
+  background: #1a1a1a; /* 回退颜色 */
+  background: var(--bg-card);
+}
+

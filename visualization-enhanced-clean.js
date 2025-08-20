@@ -403,7 +403,7 @@ class BookmarkWorkbench {
 
     // 渲染单个书签卡片
     renderBookmarkCard(bookmark) {
-        const favicon = bookmark.url ? `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32` : '';
+        const favicon = bookmark.url ? `https://icons.duckduckgo.com/ip3/${new URL(bookmark.url).hostname}.ico` : '';
         
         return `
             <div class="bookmark-card" data-bookmark-id="${bookmark.id}" onclick="window.open('${bookmark.url}', '_blank')">

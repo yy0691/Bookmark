@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = document.createElement('div');
         item.className = 'bookmark-item';
         const url = new URL(bookmark.url);
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=64`;
+        const faviconUrl = `https://icons.duckduckgo.com/ip3/${url.hostname}.ico`;
         
         // Fallback icon using Lucide
         const fallbackIcon = `<i data-lucide="globe-2" class="fallback-favicon"></i>`;
