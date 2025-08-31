@@ -5,8 +5,8 @@
 /* --- CSS变量定义系统 --- */
 :root {
   /* 配色系统 - 深色主题（默认） */
-  --bg-primary: #0f0f0f;
-  --bg-secondary: rgba(26, 26, 26, 0.8);
+  --bg-primary: #0f0f0fdb;
+  --bg-secondary: rgba(26, 26, 26, 0.678);
   --bg-tertiary: rgba(38, 38, 38, 0.9);
   --bg-card: rgba(26, 26, 26, 0.7);
   --bg-hover: rgba(38, 38, 38, 0.8);
@@ -31,6 +31,14 @@
   --accent-red: #ef4444;
   --accent-orange: #f59e0b;
   --accent-pink: #ec4899;
+
+  /* 【新增】为每个主题色定义对应的RGB值 */
+  --accent-blue-rgb: 59, 130, 246;
+  --accent-purple-rgb: 139, 92, 246;
+  --accent-green-rgb: 16, 185, 129;
+  --accent-red-rgb: 239, 68, 68;
+  --accent-orange-rgb: 245, 158, 11;
+  --accent-pink-rgb: 236, 72, 153;
   
   /* 阴影系统 */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -76,8 +84,8 @@
   --bg-tertiary: #e9ecef;
   --bg-card: #ffffff;
   --bg-hover: #f8f9fa;
-  --bg-glass: rgba(0, 0, 0, 0.05);
-  --bg-glass-hover: rgba(0, 0, 0, 0.1);
+  --bg-glass: rgba(0, 0, 0, 0.03);
+  --bg-glass-hover: #ffffff;
   
   --text-primary: #212529;
   --text-secondary: #495057;
@@ -94,12 +102,37 @@
 }
 
 /* 主题色变量 */
-[data-accent="blue"] { --accent-primary: var(--accent-blue); }
+/* [data-accent="blue"] { --accent-primary: var(--accent-blue); }
 [data-accent="purple"] { --accent-primary: var(--accent-purple); }
 [data-accent="green"] { --accent-primary: var(--accent-green); }
 [data-accent="red"] { --accent-primary: var(--accent-red); }
 [data-accent="orange"] { --accent-primary: var(--accent-orange); }
-[data-accent="pink"] { --accent-primary: var(--accent-pink); }
+[data-accent="pink"] { --accent-primary: var(--accent-pink); } */
+
+[data-accent="blue"] { 
+  --accent-primary: var(--accent-blue);
+  --accent-primary-rgb: var(--accent-blue-rgb); /* 【新增】 */
+}
+[data-accent="purple"] {
+  --accent-primary: var(--accent-purple);
+  --accent-primary-rgb: var(--accent-purple-rgb); /* 【新增】 */
+}
+[data-accent="green"] {
+  --accent-primary: var(--accent-green);
+  --accent-primary-rgb: var(--accent-green-rgb); /* 【新增】 */
+}
+[data-accent="red"] {
+  --accent-primary: var(--accent-red);
+  --accent-primary-rgb: var(--accent-red-rgb); /* 【新增】 */
+}
+[data-accent="orange"] {
+  --accent-primary: var(--accent-orange);
+  --accent-primary-rgb: var(--accent-orange-rgb); /* 【新增】 */
+}
+[data-accent="pink"] {
+  --accent-primary: var(--accent-pink);
+  --accent-primary-rgb: var(--accent-pink-rgb); /* 【新增】 */
+}
 
 /* --- 基础重置样式 --- */
 * {

@@ -1565,13 +1565,18 @@ function displayTopDomains(topDomains) {
   container.innerHTML = '';
   
   if (topDomains.length === 0) {
-    container.innerHTML = '<div class="domain-item"><span class="domain-name">No bookmarks yet</span></div>';
+    // 修改(1): 同样为空状态更新CSS类，保持样式一致
+    container.innerHTML = '<div class="stat-item domain-item-layout" style="justify-content: center;"><span class="domain-name">No bookmarks yet</span></div>';
     return;
   }
   
   topDomains.forEach(([domain, count]) => {
     const domainItem = document.createElement('div');
-    domainItem.className = 'domain-item';
+    
+    // 修改(2): 【核心】将旧的 class 替换为新的 class 组合
+    domainItem.className = 'stat-item domain-item-layout';
+    
+    // 内部结构保持不变，因为我们写的CSS就是针对这两个span的
     domainItem.innerHTML = `
       <span class="domain-name">${domain}</span>
       <span class="domain-count">${count}</span>

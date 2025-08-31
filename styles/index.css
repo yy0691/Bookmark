@@ -25,30 +25,12 @@
   --brand-warning: #f59e0b;
   --brand-danger: #ef4444;
   
-  /* 书签专用变量 */
-  --bookmark-hover: rgba(59, 130, 246, 0.1);
-  --folder-active: var(--accent-orange);
-  --tag-bg: rgba(59, 130, 246, 0.2);
-  
   /* 动画时长变量 */
   --animation-duration-fast: 0.15s;
   --animation-duration-normal: 0.3s;
   --animation-duration-slow: 0.6s;
 }
 
-/* --- 项目特定组件增强 --- */
-
-/* 书签项增强悬停效果 */
-.bookmark-item {
-  transition: all var(--transition-slow);
-  transform-origin: center;
-}
-
-.bookmark-item:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: var(--shadow-card);
-  background: var(--bookmark-hover);
-}
 
 /* 文件夹项活跃状态增强 */
 .folder-item.active > .folder-content,
@@ -83,7 +65,7 @@
 /* 搜索框聚焦增强 */
 .search-input:focus {
   transform: scale(1.02);
-  box-shadow: 0 0 0 3px var(--bookmark-hover);
+  box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb, var(--accent-blue-rgb)), 0.1);
 }
 
 /* --- 性能优化样式 --- */

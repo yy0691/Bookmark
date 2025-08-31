@@ -214,10 +214,10 @@
 }
 
 .bookmark-item:hover {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-secondary);
+  background-color: rgba(var(--accent-primary-rgb, var(--accent-blue-rgb)), 0.05);
+  border-color: var(--accent-primary, var(--accent-blue),0.1);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .favicon {
@@ -716,4 +716,188 @@
     margin-left: var(--space-2);
   }
 }
+/* --- 域名列表项布局增强 --- */
+.domain-item-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-align: left; /* 覆盖 .stat-item 的居中对齐 */
+  width: 100%;
+  padding: 0.5rem 0.75rem; /* 可以用更紧凑的内边距 */
+}
 
+.domain-item-layout .domain-name {
+  color: var(--text-secondary);
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.domain-item-layout .domain-count {
+  color: var(--accent-primary, var(--accent-blue));
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+/* --- 域名列表容器布局 --- */
+.domains-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2); /* 控制每一个卡片之间的垂直间距 */
+}
+
+/* --- 快速笔记组件 --- */
+.notes-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto; /* 将按钮推到右侧 */
+}
+
+.notes-action-btn,.stats-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  display: flex; /* 用于居中图标 */
+  align-items: center;
+  justify-content: center;
+}
+
+.notes-action-btn:hover{
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.stats-action-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+
+.notes-textarea {
+  width: 100%;
+  height: 120px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit; /* 继承页面字体 */
+  font-size: 0.875rem;
+  resize: none;
+  margin-top: var(--space-3);
+}
+
+.notes-textarea:focus {
+  outline: none;
+}
+
+.notes-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.notes-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-2);
+  font-size: 0.75rem;
+}
+
+.notes-char-count {
+  color: var(--text-muted);
+}
+
+.notes-status {
+  color: var(--accent-green);
+  font-weight: 500;
+}
+
+/* --- 时钟组件 --- */
+
+/* 基础布局样式 */
+.clock-widget {
+  /* 让时间和日期在卡片内居中显示 */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+.clock-time {
+  line-height: 1.1;
+  transition: all 0.3s ease;
+}
+
+.clock-date {
+  transition: all 0.3s ease;
+}
+
+
+/* --- 样式1: 极简主义 (minimal) --- */
+.clock-widget[data-clock-style="minimal"] .clock-time {
+  font-family: var(--font-sans);
+  font-size: 3rem;
+  font-weight: 600;
+  color: var(--accent-primary, var(--accent-blue));
+  text-shadow: 0 0 15px rgba(var(--accent-primary-rgb, var(--accent-blue-rgb)), 0.3);
+}
+
+.clock-widget[data-clock-style="minimal"] .clock-date {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: var(--space-2);
+}
+
+
+/* --- 样式2: 复古数字 (digital) --- */
+.clock-widget[data-clock-style="digital"] .clock-time {
+  font-family: var(--font-mono);
+  font-size: 2.75rem;
+  font-weight: 700;
+  color: var(--accent-green);
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.3);
+  letter-spacing: 0.2rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.clock-widget[data-clock-style="digital"] .clock-date {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: var(--space-3);
+  letter-spacing: 0.1rem;
+}
+
+
+/* --- 样式3: 渐变潮流 (gradient) --- */
+.clock-widget[data-clock-style="gradient"] .clock-time {
+  font-family: var(--font-sans);
+  font-size: 3.5rem;
+  font-weight: 700;
+  
+  /* 创建渐变文字的关键步骤 */
+  background: linear-gradient(45deg, var(--accent-primary, var(--accent-blue)), var(--accent-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent; /* 兼容性 */
+}
+
+.clock-widget[data-clock-style="gradient"] .clock-date {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: var(--space-1);
+}
