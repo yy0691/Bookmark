@@ -1,53 +1,68 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark" data-accent="blue">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard</title>
-  <!-- <link rel="stylesheet" href="./newtab.css" /> -->
+  <title>书签仪表盘</title>
+  <link rel="icon" type="image/svg+xml" href="../../images/icon.svg">
   <link rel="stylesheet" href="../../styles/index.css" />
   <link rel="stylesheet" href="../../components/UI/SettingsPanel.css" />
 </head>
 <body>
-  <!-- 顶部导航栏 -->
-  <nav class="top-nav">
+  <!-- ==========================
+       顶部导航栏 (Top Navigation)
+       ========================== -->
+  <header class="top-nav">
     <div class="nav-left">
-      <div class="logo">📚 BookmarkHub</div>
+      <a href="#" class="logo">📚 BookmarkHub</a>
+      <!-- 侧边栏收起/展开按钮 (未来功能) -->
+      <button class="nav-btn" id="toggle-left-sidebar" title="收起左侧栏">
+        <i data-lucide="panel-left-close"></i>
+      </button>
     </div>
 
-    <div class="nav-center search-container">
+    <div class="search-container">
       <i data-lucide="search" class="search-icon"></i>
-        <input type="text" class="search-input" placeholder="搜索书签和文件夹... (Ctrl + K)" />
+      <input type="text" class="search-input" placeholder="搜索书签和文件夹... (Ctrl + K)" />
     </div>
 
     <div class="nav-right">
-      <button class="nav-btn" title="个人资料">
-        <i data-lucide="user"></i>
+      <!-- 功能按钮 -->
+      <button class="nav-btn" id="dashboard-btn" title="Dashboard">
+        <i data-lucide="bar-chart-3"></i>
+      </button>
+      <button class="nav-btn" id="analysis-btn" title="智能分析中心">
+        <i data-lucide="brain"></i>
       </button>
       <button class="nav-btn" id="settings-btn" title="Settings">
         <i data-lucide="settings"></i>
       </button>
+      <!-- “添加组件”和“编辑布局”按钮 (未来功能) -->
+      <button class="nav-btn" id="add-widget-btn" title="添加组件">
+        <i data-lucide="layout-grid"></i>
+      </button>
+      <button class="nav-btn btn-primary" id="edit-layout-btn" title="编辑布局">
+        <i data-lucide="edit"></i>
+      </button>
     </div>
-  </nav>
+  </header>
 
-  <!-- 主容器 -->
+  <!-- ==========================
+       主内容容器
+       ========================== -->
   <div class="main-container">
-    <!-- 问候语区域 -->
-    <!-- <div class="greeting-section">
-      <h1 class="greeting-text">Hello! <span class="emoji">👋</span></h1>
-      <p>这是一个笑脸 <span class="emoji">😊</span> 和一个爱心 <span class="emoji">❤️</span></p>
-      <p class="greeting-time"><span id="current-time">--:--</span></p>
-    </div> -->
-
-    <!-- 仪表板网格 -->
     <div class="dashboard-grid">
-      <!-- 左侧边栏 -->
-      <div class="left-sidebar">
+
+      <!-- ==========================
+           左侧边栏 (Left Sidebar)
+           ========================== -->
+      <aside class="left-sidebar">
         <!-- 文件夹组件 -->
-        <div class="folders-widget">
+        <div class="widget" id="folders-widget">
           <div class="widget-header">
             <i data-lucide="folder" class="widget-icon"></i>
-            <h3 class="widget-title">Folders</h3>
+            <h2 class="widget-title">文件夹</h2>
+            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
           </div>
           <ul class="folder-list" id="folder-list">
             <!-- 动态填充 -->
@@ -55,13 +70,14 @@
         </div>
 
         <!-- 标签组件 -->
-        <div class="tags-widget">
+        <div class="widget" id="tags-widget">
           <div class="widget-header">
             <i data-lucide="tag" class="widget-icon"></i>
-            <h3 class="widget-title">Tags</h3>
-            <button class="clear-tags-btn" id="clear-tags-btn" title="Clear tag filters">
+            <h2 class="widget-title">标签</h2>
+            <button class="clear-tags-btn" id="clear-tags-btn" title="清除标签筛选">
               <i data-lucide="x"></i>
             </button>
+            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
           </div>
           <div class="tags-container" id="tags-container">
             <!-- 动态填充 -->
@@ -69,126 +85,135 @@
         </div>
 
         <!-- 时钟组件 -->
-        <div class="clock-widget widget"  data-clock-style="minimal">
+        <div class="widget clock-widget" id="clock-widget" data-clock-style="minimal">
           <div class="widget-header">
             <i data-lucide="clock" class="widget-icon"></i>
-            <h3 class="widget-title">World Clock</h3>
+            <h2 class="widget-title">世界时钟</h2>
+            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
           </div>
           <div class="clock-time" id="current-time-large">--:--</div>
           <div class="clock-date" id="current-date">--</div>
         </div>
-      </div>
+      </aside>
 
-      <!-- 中央书签区域 -->
-      <div class="bookmarks-section">
-        <div class="section-header view-toggle" style="display: flex; align-items: center; justify-content: space-between;">
-          <h2 class="section-title">Recent Bookmarks</h2>
-          <div class="right-view-toggle">
-            <button class="toggle-btn active" data-view="grid" title="Grid View"><i data-lucide="layout-grid"></i></button>
-            <button class="toggle-btn" data-view="list" title="List View"><i data-lucide="list"></i></button>
+      <!-- ==========================
+           主内容区 (Main Content)
+           ========================== -->
+      <main class="bookmarks-section">
+        <div class="bookmarks-toolbar">
+          <h2 class="section-title">最近书签</h2>
+          <div class="view-toggle">
+            <button class="toggle-btn active" data-view="grid" title="网格视图"><i data-lucide="layout-grid"></i></button>
+            <button class="toggle-btn" data-view="list" title="列表视图"><i data-lucide="list"></i></button>
           </div>
         </div>
         <div class="bookmarks-grid" id="bookmarks-grid">
           <!-- 动态填充 -->
         </div>
-      </div>
+      </main>
 
-      <!-- 右侧边栏 -->
-      <div class="right-sidebar">
-        <!-- 数据统计 -->
-        <div class="stats-widget">
+      <!-- ==========================
+           右侧边栏 (Right Sidebar)
+           ========================== -->
+      <aside class="right-sidebar">
+        <!-- 数据统计组件 -->
+        <div class="widget" id="stats-widget">
           <div class="widget-header">
             <i data-lucide="bar-chart-3" class="widget-icon"></i>
-            <h3 class="widget-title">Statistics</h3>
-            <button class="stats-action-btn" id="view-detailed-stats" title="View detailed statistics">
+            <h2 class="widget-title">统计数据</h2>
+            <button class="stats-action-btn" id="view-detailed-stats" title="查看详细统计">
               <i data-lucide="external-link"></i>
             </button>
+            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
           </div>
           <div class="stats-grid">
             <div class="stat-item">
               <div class="stat-value" id="total-bookmarks">0</div>
-              <div class="stat-label">Total Bookmarks</div>
+              <div class="stat-label">书签总数</div>
             </div>
             <div class="stat-item">
               <div class="stat-value" id="total-folders">0</div>
-              <div class="stat-label">Folders</div>
+              <div class="stat-label">文件夹</div>
             </div>
             <div class="stat-item">
               <div class="stat-value" id="unique-domains">0</div>
-              <div class="stat-label">Unique Domains</div>
+              <div class="stat-label">独立域名</div>
             </div>
             <div class="stat-item">
               <div class="stat-value" id="recent-added">0</div>
-              <div class="stat-label">Added This Week</div>
-            </div>
-          </div>
-
-          <div class="top-domains">
-            <h4 class="top-domains-title">Top Domains</h4>
-            <div class="domains-list" id="top-domains-list">
-               <div class="widget">
-                 <!-- 动态填充 -->
-               </div> 
+              <div class="stat-label">本周新增</div>
             </div>
           </div>
         </div>
 
-        <!-- AI分析工具 -->
-        <div class="ai-tools-widget">
+        <!-- 常用域名组件 -->
+        <div class="widget" id="domains-widget">
+            <div class="widget-header">
+              <i data-lucide="globe" class="widget-icon"></i>
+              <h2 class="widget-title">常用域名</h2>
+              <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+            </div>
+            <div class="domains-list" id="top-domains-list">
+              <!-- 动态填充 -->
+            </div>
+        </div>
+
+        <!-- AI分析工具组件 -->
+        <div class="widget" id="ai-tools-widget">
           <div class="widget-header">
             <i data-lucide="brain" class="widget-icon"></i>
-            <h3 class="widget-title">AI Tools</h3>
+            <h2 class="widget-title">AI 工具</h2>
+            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
           </div>
           <div class="ai-tools-grid">
-            <button class="ai-tool-btn" id="analyze-bookmarks-btn" title="Analyze and categorize bookmarks">
+            <button class="ai-tool-btn" id="analyze-bookmarks-btn" title="分析和分类书签">
               <i data-lucide="zap"></i>
-              <span>Smart Analysis</span>
+              <span>智能分析</span>
             </button>
-            <button class="ai-tool-btn" id="detect-duplicates-btn" title="Find duplicate bookmarks">
+            <button class="ai-tool-btn" id="detect-duplicates-btn" title="查找重复书签">
               <i data-lucide="copy"></i>
-              <span>Find Duplicates</span>
+              <span>查找重复</span>
             </button>
-            <button class="ai-tool-btn" id="check-broken-btn" title="Check for broken links">
+            <button class="ai-tool-btn" id="check-broken-btn" title="检查失效链接">
               <i data-lucide="link-off"></i>
-              <span>Check Links</span>
+              <span>检查链接</span>
             </button>
-            <button class="ai-tool-btn" id="clean-folders-btn" title="Clean empty folders">
+            <button class="ai-tool-btn" id="clean-folders-btn" title="清理空文件夹">
               <i data-lucide="folder-minus"></i>
-              <span>Clean Folders</span>
+              <span>清理文件夹</span>
             </button>
-            <button class="ai-tool-btn" id="generate-report-btn" title="Generate detection report">
+            <button class="ai-tool-btn" id="generate-report-btn" title="生成检测报告">
               <i data-lucide="file-text"></i>
-              <span>Generate Report</span>
+              <span>生成报告</span>
             </button>
           </div>
           <div class="ai-status" id="ai-status">
-            <span class="status-text">Ready</span>
+            <span class="status-text">准备就绪</span>
           </div>
         </div>
 
-        
-
-        <!-- 快速笔记 -->
-        <div class="notes-widget">
+        <!-- 快速笔记组件 -->
+        <div class="widget" id="notes-widget">
           <div class="widget-header">
             <i data-lucide="sticky-note" class="widget-icon"></i>
-            <h3 class="widget-title">Quick Notes</h3>
+            <h2 class="widget-title">快速笔记</h2>
             <div class="notes-actions">
-              <button class="notes-action-btn" id="clear-notes-btn" title="Clear notes">
+              <button class="notes-action-btn" id="clear-notes-btn" title="清空笔记">
                 <i data-lucide="trash-2"></i>
               </button>
-              <button class="notes-action-btn" id="export-notes-btn" title="Export notes">
+              <button class="notes-action-btn" id="export-notes-btn" title="导出笔记">
                 <i data-lucide="download"></i>
               </button>
             </div>
+            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
           </div>
-          <textarea class="notes-textarea widget" id="quick-notes" placeholder="Click to add your quick notes..."></textarea>
+          <textarea class="notes-textarea" id="quick-notes" placeholder="点击添加您的快速笔记..."></textarea>
           <div class="notes-footer">
-            <span class="notes-char-count" id="notes-char-count">0 characters</span>
-            <span class="notes-status" id="notes-status">Saved</span>
+            <span class="notes-char-count" id="notes-char-count">0 字符</span>
+            <span class="notes-status" id="notes-status">已保存</span>
           </div>
         </div>
-      </div>
+      </aside>
     </div>
   </div>
 
@@ -196,31 +221,35 @@
   <div id="context-menu" class="context-menu hidden">
     <div class="context-menu-item" data-action="open">
       <i data-lucide="external-link"></i>
-      <span>Open</span>
+      <span>打开</span>
     </div>
     <div class="context-menu-item" data-action="open-new-tab">
       <i data-lucide="plus-square"></i>
-      <span>Open in New Tab</span>
+      <span>在新标签页中打开</span>
     </div>
     <div class="context-menu-separator"></div>
     <div class="context-menu-item" data-action="edit">
       <i data-lucide="edit"></i>
-      <span>Edit</span>
+      <span>编辑</span>
     </div>
     <div class="context-menu-item" data-action="copy-url">
       <i data-lucide="copy"></i>
-      <span>Copy URL</span>
+      <span>复制链接</span>
     </div>
     <div class="context-menu-separator"></div>
-    <div class="context-menu-item" data-action="delete" class="danger">
+    <div class="context-menu-item danger" data-action="delete">
       <i data-lucide="trash-2"></i>
-      <span>Delete</span>
+      <span>删除</span>
     </div>
   </div>
 
   <!-- Settings modal will be dynamically created by SettingsPanel module -->
 
   <!-- Page controller (ES Module) -->
+  <script src="../../lucide.min.js"></script>
   <script type="module" src="./index.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

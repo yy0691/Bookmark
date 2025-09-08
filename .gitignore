@@ -1,4 +1,4 @@
-# 编辑器和IDE文件
+# ide
 .vscode/
 .idea/
 .cursor/
@@ -6,16 +6,26 @@
 *.swo
 *~
 
-# 操作系统文件
+# system
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# 临时文件
+# temp
 *.tmp
 *.temp
 *.log
 
-# 备份文件
+# backup
 *.backup
 *.bak
+
+# env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.development
+.env.test
+.env.production

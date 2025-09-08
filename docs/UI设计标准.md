@@ -4,6 +4,8 @@
 
 本文档基于 `pages/newtab/index.css` 建立了项目的统一 UI 设计标准，确保所有页面和组件保持一致的视觉风格和用户体验。
 
+**🎨 图标系统更新**: 项目已全局集成了统一的图标系统，使用自定义SVG图标作为应用主图标。详细使用指南请参考 [图标使用指南](./图标使用指南.md)。
+
 ## 设计系统架构
 
 ```
@@ -12,6 +14,17 @@ styles/
 ├── global-ui-standards.css   # 全局基础样式和CSS变量
 ├── component-standards.css   # 通用组件样式标准
 └── page-standards.css        # 页面专用样式标准
+
+components/
+├── Icon.js                   # 图标组件系统
+├── Icon.css                  # 图标样式文件
+└── icon-demo.html           # 图标演示页面
+
+images/
+├── icon.svg                 # 原始SVG图标文件
+├── icon16.svg               # 16x16尺寸图标
+├── icon48.svg               # 48x48尺寸图标
+└── icon128.svg              # 128x128尺寸图标
 ```
 
 ## 1. 色彩系统
@@ -155,9 +168,65 @@ styles/
 }
 ```
 
-## 7. 组件标准
+## 7. 图标系统
 
-### 7.1 按钮组件
+### 7.1 图标使用规范
+
+#### 基本用法
+```html
+<!-- HTML 方式 -->
+<div data-icon="app-icon" data-size="24"></div>
+<div data-icon="search" data-size="20" data-color="#007aff"></div>
+
+<!-- JavaScript 方式 -->
+<script>
+const iconElement = iconManager.createIconElement('app-icon', {
+  size: 24,
+  color: '#007aff',
+  className: 'icon-primary'
+});
+</script>
+```
+
+#### 图标尺寸标准
+- **XS**: 12px - 极小图标（状态指示）
+- **SM**: 16px - 小图标（工具栏、按钮）
+- **MD**: 20px - 中等图标（导航、列表）
+- **LG**: 24px - 大图标（标题、卡片）
+- **XL**: 32px - 超大图标（页面标题）
+- **2XL**: 48px - 巨大图标（应用图标）
+
+#### 图标颜色规范
+```css
+.icon-primary { color: #007aff; }    /* 主色调 */
+.icon-secondary { color: #6e6e73; }   /* 次要色 */
+.icon-success { color: #30d158; }    /* 成功色 */
+.icon-warning { color: #ff9500; }    /* 警告色 */
+.icon-danger { color: #ff3b30; }     /* 危险色 */
+.icon-info { color: #5ac8fa; }       /* 信息色 */
+```
+
+### 7.2 应用主图标
+
+项目使用自定义的SVG图标作为应用主图标，具有以下特点：
+- 独特的书签主题设计
+- 支持多尺寸缩放
+- 矢量格式，清晰度无损
+- 支持主题色彩变化
+
+### 7.3 图标动画效果
+
+```css
+.icon-spin { animation: icon-spin 1s linear infinite; }
+.icon-pulse { animation: icon-pulse 2s ease-in-out infinite; }
+.icon-bounce { animation: icon-bounce 1s ease-in-out infinite; }
+.icon-hover-scale:hover { transform: scale(1.1); }
+.icon-hover-rotate:hover { transform: rotate(90deg); }
+```
+
+## 8. 组件标准
+
+### 8.1 按钮组件
 
 #### 基础按钮
 ```css
@@ -469,10 +538,18 @@ styles/
 
 ### 15.1 引入样式
 
-在HTML文件中引入主样式文件：
+在HTML文件中引入主样式文件和图标系统：
 
 ```html
+<!-- 主样式文件 -->
 <link rel="stylesheet" href="styles/index.css">
+
+<!-- 图标系统 -->
+<link rel="stylesheet" href="components/Icon.css">
+<script src="components/Icon.js"></script>
+
+<!-- 页面图标 -->
+<link rel="icon" type="image/svg+xml" href="images/icon.svg">
 ```
 
 ### 15.2 组件使用示例
@@ -480,8 +557,14 @@ styles/
 #### 基本按钮
 ```html
 <button class="btn btn-primary">
-  <i class="icon"></i>
+  <div data-icon="search" data-size="16"></div>
   按钮文字
+</button>
+
+<!-- 或者使用应用图标 -->
+<button class="btn btn-primary">
+  <div data-icon="app-icon" data-size="16"></div>
+  书签助手
 </button>
 ```
 
@@ -489,7 +572,7 @@ styles/
 ```html
 <div class="glass-card">
   <div class="widget-header">
-    <i class="widget-icon"></i>
+    <div data-icon="folder" data-size="20" class="widget-icon"></div>
     <h3 class="widget-title">标题</h3>
   </div>
   <div class="widget-content">

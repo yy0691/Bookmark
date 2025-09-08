@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>书签助手</title>
+  <link rel="icon" type="image/svg+xml" href="images/icon.svg">
   <link rel="stylesheet" href="styles/index.css">
   <style>
     * {
@@ -525,7 +526,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <img src="images/icon.png" alt="书签助手" class="logo">
+      <img src="images/icon.svg" alt="书签助手" class="logo">
       <h1>书签助手</h1>
     </div>
 
@@ -639,11 +640,23 @@
         <span class="btn-text">API设置</span>
       </button>
     </div>
+
+    <div class="dashboard">  
+      <div class="category-title">
+        <span>🔍</span>
+        <span>仪表盘</span>
+      </div>
+      <button id="dashboard" class="btn btn-secondary">
+        <span class="btn-icon">�</span>
+        <span class="btn-text">仪表盘</span>
+      </button>
+    </div>
     
     <div class="api-status" id="api-status-container">
       <span class="api-status-icon"></span>
       <span>API状态: <span id="api-status-text">检查中...</span></span>
     </div>
+
     
     <div class="footer">
       AI辅助书签整理工具 v1.0.0

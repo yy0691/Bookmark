@@ -564,6 +564,11 @@ function showNotification(message, type = 'info') {
   }, 3000);
 }
 
+function openDashboard() {
+  console.log('🔍 打开仪表盘');
+  chrome.tabs.create({ url: 'dashbord.html' });
+}
+subscribe('dashboard', openDashboard);
 // 添加通知动画样式（优化版本）
 const style = document.createElement('style');
 style.textContent = `

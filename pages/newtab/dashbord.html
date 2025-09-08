@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    
+    <!-- 引入统一UI样式标准 -->
+    <link rel="stylesheet" href="../../styles/index.css">
+    
+    <!-- 引入图标库 -->
+    <script src="../../lucide.min.js"></script>
+    
+    <!-- Dashboard专用样式 -->
+    <style>
+        /* Dashboard专用样式 */
+        .dashboard-container {
+            min-height: 100vh;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* 导航栏样式 */
+        .navbar {
+            background: var(--bg-background);
+            border-bottom: 1px solid var(--border-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            padding: 0 var(--space-6);
+        }
+        
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-6);
+        }
+        
+        .navbar-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .navbar-links {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .navbar-link {
+            padding: var(--space-2) var(--space-4);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-foreground);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-normal);
+        }
+        
+        .navbar-link:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .navbar-link.active {
+            background: var(--bg-primary);
+            color: var(--text-primary-foreground);
+        }
+        
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .navbar-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            padding: var(--space-2) var(--space-3);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-foreground);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .navbar-btn:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .navbar-dropdown {
+            position: relative;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            width: 192px;
+            padding: var(--space-1);
+            background: var(--bg-popover);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            z-index: 10;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-8px);
+            transition: all var(--transition-normal);
+        }
+        
+        .navbar-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            width: 100%;
+            padding: var(--space-2) var(--space-3);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-foreground);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            text-align: left;
+        }
+        
+        .dropdown-item:hover {
+            background: var(--bg-accent);
+        }
+        
+        /* 页面标题样式 */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-6);
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .btn-primary {
+            padding: var(--space-2) var(--space-4);
+            font-weight: 500;
+            color: white;
+            background: var(--bg-primary);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .btn-primary:hover {
+            background: var(--bg-primary);
+            opacity: 0.9;
+        }
+        
+        .dashboard-content {
+            padding: var(--space-6);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* 关键指标卡片 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
+        }
+        
+        .metric-card {
+            display: flex;
+            flex-direction: column;
+            padding: var(--space-6);
+            background: var(--bg-card);
+            color: var(--text-card-foreground);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--border-primary);
+            box-shadow: var(--shadow-sm);
+            transition: all var(--transition-normal);
+            cursor: pointer;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+        
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+        }
+        
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-4);
+        }
+        
+        .metric-icon {
+            padding: var(--space-3);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-primary);
+            opacity: 0.15;
+        }
+        
+        .metric-icon i {
+            color: var(--accent-primary);
+        }
+        
+        .metric-value-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .metric-value {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+            letter-spacing: -0.025em;
+        }
+        
+        .metric-trend {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            font-size: 0.75rem;
+            margin-top: var(--space-1);
+        }
+        
+        .trend-up {
+            color: var(--brand-success);
+        }
+        
+        .trend-down {
+            color: var(--brand-danger);
+        }
+        
+        .trend-neutral {
+            color: var(--text-muted);
+        }
+        
+        .metric-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-top: var(--space-3);
+        }
+        
+        /* 图表区域 */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-6);
+            margin-bottom: var(--space-8);
+        }
+        
+        .chart-container {
+            padding: var(--space-6);
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-primary);
+            overflow: hidden;
+        }
+        
+        .chart-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-4);
+        }
+        
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .chart-subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: var(--space-1);
+        }
+        
+        .chart-badge {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg-muted);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-full);
+        }
+        
+        .chart-content {
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 词云样式 */
+        .word-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-3);
+            padding: var(--space-6);
+            min-height: 240px;
+            background: linear-gradient(135deg, var(--bg-background) 0%, var(--bg-background) 50%);
+            border-radius: var(--radius-lg);
+        }
+        
+        .word-item {
+            display: inline-block;
+            padding: 0.25rem;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            color: var(--text-primary);
+        }
+        
+        .word-item:hover {
+            transform: scale(1.1);
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+        }
+        
+        .word-item.highlight {
+            font-weight: 600;
+        }
+        
+        /* 分类统计图 */
+        .category-chart {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+        
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-normal);
+        }
+        
+        .category-item:hover {
+            background: var(--bg-tertiary);
+            transform: translateX(4px);
+        }
+        
+        .category-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .category-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            border-radius: var(--radius-sm);
+            transition: width var(--transition-slow);
+        }
+        
+        .category-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            min-width: 120px;
+        }
+        
+        .category-count {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            min-width: 40px;
+            text-align: right;
+        }
+        
+        .chart-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .chart-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+        }
+        
+        .chart-indicator-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        /* 活跃度热力图 */
+        .activity-heatmap {
+            width: 100%;
+            overflow-x: auto;
+        }
+        
+        .heatmap-container {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-2);
+            min-width: 800px;
+        }
+        
+        .heatmap-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            margin-bottom: var(--space-4);
+        }
+        
+        .heatmap-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+        
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: 60px 1fr;
+            gap: var(--space-2);
+        }
+        
+        .heatmap-days {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .heatmap-squares {
+            display: grid;
+            grid-template-columns: repeat(53, 12px);
+            gap: 2px;
+        }
+        
+        .heatmap-square {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .heatmap-square:hover {
+            transform: scale(1.2);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        /* 加载状态 */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-4);
+            padding: var(--space-8);
+            color: var(--text-muted);
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-primary);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 0.875rem;
+            text-align: center;
+        }
+        
+        /* 错误状态 */
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-4);
+            padding: var(--space-8);
+            color: var(--brand-danger);
+        }
+        
+        .error-icon {
+            width: 48px;
+            height: 48px;
+            color: var(--brand-danger);
+        }
+        
+        .error-text {
+            font-size: 0.875rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .navbar-container {
+                padding: 0 var(--space-4);
+            }
+            
+            .navbar-left {
+                gap: var(--space-4);
+            }
+            
+            .navbar-title {
+                font-size: 1.125rem;
+            }
+            
+            .navbar-links {
+                display: none;
+            }
+            
+            .dashboard-content {
+                padding: var(--space-4);
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--space-4);
+            }
+            
+            .page-title {
+                font-size: 1.5rem;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metric-value {
+                font-size: 2.5rem;
+            }
+            
+            .heatmap-container {
+                min-width: auto;
+            }
+            
+            .heatmap-squares {
+                grid-template-columns: repeat(26, 16px);
+            }
+            
+            .heatmap-square {
+                width: 16px;
+                height: 16px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .navbar-container {
+                padding: 0 var(--space-3);
+            }
+            
+            .navbar-title {
+                font-size: 1rem;
+            }
+            
+            .dashboard-content {
+                padding: var(--space-3);
+            }
+            
+            .chart-container {
+                padding: var(--space-4);
+            }
+            
+            .metric-card {
+                padding: var(--space-4);
+            }
+            
+            .metric-value {
+                font-size: 2rem;
+            }
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-4);
+            padding: var(--space-8);
+            color: var(--text-muted);
+            text-align: center;
+        }
+        
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+        
+        .empty-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .empty-description {
+            font-size: 0.875rem;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+        
+        /* 工具提示 */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-popover);
+            color: var(--text-popover);
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--radius-md);
+            font-size: 0.75rem;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .tooltip.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-container">
+                <div class="navbar-left">
+                    <h1 class="navbar-title">书签分析与管理</h1>
+                    <div class="navbar-links">
+                        <a href="#" class="navbar-link active">数据概览</a>
+                        <a href="#" class="navbar-link" id="analysis-link">智能分析中心</a>
+                    </div>
+                </div>
+                <div class="navbar-right">
+                    <button class="navbar-btn" title="刷新数据">
+                        <i data-lucide="refresh-cw" width="16" height="16"></i>
+                        <span>刷新</span>
+                    </button>
+                    <div class="navbar-dropdown">
+                        <button class="navbar-btn" title="导出/备份">
+                            <i data-lucide="download" width="16" height="16"></i>
+                            <span>导出/备份</span>
+                        </button>
+                        <div class="dropdown-menu">
+                            <button class="dropdown-item">
+                                <i data-lucide="download" width="16" height="16"></i>
+                                导出为HTML
+                            </button>
+                            <button class="dropdown-item">
+                                <i data-lucide="save" width="16" height="16"></i>
+                                创建应用备份
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Dashboard内容 -->
+        <main class="dashboard-content">
+            <!-- 页面标题和操作 -->
+            <div class="page-header">
+                <h1 class="page-title">数据概览</h1>
+                <button class="btn-primary">
+                    前往智能分析中心
+                </button>
+            </div>
+            <!-- 关键指标卡片 -->
+            <section class="metrics-grid" id="metricsGrid">
+                <!-- 动态生成指标卡片 -->
+            </section>
+            
+            <!-- 图表区域 -->
+            <section class="charts-grid">
+                <!-- 词云图 -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">书签主题词云</div>
+                            <div class="chart-subtitle">基于书签标题的关键词分析</div>
+                        </div>
+                        <span class="chart-badge" id="wordCloudBadge">0 个主题</span>
+                    </div>
+                    <div class="chart-content" id="wordCloudContainer">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">正在生成词云...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 分类统计图 -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div>
+                            <div class="chart-title">分类统计图</div>
+                            <div class="chart-subtitle">各分类书签数量分布</div>
+                        </div>
+                        <div class="chart-indicator">
+                            <span class="chart-dot"></span>
+                            <span class="chart-indicator-text">按书签数量排序</span>
+                        </div>
+                    </div>
+                    <div class="chart-content" id="categoryChartContainer">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">正在分析分类...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 活跃度热力图 -->
+            <section class="chart-container">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">收藏活跃度热力图</div>
+                        <div class="chart-subtitle">过去一年的书签收藏活跃度</div>
+                    </div>
+                </div>
+                <div class="chart-content" id="activityHeatmapContainer">
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">正在生成活跃度热力图...</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- 工具提示 -->
+    <div class="tooltip" id="tooltip"></div>
+    
+    <!-- 引入模块 -->
+    <script type="module" src="dashbord.js"></script>
+</body>
+</html>

@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能分析中心</title>
+    
+    <!-- 引入统一UI样式标准 -->
+    <link rel="stylesheet" href="../../styles/index.css">
+    
+    <!-- 引入图标库 -->
+    <script src="../../lucide.min.js"></script>
+    
+    <!-- 智能分析中心专用样式 -->
+    <style>
+        /* 智能分析中心专用样式 */
+        .analysis-container {
+            min-height: 100vh;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* 导航栏样式 */
+        .navbar {
+            background: var(--bg-background);
+            border-bottom: 1px solid var(--border-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            padding: 0 var(--space-6);
+        }
+        
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-6);
+        }
+        
+        .navbar-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .navbar-links {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .navbar-link {
+            padding: var(--space-2) var(--space-4);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-foreground);
+            text-decoration: none;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-normal);
+        }
+        
+        .navbar-link:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .navbar-link.active {
+            background: var(--bg-primary);
+            color: var(--text-primary-foreground);
+        }
+        
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .navbar-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            padding: var(--space-2) var(--space-3);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-foreground);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .navbar-btn:hover {
+            background: var(--bg-secondary);
+        }
+        
+        /* 页面标题样式 */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-6);
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .page-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .btn-secondary {
+            padding: var(--space-2) var(--space-3);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-foreground);
+            background: transparent;
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-accent);
+        }
+        
+        .btn-primary {
+            padding: var(--space-2) var(--space-4);
+            font-weight: 500;
+            color: white;
+            background: var(--bg-primary);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .btn-primary:hover {
+            background: var(--bg-primary);
+            opacity: 0.9;
+        }
+        
+        .btn-danger {
+            padding: var(--space-2) var(--space-4);
+            font-weight: 500;
+            color: white;
+            background: var(--brand-danger);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .btn-danger:hover {
+            background: var(--brand-danger);
+            opacity: 0.9;
+        }
+        
+        .analysis-content {
+            padding: var(--space-6);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* 任务标签页样式 */
+        .task-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-primary);
+            margin-bottom: var(--space-6);
+        }
+        
+        .task-tab {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-4);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .task-tab:hover {
+            color: var(--text-foreground);
+            border-bottom-color: var(--border-muted);
+        }
+        
+        .task-tab.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--bg-primary);
+        }
+        
+        /* 结果面板样式 */
+        .results-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        
+        .results-header {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+        }
+        
+        .results-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .results-content {
+            padding: var(--space-4);
+        }
+        
+        /* 分析进度样式 */
+        .analysis-progress {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-8);
+            gap: var(--space-4);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            max-width: 400px;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-full);
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            border-radius: var(--radius-full);
+            transition: width var(--transition-slow);
+        }
+        
+        .progress-text {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+        
+        /* 空状态样式 */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-8);
+            gap: var(--space-4);
+            text-align: center;
+        }
+        
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+        
+        .empty-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .empty-description {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            max-width: 400px;
+            line-height: 1.5;
+        }
+        
+        /* 结果列表样式 */
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+        }
+        
+        .result-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-normal);
+        }
+        
+        .result-item:hover {
+            background: var(--bg-tertiary);
+            transform: translateX(4px);
+        }
+        
+        .result-checkbox {
+            width: 16px;
+            height: 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-primary);
+            cursor: pointer;
+        }
+        
+        .result-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+        }
+        
+        .result-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .result-url {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            word-break: break-all;
+        }
+        
+        .result-folder {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .result-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .result-badge {
+            padding: var(--space-1) var(--space-2);
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+        }
+        
+        .badge-suggestion {
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        .badge-confidence {
+            background: var(--bg-muted);
+            color: var(--text-muted);
+        }
+        
+        .action-btn {
+            padding: var(--space-1);
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .action-btn:hover {
+            background: var(--bg-accent);
+        }
+        
+        .action-btn.delete {
+            color: var(--brand-danger);
+        }
+        
+        .action-btn.accept {
+            color: var(--brand-success);
+        }
+        
+        /* 批量操作样式 */
+        .batch-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-4);
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-primary);
+            margin-top: var(--space-4);
+        }
+        
+        .batch-select {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .batch-buttons {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        /* 分析日志样式 */
+        .analysis-logs {
+            margin-top: var(--space-6);
+            background: var(--bg-card);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        
+        .logs-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--border-primary);
+            background: var(--bg-secondary);
+        }
+        
+        .logs-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .logs-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--bg-muted);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-full);
+        }
+        
+        .logs-content {
+            max-height: 240px;
+            overflow-y: auto;
+            padding: var(--space-3);
+            background: var(--bg-muted);
+        }
+        
+        .log-entry {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-2);
+            padding: var(--space-2);
+            margin-bottom: var(--space-2);
+            background: var(--bg-card);
+            border-left: 2px solid var(--border-primary);
+            border-radius: var(--radius-sm);
+        }
+        
+        .log-entry.success {
+            border-left-color: var(--brand-success);
+        }
+        
+        .log-entry.error {
+            border-left-color: var(--brand-danger);
+        }
+        
+        .log-entry.warning {
+            border-left-color: var(--brand-warning);
+        }
+        
+        .log-entry.info {
+            border-left-color: var(--accent-blue);
+        }
+        
+        .log-icon {
+            width: 16px;
+            height: 16px;
+            margin-top: 2px;
+        }
+        
+        .log-content {
+            flex: 1;
+        }
+        
+        .log-message {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .log-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: var(--space-1);
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .navbar-container {
+                padding: 0 var(--space-4);
+            }
+            
+            .navbar-left {
+                gap: var(--space-4);
+            }
+            
+            .navbar-title {
+                font-size: 1.125rem;
+            }
+            
+            .navbar-links {
+                display: none;
+            }
+            
+            .analysis-content {
+                padding: var(--space-4);
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--space-4);
+            }
+            
+            .page-title {
+                font-size: 1.5rem;
+            }
+            
+            .task-tabs {
+                overflow-x: auto;
+            }
+            
+            .task-tab {
+                white-space: nowrap;
+            }
+            
+            .result-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--space-2);
+            }
+            
+            .result-actions {
+                align-self: flex-end;
+            }
+            
+            .batch-actions {
+                flex-direction: column;
+                gap: var(--space-3);
+                align-items: stretch;
+            }
+        }
+        
+        /* 加载状态 */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-4);
+            padding: var(--space-8);
+            color: var(--text-muted);
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-primary);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 0.875rem;
+            text-align: center;
+        }
+        
+        /* 错误状态 */
+        .error-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-4);
+            padding: var(--space-8);
+            color: var(--brand-danger);
+        }
+        
+        .error-icon {
+            width: 48px;
+            height: 48px;
+            color: var(--brand-danger);
+        }
+        
+        .error-text {
+            font-size: 0.875rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="analysis-container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-container">
+                <div class="navbar-left">
+                    <h1 class="navbar-title">书签分析与管理</h1>
+                    <div class="navbar-links">
+                        <a href="#" class="navbar-link">数据概览</a>
+                        <a href="#" class="navbar-link active">智能分析中心</a>
+                    </div>
+                </div>
+                <div class="navbar-right">
+                    <button class="navbar-btn" title="刷新数据">
+                        <i data-lucide="refresh-cw" width="16" height="16"></i>
+                        <span>刷新</span>
+                    </button>
+                    <button class="navbar-btn" title="导出结果">
+                        <i data-lucide="download" width="16" height="16"></i>
+                        <span>导出</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- 分析内容 -->
+        <main class="analysis-content">
+            <!-- 页面标题和操作 -->
+            <div class="page-header">
+                <h1 class="page-title">智能分析中心</h1>
+                <div class="page-actions">
+                    <button class="btn-secondary" id="history-btn">
+                        历史版本
+                    </button>
+                    <button class="btn-primary" id="start-analysis-btn">
+                        开始分析
+                    </button>
+                    <button class="btn-danger" id="cancel-analysis-btn" style="display: none;">
+                        取消分析
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 任务标签页 -->
+            <div class="task-tabs" id="taskTabs">
+                <button class="task-tab active" data-tab="smart">
+                    <i data-lucide="layout-grid" width="16" height="16"></i>
+                    智能分类
+                </button>
+                <button class="task-tab" data-tab="duplicates">
+                    <i data-lucide="pie-chart" width="16" height="16"></i>
+                    重复项检测
+                </button>
+                <button class="task-tab" data-tab="deadlinks">
+                    <i data-lucide="alert-circle" width="16" height="16"></i>
+                    失效链接检测
+                </button>
+                <button class="task-tab" data-tab="emptyfolders">
+                    <i data-lucide="folder" width="16" height="16"></i>
+                    空文件夹检测
+                </button>
+            </div>
+            
+            <!-- 结果面板 -->
+            <div class="results-panel" id="resultsPanel">
+                <div class="results-header">
+                    <h2 class="results-title" id="resultsTitle">选择分析任务</h2>
+                </div>
+                <div class="results-content" id="resultsContent">
+                    <!-- 动态内容 -->
+                </div>
+            </div>
+            
+            <!-- 分析日志 -->
+            <div class="analysis-logs" id="analysisLogs" style="display: none;">
+                <div class="logs-header">
+                    <div class="logs-title">
+                        <i data-lucide="clock" width="16" height="16"></i>
+                        分析日志
+                    </div>
+                    <span class="logs-count" id="logsCount">0 条记录</span>
+                </div>
+                <div class="logs-content" id="logsContent">
+                    <!-- 动态日志内容 -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- 引入模块 -->
+    <script type="module" src="analysis.js"></script>
+</body>
+</html>
+
