@@ -1,0 +1,17 @@
+{
+  "extends": [
+    "development",
+    "plasmo"
+  ],
+  "hints": {
+    "compat-api/css": [
+      "default",
+      {
+        "ignore": [
+          "image-rendering: crisp-edges"
+        ]
+      }
+    ],
+    "typescript-config/strict": "off"
+  }
+}

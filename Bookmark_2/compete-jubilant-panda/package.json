@@ -1,0 +1,45 @@
+{
+  "name": "书签智能工作台",
+  "displayName": "书签智能工作台",
+  "version": "0.0.1",
+  "description": "使用AI自动分类并整理浏览器书签",
+  "author": "LuoYuan. <luoyuan@ifree8.cn>",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package"
+  },
+  "dependencies": {
+    "plasmo": "0.90.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "4.1.1",
+    "@types/chrome": "0.0.258",
+    "@types/node": "20.11.5",
+    "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.18",
+    "prettier": "3.2.4",
+    "typescript": "5.3.3"
+  },
+  "manifest": {
+    "permissions": [
+      "bookmarks",
+      "storage",
+      "tabs",
+      "activeTab",
+      "favicon"
+    ],
+    "host_permissions": [
+      "https://*/*",
+      "http://*/*"
+    ],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "chrome_url_overrides": {
+      "newtab": "newtab.html"
+    }
+  }
+}

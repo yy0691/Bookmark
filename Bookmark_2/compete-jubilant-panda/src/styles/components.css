@@ -1,0 +1,647 @@
+/* ======================================
+   组件样式标准 - React版本
+   基于原 styles/component-standards.css
+   ====================================== */
+
+/* --- 书签相关组件 --- */
+
+/* 书签项 */
+.bookmark-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.bookmark-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.bookmark-item .favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.bookmark-item .bookmark-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bookmark-item .bookmark-title {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-item .bookmark-url {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 书签卡片 */
+.bookmark-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+}
+
+.bookmark-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.bookmark-card .favicon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+}
+
+.bookmark-card .bookmark-title {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.bookmark-card .bookmark-url {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+/* 书签标签 */
+.bookmark-tags {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.bookmark-tag {
+  background: var(--accent-primary, var(--accent-blue));
+  color: white;
+  font-size: 0.625rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+}
+
+/* 文件夹项 */
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.folder-item:hover {
+  background: var(--bg-hover);
+}
+
+.folder-item.active {
+  background: var(--accent-primary, var(--accent-blue));
+  color: white;
+}
+
+.folder-item .folder-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.folder-item .folder-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.folder-item .bookmark-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.folder-item.active .bookmark-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* 文件夹切换图标 */
+.folder-toggle-icon {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  transition: transform var(--transition-normal);
+}
+
+.folder-item.expanded .folder-toggle-icon {
+  transform: rotate(90deg);
+}
+
+/* 子文件夹列表 */
+.sub-folder-list {
+  margin-left: var(--space-6);
+  border-left: 1px solid var(--border-primary);
+  padding-left: var(--space-3);
+}
+
+/* --- 过滤和搜索组件 --- */
+
+/* 过滤器标签 */
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.filter-tag:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+}
+
+.filter-tag.active {
+  background: var(--accent-primary, var(--accent-blue));
+  color: white;
+  border-color: var(--accent-primary, var(--accent-blue));
+}
+
+.filter-tag .tag-count {
+  background: var(--bg-glass);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.625rem;
+}
+
+.filter-tag.active .tag-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 搜索输入框 */
+.search-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all var(--transition-normal);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-primary, var(--accent-blue));
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* --- 视图切换组件 --- */
+
+/* 切换按钮 */
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.toggle-btn.active {
+  background: var(--accent-primary, var(--accent-blue));
+  color: white;
+  border-color: var(--accent-primary, var(--accent-blue));
+}
+
+.toggle-btn .btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* --- 统计和指标组件 --- */
+
+/* 指标卡片 */
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.metric-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.metric-value-container {
+  text-align: right;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  display: block;
+}
+
+.metric-trend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.75rem;
+  margin-top: var(--space-1);
+}
+
+.metric-trend.trend-up {
+  color: var(--accent-green);
+}
+
+.metric-trend.trend-down {
+  color: var(--accent-red);
+}
+
+.metric-trend.trend-neutral {
+  color: var(--text-muted);
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* --- 图表组件 --- */
+
+/* 词云 */
+.word-cloud {
+  padding: var(--space-4);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.word-item {
+  display: inline-block;
+  margin: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: default;
+  transition: transform var(--transition-normal);
+}
+
+.word-item:hover {
+  transform: scale(1.1);
+}
+
+.word-item.highlight {
+  font-weight: 600;
+}
+
+/* 分类图表 */
+.category-chart {
+  padding: var(--space-4);
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.category-label {
+  width: 120px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-bar {
+  flex: 1;
+  height: 20px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.category-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary, var(--accent-blue)), var(--accent-purple));
+  border-radius: var(--radius-sm);
+  transition: width var(--transition-slow);
+}
+
+.category-count {
+  width: 40px;
+  text-align: right;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* --- 活跃度热力图 --- */
+
+.activity-heatmap {
+  padding: var(--space-4);
+}
+
+.heatmap-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.heatmap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.heatmap-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+}
+
+.heatmap-grid {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.heatmap-days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  width: 40px;
+}
+
+.heatmap-squares {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.heatmap-square {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform var(--transition-normal);
+}
+
+.heatmap-square:hover {
+  transform: scale(1.2);
+}
+
+/* --- 空状态组件 --- */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-4);
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+.empty-description {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* --- 错误状态组件 --- */
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--accent-red);
+}
+
+.error-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-4);
+}
+
+.error-text {
+  font-size: 0.875rem;
+  color: var(--accent-red);
+}
+
+/* --- 加载状态组件 --- */
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.loading-text {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: var(--space-3);
+}
+
+/* --- 响应式设计 --- */
+
+@media (max-width: 768px) {
+  .bookmark-item {
+    padding: var(--space-2);
+  }
+  
+  .bookmark-card {
+    padding: var(--space-3);
+  }
+  
+  .metric-card {
+    padding: var(--space-3);
+  }
+  
+  .metric-value {
+    font-size: 1.25rem;
+  }
+  
+  .category-label {
+    width: 80px;
+    font-size: 0.75rem;
+  }
+  
+  .heatmap-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  
+  .heatmap-legend {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .bookmark-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  
+  .bookmark-item .favicon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .bookmark-card .favicon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .category-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+  
+  .category-label {
+    width: 100%;
+  }
+  
+  .category-bar {
+    width: 100%;
+  }
+}

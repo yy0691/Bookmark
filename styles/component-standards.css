@@ -412,29 +412,51 @@
   flex-shrink: 0;
 }
 
-/* --- 视图切换组件 --- */
+/* --- 视图切换组件（简洁灵动版） --- */
 .view-toggle {
   display: flex;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: 0.125rem;
+  gap: 0.25rem;
+  background: none;
+  border-radius: var(--radius-sm);
+  padding: 0;
+  box-shadow: none;
 }
 
 .toggle-btn {
-  padding: var(--space-2) var(--space-3);
+  padding: 0.25rem 0.25rem;
   border: none;
-  background: transparent;
+  background: none;
   color: var(--text-tertiary);
-  font-size: 0.75rem;
+  font-size: 1rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    color var(--transition-normal),
+    background var(--transition-normal),
+    box-shadow 0.25s cubic-bezier(.4,0,.2,1),
+    transform 0.18s cubic-bezier(.4,0,.2,1);
+}
+
+.toggle-btn:hover {
+  color: var(--accent-primary, var(--accent-blue));
+  background: var(--bg-tertiary);
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.06);
 }
 
 .toggle-btn.active {
   background: var(--accent-primary, var(--accent-blue));
-  color: white;
+  color: #fff;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.10);
+  transform: scale(1.12);
+  z-index: 1;
 }
+
 
 /* --- 标签过滤器组件 --- */
 .tags-container {

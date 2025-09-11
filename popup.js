@@ -569,6 +569,7 @@ function openDashboard() {
   chrome.tabs.create({ url: 'dashbord.html' });
 }
 subscribe('dashboard', openDashboard);
+
 // 添加通知动画样式（优化版本）
 const style = document.createElement('style');
 style.textContent = `
