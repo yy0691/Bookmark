@@ -1,23 +1,279 @@
 /**
  * 智能分析中心 - 书签智能分析和管理
- * 基于示例代码设计，集成现有模块功能
+ * 优化版：改进UI反馈、简化代码结构
  */
 
 // 导入模块
 import { BookmarkService } from '../../modules/bookmarkService.js';
 import { DetectionService } from '../../modules/detectionService.js';
 import { ApiService } from '../../modules/apiService.js';
+import { BookmarkSyncer } from '../../modules/bookmarkSyncer.js';
 
 // 检查模块导入
 console.log('📦 模块导入状态:');
 console.log('BookmarkService:', BookmarkService);
 console.log('DetectionService:', DetectionService);
 console.log('ApiService:', ApiService);
+console.log('BookmarkSyncer:', BookmarkSyncer);
 
 // 检查Chrome API是否可用
 console.log('🌐 Chrome API状态:');
 console.log('chrome:', typeof chrome);
 console.log('chrome.bookmarks:', typeof chrome?.bookmarks);
+
+/**
+ * 缓存管理器 - 用于存储和管理已分类的书签
+ */
+class CacheManager {
+    constructor() {
+        this.bookmarkCache = new Map();
+        this.cacheStats = {
+            totalCached: 0,
+            hits: 0,
+            misses: 0,
+            hitRate: 0,
+            lastUpdated: Date.now()
+        };
+        this.loadCacheFromStorage();
+    }
+
+    /**
+     * 检查缓存中的分类结果
+     */
+    async getCachedCategory(bookmarkId) {
+        const cached = this.bookmarkCache.get(bookmarkId);
+        
+        if (cached && this.isValidCache(cached)) {
+            this.cacheStats.hits++;
+            this.updateHitRate();
+            console.log(`📦 缓存命中: ${bookmarkId}`);
+            return cached;
+        }
+        
+        this.cacheStats.misses++;
+        this.updateHitRate();
+        return null;
+    }
+
+    /**
+     * 批量检查书签缓存状态
+     */
+    async getBookmarksStatus(bookmarks) {
+        const cached = [];
+        const needsClassification = [];
+        const needsUpdate = [];
+
+        for (const bookmark of bookmarks) {
+            const cachedData = this.bookmarkCache.get(bookmark.id);
+            
+            if (!cachedData) {
+                needsClassification.push(bookmark);
+            } else if (this.isValidCache(cachedData)) {
+                cached.push({ ...bookmark, ...cachedData });
+            } else {
+                needsUpdate.push(bookmark);
+            }
+        }
+
+        return { cached, needsClassification, needsUpdate };
+    }
+
+    /**
+     * 保存分类结果到缓存
+     */
+    async saveToCache(bookmarkId, categoryData) {
+        const cacheEntry = {
+            ...categoryData,
+            timestamp: Date.now(),
+            version: 1,
+            cachedAt: new Date().toISOString()
+        };
+
+        this.bookmarkCache.set(bookmarkId, cacheEntry);
+        this.cacheStats.totalCached = this.bookmarkCache.size;
+
+        // 异步保存到 Chrome Storage
+        await this.syncToStorage();
+
+        console.log(`💾 缓存保存: ${bookmarkId} -> ${categoryData.suggestedCategory}`);
+    }
+
+    /**
+     * 检查缓存是否有效（30天过期）
+     */
+    isValidCache(cacheEntry, maxAge = 30 * 24 * 60 * 60 * 1000) {
+        if (!cacheEntry || !cacheEntry.timestamp) return false;
+        return (Date.now() - cacheEntry.timestamp) < maxAge;
+    }
+
+    /**
+     * 清理过期缓存
+     */
+    async cleanExpiredCache(maxAge = 30 * 24 * 60 * 60 * 1000) {
+        const now = Date.now();
+        let cleanedCount = 0;
+
+        for (const [id, data] of this.bookmarkCache) {
+            if (now - data.timestamp > maxAge) {
+                this.bookmarkCache.delete(id);
+                cleanedCount++;
+            }
+        }
+
+        if (cleanedCount > 0) {
+            this.cacheStats.totalCached = this.bookmarkCache.size;
+            await this.syncToStorage();
+            console.log(`🧹 清理过期缓存: ${cleanedCount} 条`);
+        }
+
+        return cleanedCount;
+    }
+
+    /**
+     * 更新命中率统计
+     */
+    updateHitRate() {
+        const total = this.cacheStats.hits + this.cacheStats.misses;
+        if (total > 0) {
+            this.cacheStats.hitRate = (
+                (this.cacheStats.hits / total) * 100
+            ).toFixed(2) + '%';
+        }
+    }
+
+    /**
+     * 获取缓存统计
+     */
+    getCacheStats() {
+        return {
+            totalCached: this.cacheStats.totalCached,
+            hits: this.cacheStats.hits,
+            misses: this.cacheStats.misses,
+            hitRate: this.cacheStats.hitRate,
+            lastUpdated: this.cacheStats.lastUpdated
+        };
+    }
+
+    /**
+     * 清空所有缓存
+     */
+    async clearAllCache() {
+        this.bookmarkCache.clear();
+        this.cacheStats = {
+            totalCached: 0,
+            hits: 0,
+            misses: 0,
+            hitRate: 0,
+            lastUpdated: Date.now()
+        };
+        
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+            await chrome.storage.local.remove(['bookmarkCache']);
+        }
+        
+        console.log('🗑️ 已清空所有缓存');
+    }
+
+    /**
+     * 导出缓存数据
+     */
+    exportCache() {
+        const exportData = {
+            timestamp: Date.now(),
+            totalCached: this.bookmarkCache.size,
+            items: Array.from(this.bookmarkCache.entries()).map(([id, data]) => ({
+                bookmarkId: id,
+                ...data
+            }))
+        };
+
+        return exportData;
+    }
+
+    /**
+     * 导入缓存数据
+     */
+    async importCache(importData) {
+        if (!importData.items || !Array.isArray(importData.items)) {
+            throw new Error('无效的缓存数据格式');
+        }
+
+        for (const item of importData.items) {
+            const { bookmarkId, ...data } = item;
+            this.bookmarkCache.set(bookmarkId, data);
+        }
+
+        this.cacheStats.totalCached = this.bookmarkCache.size;
+        await this.syncToStorage();
+
+        console.log(`📥 导入缓存: ${importData.items.length} 条`);
+    }
+
+    /**
+     * 同步缓存到 Chrome Storage
+     */
+    async syncToStorage() {
+        if (typeof chrome === 'undefined' || !chrome.storage) {
+            return;
+        }
+
+        try {
+            const cacheData = Array.from(this.bookmarkCache.entries());
+            await chrome.storage.local.set({
+                bookmarkCache: cacheData,
+                cacheStats: this.cacheStats,
+                lastSyncTime: Date.now()
+            });
+        } catch (error) {
+            console.warn('缓存同步到 Storage 失败:', error);
+        }
+    }
+
+    /**
+     * 从 Chrome Storage 加载缓存
+     */
+    async loadCacheFromStorage() {
+        if (typeof chrome === 'undefined' || !chrome.storage) {
+            return;
+        }
+
+        try {
+            const result = await chrome.storage.local.get([
+                'bookmarkCache',
+                'cacheStats'
+            ]);
+
+            if (result.bookmarkCache) {
+                this.bookmarkCache = new Map(result.bookmarkCache);
+            }
+
+            if (result.cacheStats) {
+                this.cacheStats = result.cacheStats;
+            }
+
+            console.log(`✅ 从 Storage 加载缓存: ${this.bookmarkCache.size} 条`);
+        } catch (error) {
+            console.warn('从 Storage 加载缓存失败:', error);
+        }
+    }
+
+    /**
+     * 获取缓存大小统计
+     */
+    getCacheSize() {
+        let size = 0;
+        for (const [, data] of this.bookmarkCache) {
+            size += JSON.stringify(data).length;
+        }
+        
+        return {
+            items: this.bookmarkCache.size,
+            bytes: size,
+            kilobytes: (size / 1024).toFixed(2),
+            megabytes: (size / (1024 * 1024)).toFixed(4)
+        };
+    }
+}
 
 class AnalysisCenter {
     constructor() {
@@ -25,6 +281,8 @@ class AnalysisCenter {
             this.bookmarkService = new BookmarkService();
             this.detectionService = new DetectionService();
             this.apiService = new ApiService();
+            this.cacheManager = new CacheManager();
+            this.bookmarkSyncer = new BookmarkSyncer();  // ✨ 新增
         } catch (error) {
             console.error('❌ 创建服务实例失败:', error);
             throw error;
@@ -42,6 +300,7 @@ class AnalysisCenter {
             emptyfolders: []
         };
         this.selectedItems = {};
+        this.isSyncing = false;  // ✨ 新增
         
         // 绑定方法
         this.init = this.init.bind(this);
@@ -54,6 +313,8 @@ class AnalysisCenter {
         this.toggleSelectAll = this.toggleSelectAll.bind(this);
         this.handleBatchAction = this.handleBatchAction.bind(this);
         this.log = this.log.bind(this);
+        this.applyToBookmarks = this.applyToBookmarks.bind(this);  // ✨ 新增
+        this.undoLastApply = this.undoLastApply.bind(this);  // ✨ 新增
     }
     
     /**
@@ -63,61 +324,29 @@ class AnalysisCenter {
         try {
             console.log('🚀 初始化智能分析中心...');
             
-            // 检查服务是否可用
-            console.log('📋 检查服务状态...');
-            console.log('BookmarkService:', this.bookmarkService);
-            console.log('DetectionService:', this.detectionService);
-            console.log('ApiService:', this.apiService);
-            
-            // 检查服务方法
-            console.log('🔧 检查服务方法...');
-            console.log('BookmarkService.setLogCallback:', typeof this.bookmarkService?.setLogCallback);
-            console.log('DetectionService.setLogCallback:', typeof this.detectionService?.setLogCallback);
-            console.log('DetectionService.initialize:', typeof this.detectionService?.initialize);
-            console.log('ApiService.setLogCallback:', typeof this.apiService?.setLogCallback);
-            
             // 设置日志回调
-            if (this.bookmarkService && this.bookmarkService.setLogCallback) {
+            if (this.bookmarkService?.setLogCallback) {
                 this.bookmarkService.setLogCallback(this.log);
-                console.log('✅ BookmarkService 日志回调设置成功');
-            } else {
-                console.warn('⚠️ BookmarkService 日志回调设置失败');
             }
             
-            if (this.detectionService && this.detectionService.setLogCallback) {
+            if (this.detectionService?.setLogCallback) {
                 this.detectionService.setLogCallback(this.log);
-                console.log('✅ DetectionService 日志回调设置成功');
-            } else {
-                console.warn('⚠️ DetectionService 日志回调设置失败');
             }
             
-            if (this.apiService && this.apiService.setLogCallback) {
+            if (this.apiService?.setLogCallback) {
                 this.apiService.setLogCallback(this.log);
-                console.log('✅ ApiService 日志回调设置成功');
-            } else {
-                console.warn('⚠️ ApiService 日志回调设置失败');
             }
             
             // 初始化服务
-            // BookmarkService 不需要初始化
-            if (this.detectionService && this.detectionService.initialize) {
-                console.log('🔄 初始化 DetectionService...');
+            if (this.detectionService?.initialize) {
                 await this.detectionService.initialize();
-                console.log('✅ DetectionService 初始化成功');
-            } else {
-                console.warn('⚠️ DetectionService 不需要初始化或方法不存在');
             }
-            // ApiService 不需要初始化
             
             // 绑定事件
-            console.log('🔗 绑定事件处理器...');
             this.bindEvents();
-            console.log('✅ 事件处理器绑定成功');
             
             // 渲染初始状态
-            console.log('🎨 渲染初始状态...');
             this.renderResults();
-            console.log('✅ 初始状态渲染完成');
             
             console.log('✅ 智能分析中心初始化完成');
             
@@ -127,108 +356,90 @@ class AnalysisCenter {
     }
     
     /**
-     * 绑定事件处理器
+     * 绑定事件处理器 - 优化版
      */
     bindEvents() {
-        console.log('🔗 开始绑定事件处理器...');
-        
-        // 标签页切换
-        const taskTabs = document.querySelectorAll('.task-tab');
-        console.log(`📋 找到 ${taskTabs.length} 个标签页`);
-        taskTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const tabId = tab.dataset.tab;
-                console.log(`🔄 切换到标签页: ${tabId}`);
-                this.handleTabChange(tabId);
+        // 任务卡片点击
+        document.querySelectorAll('.task-card').forEach(card => {
+            card.addEventListener('click', () => {
+                this.handleTabChange(card.dataset.tab);
             });
         });
         
         // 开始分析按钮
         const startBtn = document.getElementById('start-analysis-btn');
-        console.log('🔘 开始分析按钮:', startBtn);
         if (startBtn) {
             startBtn.addEventListener('click', (e) => {
-                console.log('🔘 开始分析按钮被点击');
                 e.preventDefault();
-                e.stopPropagation();
                 this.startAnalysis();
             });
-            console.log('✅ 开始分析按钮事件绑定成功');
-        } else {
-            console.warn('⚠️ 开始分析按钮未找到');
         }
         
         // 取消分析按钮
         const cancelBtn = document.getElementById('cancel-analysis-btn');
-        console.log('🔘 取消分析按钮:', cancelBtn);
         if (cancelBtn) {
             cancelBtn.addEventListener('click', (e) => {
-                console.log('🔘 取消分析按钮被点击');
+                e.preventDefault();
                 this.cancelAnalysis();
             });
-            console.log('✅ 取消分析按钮事件绑定成功');
-        } else {
-            console.warn('⚠️ 取消分析按钮未找到');
-        }
-        
-        // 历史版本按钮
-        const historyBtn = document.getElementById('history-btn');
-        console.log('🔘 历史版本按钮:', historyBtn);
-        if (historyBtn) {
-            historyBtn.addEventListener('click', () => {
-                this.log('历史版本功能开发中...', 'info');
-            });
-            console.log('✅ 历史版本按钮事件绑定成功');
-        } else {
-            console.warn('⚠️ 历史版本按钮未找到');
         }
         
         // 刷新按钮
-        const refreshBtn = document.querySelector('.navbar-btn[title="刷新数据"]');
-        console.log('🔘 刷新按钮:', refreshBtn);
+        const refreshBtn = document.querySelector('.nav-btn[title="刷新"]');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                this.refreshData();
-            });
-            console.log('✅ 刷新按钮事件绑定成功');
-        } else {
-            console.warn('⚠️ 刷新按钮未找到');
+            refreshBtn.addEventListener('click', () => this.refreshData());
         }
         
         // 导出按钮
-        const exportBtn = document.querySelector('.navbar-btn[title="导出结果"]');
-        console.log('🔘 导出按钮:', exportBtn);
+        const exportBtn = document.querySelector('.nav-btn[title="导出"]');
         if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                this.exportResults();
-            });
-            console.log('✅ 导出按钮事件绑定成功');
-        } else {
-            console.warn('⚠️ 导出按钮未找到');
+            exportBtn.addEventListener('click', () => this.exportResults());
         }
-        
-        console.log('✅ 所有事件处理器绑定完成');
+
+        // ✨ 新增：应用到书签按钮
+        const applyBtn = document.getElementById('apply-to-bookmarks-btn');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.applyToBookmarks();
+            });
+        }
+
+        // ✨ 新增：撤销按钮
+        const undoBtn = document.getElementById('undo-last-apply-btn');
+        if (undoBtn) {
+            undoBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.undoLastApply();
+            });
+        }
+
+        // ✨ 新增：全选按钮
+        const selectAllBtn = document.getElementById('select-all-btn');
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.toggleSelectAll();
+            });
+        }
     }
     
     /**
-     * 处理标签页切换
+     * 处理标签页切换 - 优化版
      */
     handleTabChange(tabId) {
         this.activeTab = tabId;
         
-        // 更新标签页状态
-        document.querySelectorAll('.task-tab').forEach(tab => {
-            tab.classList.remove('active');
+        // 更新卡片状态
+        document.querySelectorAll('.task-card').forEach(card => {
+            card.classList.toggle('active', card.dataset.tab === tabId);
         });
-        document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
-        
-        // 渲染结果
-        this.renderResults();
         
         // 清空选择状态
         this.selectedItems = {};
         
-        this.log(`切换到${this.getTabLabel(tabId)}`, 'info');
+        // 渲染结果
+        this.renderResults();
     }
     
     /**
@@ -248,29 +459,14 @@ class AnalysisCenter {
      * 开始分析
      */
     async startAnalysis() {
-        console.log('🚀 开始分析被调用');
-        console.log('📊 当前状态:', {
-            isAnalyzing: this.isAnalyzing,
-            activeTab: this.activeTab,
-            progress: this.progress
-        });
-        
-        if (this.isAnalyzing) {
-            console.log('⚠️ 分析正在进行中，忽略重复调用');
-            return;
-        }
+        if (this.isAnalyzing) return;
         
         try {
-            console.log('🔄 设置分析状态...');
             this.isAnalyzing = true;
             this.progress = 0;
             this.logs = [];
             
-            // 更新UI状态
             this.updateAnalysisState();
-            
-            // 开始分析
-            console.log('🔄 执行分析...');
             await this.performAnalysis();
             
         } catch (error) {
@@ -328,31 +524,340 @@ class AnalysisCenter {
     }
     
     /**
-     * 执行智能分类分析
+     * 智能分类 - 集成缓存系统的版本
      */
-    async performSmartCategorization() {
+    async smartCategorizeWithCache() {
         try {
-            console.log('🔄 开始智能分类分析...');
-            this.log('正在加载书签数据...', 'info');
+            this.log('🚀 开始智能分类分析（启用缓存）...', 'info');
+            
+            // 1. 获取书签数据
+            this.log('📚 获取书签数据...', 'info');
             const bookmarks = await this.bookmarkService.getAllBookmarks();
-            console.log('📚 获取到书签数量:', bookmarks.length);
+            const urls = bookmarks.filter(b => b.url).slice(0, 50);
             
-            this.log('正在分析书签内容...', 'info');
-            // 获取所有书签，过滤掉根目录
-            const uncategorized = bookmarks.filter(b => b.url && b.parentId && b.parentId !== '1');
-            console.log('📋 未分类书签数量:', uncategorized.length);
+            if (urls.length === 0) {
+                this.log('⚠️ 没有找到书签', 'warning');
+                return;
+            }
             
-            this.log('正在生成分类建议...', 'info');
-            const suggestions = await this.generateCategorizationSuggestions(uncategorized);
-            console.log('💡 生成建议数量:', suggestions.length);
+            this.log(`📋 获取到 ${urls.length} 个书签`, 'info');
             
+            // 2. 检查缓存状态
+            this.log('🔍 检查缓存状态...', 'info');
+            const { cached, needsClassification, needsUpdate } = 
+                await this.cacheManager.getBookmarksStatus(urls);
+            
+            // 显示缓存统计
+            this.log(`💾 缓存状态: 已缓存 ${cached.length}, 需要分类 ${needsClassification.length}, 需要更新 ${needsUpdate.length}`, 'info');
+            
+            const suggestions = [];
+            
+            // 3. 添加已缓存的结果
+            suggestions.push(...cached);
+            
+            // 4. 处理需要分类的书签
+            if (needsClassification.length > 0) {
+                this.log(`📊 处理 ${needsClassification.length} 个新书签...`, 'info');
+                
+                const apiSettings = await this.getApiSettings();
+                const batchSize = 5;
+                
+                for (let i = 0; i < needsClassification.length; i += batchSize) {
+                    const batch = needsClassification.slice(i, Math.min(i + batchSize, needsClassification.length));
+                    this.log(`📊 处理第 ${Math.floor(i / batchSize) + 1}/${Math.ceil(needsClassification.length / batchSize)} 批...`, 'info');
+                    
+                    // 本地分类
+                    const localSuggestions = batch.map(bookmark => this.localCategorize(bookmark));
+                    
+                    // LLM增强（如果有API）
+                    let finalSuggestions = localSuggestions;
+                    if (apiSettings && apiSettings.apiKey) {
+                        try {
+                            finalSuggestions = await this.enhanceWithLLM(batch, localSuggestions, apiSettings);
+                        } catch (error) {
+                            this.log(`⚠️ LLM增强失败: ${error.message}`, 'warning');
+                        }
+                    }
+                    
+                    // 保存到缓存
+                    for (let j = 0; j < batch.length; j++) {
+                        await this.cacheManager.saveToCache(batch[j].id, finalSuggestions[j]);
+                    }
+                    
+                    suggestions.push(...finalSuggestions);
+                    
+                    this.progress = (cached.length + i + batch.length) / urls.length * 100;
+                    this.updateProgress();
+                    
+                    if (i + batchSize < needsClassification.length) {
+                        await this.delay(1000);
+                    }
+                }
+            }
+            
+            // 5. 处理过期的缓存（可选）
+            if (needsUpdate.length > 0) {
+                this.log(`🔄 处理 ${needsUpdate.length} 个过期缓存...`, 'info');
+                // 类似新书签的处理流程
+            }
+            
+            // 6. 显示缓存统计
+            const cacheStats = this.cacheManager.getCacheStats();
+            const cacheSize = this.cacheManager.getCacheSize();
+            this.log(`📦 缓存统计 - 命中率: ${cacheStats.hitRate}, 缓存项: ${cacheStats.totalCached}, 大小: ${cacheSize.kilobytes}KB`, 'info');
+            
+            // 7. 保存结果
             this.results.smart = suggestions;
-            this.log(`发现${suggestions.length}个未分类书签`, 'warning');
+            this.progress = 100;
+            this.completeAnalysis();
+            
+            this.log(`✅ 分类完成！共生成 ${suggestions.length} 条建议`, 'success');
             
         } catch (error) {
-            console.error('❌ 智能分类分析失败:', error);
-            this.log(`智能分类分析失败: ${error.message}`, 'error');
+            this.log(`❌ 智能分类失败: ${error.message}`, 'error');
         }
+    }
+
+    /**
+     * 原始智能分类方法（不使用缓存）
+     */
+    async performSmartCategorization() {
+        // 调用新的方法（已集成缓存）
+        return this.smartCategorizeWithCache();
+    }
+
+    /**
+     * 本地分类规则
+     */
+    localCategorize(bookmark) {
+        const title = (bookmark.title || '').toLowerCase();
+        const url = (bookmark.url || '').toLowerCase();
+        
+        // 域名分类规则
+        const domainRules = {
+            '技术': ['github.com', 'stackoverflow.com', 'developer.mozilla.org', 'w3schools.com', 'js', 'python', 'programming', 'code', 'api', 'npm', 'yarn'],
+            '社交': ['twitter.com', 'facebook.com', 'instagram.com', 'linkedin.com', 'reddit.com', 'weibo.com', 'douban.com'],
+            '购物': ['amazon.com', 'taobao.com', 'jd.com', 'ebay.com', 'shop', 'buy', 'sale', 'store'],
+            '娱乐': ['youtube.com', 'netflix.com', 'twitch.tv', 'spotify.com', 'bilibili.com', 'game', 'movie', 'music'],
+            '学习': ['coursera.org', 'udemy.com', 'edx.org', 'khan', 'education', 'course', 'tutorial', 'learn'],
+            '新闻': ['news', 'cnn.com', 'bbc.com', '新闻', '资讯'],
+            '工作': ['job', 'career', 'recruit', '招聘', 'work', '工作']
+        };
+        
+        // 逐一检查规则
+        for (const [category, keywords] of Object.entries(domainRules)) {
+            if (keywords.some(kw => url.includes(kw) || title.includes(kw))) {
+                return {
+                    id: `cat-${bookmark.id || Date.now()}`,
+                    title: bookmark.title || '未命名',
+                    url: bookmark.url,
+                    suggestedCategory: category,
+                    confidence: 0.7,
+                    source: 'local', // 标记数据来源
+                    folder: bookmark.parentId
+                };
+            }
+        }
+        
+        // 默认分类
+        return {
+            id: `cat-${bookmark.id || Date.now()}`,
+            title: bookmark.title || '未命名',
+            url: bookmark.url,
+            suggestedCategory: '其他',
+            confidence: 0.3,
+            source: 'local',
+            folder: bookmark.parentId
+        };
+    }
+
+    /**
+     * 使用LLM增强分类
+     */
+    async enhanceWithLLM(bookmarks, localSuggestions, apiSettings) {
+        if (!apiSettings || !apiSettings.apiKey) {
+            return localSuggestions;
+        }
+        
+        try {
+            // 构建提示词
+            const bookmarksList = bookmarks.map((b, i) => 
+                `${i + 1}. 标题: ${b.title}\n   URL: ${b.url}\n   本地分类: ${localSuggestions[i].suggestedCategory}`
+            ).join('\n\n');
+            
+            const prompt = `请分析以下书签，提供更准确的分类建议。返回JSON格式：
+[{"index": 0, "category": "分类", "confidence": 0.9, "reason": "原因"}]
+
+书签列表：
+${bookmarksList}
+
+可选分类：技术、社交、购物、娱乐、学习、新闻、工作、设计、其他`;
+            
+            this.log('🤖 调用LLM API进行增强分类...', 'info');
+            
+            // 调用API
+            const response = await this.callLLMApi(prompt, apiSettings);
+            
+            // 解析响应
+            const categories = JSON.parse(response);
+            
+            // 合并本地和LLM的分类结果
+            return bookmarks.map((bookmark, index) => {
+                const llmResult = categories[index];
+                const localResult = localSuggestions[index];
+                
+                return {
+                    ...localResult,
+                    suggestedCategory: llmResult.category || localResult.suggestedCategory,
+                    confidence: llmResult.confidence || localResult.confidence,
+                    source: 'llm_enhanced', // 标记为LLM增强
+                    llmReason: llmResult.reason
+                };
+            });
+            
+        } catch (error) {
+            this.log(`⚠️ LLM调用失败，回退到本地分类: ${error.message}`, 'warning');
+            return localSuggestions;
+        }
+    }
+
+    /**
+     * 调用LLM API
+     */
+    async callLLMApi(prompt, apiSettings) {
+        const { provider = 'gemini', apiKey, model = 'gemini-2.0-flash', customApiUrl } = apiSettings;
+        
+        switch (provider) {
+            case 'gemini':
+                return await this.callGeminiAPI(prompt, apiKey, model);
+            case 'openai':
+                return await this.callOpenAIAPI(prompt, apiKey, model);
+            case 'custom':
+                return await this.callCustomAPI(prompt, apiKey, customApiUrl, model);
+            default:
+                throw new Error(`未知的API提供商: ${provider}`);
+        }
+    }
+
+    /**
+     * 调用Gemini API
+     */
+    async callGeminiAPI(prompt, apiKey, model) {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: prompt }]
+                }],
+                generationConfig: {
+                    temperature: 0.3,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 1024
+                }
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Gemini API错误: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const text = data.candidates[0]?.content?.parts[0]?.text || '';
+        
+        // 提取JSON
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        return jsonMatch ? jsonMatch[0] : text;
+    }
+
+    /**
+     * 调用OpenAI API
+     */
+    async callOpenAIAPI(prompt, apiKey, model) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model || 'gpt-3.5-turbo',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.3,
+                max_tokens: 1024
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`OpenAI API错误: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.choices[0]?.message?.content || '';
+    }
+
+    /**
+     * 调用自定义API
+     */
+    async callCustomAPI(prompt, apiKey, customApiUrl, model) {
+        const response = await fetch(customApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: model,
+                prompt: prompt,
+                max_tokens: 1024
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`自定义API错误: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data.content || data.result || JSON.stringify(data);
+    }
+
+    /**
+     * 获取API设置
+     */
+    async getApiSettings() {
+        return new Promise((resolve) => {
+            try {
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    chrome.storage.sync.get([
+                        'apiProvider',
+                        'apiKey',
+                        'geminiModel',
+                        'openaiModel',
+                        'customModel',
+                        'customApiUrl'
+                    ], (result) => {
+                        resolve({
+                            provider: result.apiProvider || 'gemini',
+                            apiKey: result.apiKey || '',
+                            model: result.geminiModel || result.openaiModel || 'gemini-2.0-flash',
+                            customApiUrl: result.customApiUrl || ''
+                        });
+                    });
+                } else {
+                    resolve(null);
+                }
+            } catch (error) {
+                resolve(null);
+            }
+        });
+    }
+
+    /**
+     * 延迟函数
+     */
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
     
     /**
@@ -902,250 +1407,129 @@ class AnalysisCenter {
     }
     
     /**
-     * 渲染结果
+     * 渲染结果 - 适配新布局
      */
     renderResults() {
         const resultsContent = document.getElementById('resultsContent');
         const resultsTitle = document.getElementById('resultsTitle');
+        const logsPanel = document.getElementById('logsPanel');
+        const batchActions = document.getElementById('batchActions');  // ✨ 新增
         
-        console.log('🔄 渲染结果:', {
-            resultsContent,
-            resultsTitle,
-            isAnalyzing: this.isAnalyzing,
-            progress: this.progress,
-            activeTab: this.activeTab
-        });
+        if (!resultsContent || !resultsTitle) return;
         
-        if (!resultsContent || !resultsTitle) {
-            console.warn('⚠️ 结果容器未找到');
-            return;
-        }
-        
-        // 更新标题
-        resultsTitle.textContent = this.getTabLabel(this.activeTab);
+        // 获取任务标签
+        const tabLabel = this.getTabLabel(this.activeTab);
+        resultsTitle.textContent = tabLabel;
         
         // 根据状态渲染内容
         if (this.isAnalyzing) {
-            console.log('🔄 渲染分析中状态');
             this.renderAnalyzingState(resultsContent);
+            if (logsPanel) logsPanel.style.display = 'block';
+            if (batchActions) batchActions.style.display = 'none';  // ✨ 新增
         } else if (this.progress === 0) {
-            console.log('🔄 渲染空状态');
             this.renderEmptyState(resultsContent);
+            if (logsPanel) logsPanel.style.display = 'none';
+            if (batchActions) batchActions.style.display = 'none';  // ✨ 新增
         } else {
-            console.log('🔄 渲染结果内容');
             this.renderResultsContent(resultsContent);
+            // ✨ 新增：如果有结果且是智能分类标签，显示批量操作栏
+            const results = this.results[this.activeTab] || [];
+            if (batchActions && results.length > 0 && this.activeTab === 'smart') {
+                batchActions.style.display = 'flex';
+            } else if (batchActions) {
+                batchActions.style.display = 'none';
+            }
         }
     }
     
     /**
-     * 渲染分析中状态
+     * 渲染分析中状态 - 简化版
      */
     renderAnalyzingState(container) {
         container.innerHTML = `
-            <div class="analysis-progress">
+            <div class="progress-container">
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${this.progress}%"></div>
                 </div>
-                <p class="progress-text">正在分析中，请稍候... ${Math.round(this.progress)}%</p>
+                <p class="progress-text">正在分析... ${Math.round(this.progress)}%</p>
             </div>
         `;
     }
-    
+
     /**
-     * 渲染空状态
+     * 渲染空状态 - 适配新布局
      */
     renderEmptyState(container) {
         const descriptions = {
-            smart: '分析您的书签并提供智能分类建议，帮助您更好地组织书签。',
-            duplicates: '检测您的书签库中的重复项，帮助您清理冗余内容。',
-            deadlinks: '检测您的书签库中已失效的链接，保持书签库的健康。',
-            emptyfolders: '查找并标记空文件夹，帮助您保持书签结构整洁。'
-        };
-        
-        const icons = {
-            smart: 'layout-grid',
-            duplicates: 'pie-chart',
-            deadlinks: 'alert-circle',
-            emptyfolders: 'folder'
+            smart: '分析您的书签并提供智能分类建议',
+            duplicates: '检测您的书签库中的重复项',
+            deadlinks: '检测您的书签库中已失效的链接',
+            emptyfolders: '查找并标记空文件夹'
         };
         
         container.innerHTML = `
             <div class="empty-state">
-                <i data-lucide="${icons[this.activeTab]}" class="empty-icon"></i>
-                <h3 class="empty-title">开始${this.getTabLabel(this.activeTab)}</h3>
-                <p class="empty-description">${descriptions[this.activeTab]}</p>
-                <button class="btn-primary" id="empty-state-start-btn">
-                    开始${this.getTabLabel(this.activeTab)}
-                </button>
+                <div class="empty-icon">📋</div>
+                <h3 class="empty-title">点击上方开始分析</h3>
+                <p class="empty-desc">${descriptions[this.activeTab]}</p>
             </div>
         `;
-        
-        // 重新初始化图标
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-        
-        // 绑定空状态按钮事件
-        const emptyStateBtn = document.getElementById('empty-state-start-btn');
-        console.log('🔘 空状态按钮:', emptyStateBtn);
-        if (emptyStateBtn) {
-            emptyStateBtn.addEventListener('click', (e) => {
-                console.log('🔘 空状态开始分析按钮被点击');
-                e.preventDefault();
-                e.stopPropagation();
-                this.startAnalysis();
-            });
-            console.log('✅ 空状态按钮事件绑定成功');
-        } else {
-            console.warn('⚠️ 空状态按钮未找到');
-        }
     }
-    
+
     /**
-     * 渲染结果内容
+     * 渲染结果内容 - 主入口
      */
     renderResultsContent(container) {
         const results = this.results[this.activeTab] || [];
         
-        if (results.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i data-lucide="check-circle" class="empty-icon"></i>
-                    <h3 class="empty-title">分析完成</h3>
-                    <p class="empty-description">未发现需要处理的项目。</p>
-                </div>
-            `;
-            return;
+        if (this.activeTab === 'duplicates') {
+            container.innerHTML = this.renderDuplicateResults(results) + (results.length > 0 ? this.renderBatchBar(results) : '');
+        } else {
+            container.innerHTML = this.renderResultsList(results);
         }
         
-        // 渲染结果摘要
-        const summary = this.renderResultsSummary(results);
-        
-        // 渲染结果列表
-        const resultsList = this.renderResultsList(results);
-        
-        // 渲染批量操作
-        const batchActions = this.renderBatchActions(results);
-        
-        container.innerHTML = `
-            ${summary}
-            ${resultsList}
-            ${batchActions}
-        `;
-        
-        // 重新初始化图标
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
-        
-        // 绑定结果项事件
-        this.bindResultEvents();
     }
-    
+
     /**
-     * 绑定结果项事件
-     */
-    bindResultEvents() {
-        // 绑定复选框事件
-        const checkboxes = document.querySelectorAll('.result-checkbox');
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', (e) => {
-                const itemId = e.target.dataset.itemId;
-                this.toggleSelectItem(itemId);
-            });
-        });
-        
-        // 绑定全选复选框事件
-        const selectAllCheckbox = document.getElementById('select-all-checkbox');
-        if (selectAllCheckbox) {
-            selectAllCheckbox.addEventListener('change', () => {
-                this.toggleSelectAll();
-            });
-        }
-        
-        // 绑定导出按钮事件
-        const exportBtn = document.getElementById('export-results-btn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                this.exportResults();
-            });
-        }
-        
-        // 绑定批量操作按钮事件
-        const applyAllBtn = document.getElementById('apply-all-suggestions-btn');
-        if (applyAllBtn) {
-            applyAllBtn.addEventListener('click', () => {
-                this.applyAllSuggestions();
-            });
-        }
-        
-        const cleanAllDuplicatesBtn = document.getElementById('clean-all-duplicates-btn');
-        if (cleanAllDuplicatesBtn) {
-            cleanAllDuplicatesBtn.addEventListener('click', () => {
-                this.cleanAllDuplicates();
-            });
-        }
-        
-        const deleteAllDeadlinksBtn = document.getElementById('delete-all-deadlinks-btn');
-        if (deleteAllDeadlinksBtn) {
-            deleteAllDeadlinksBtn.addEventListener('click', () => {
-                this.deleteAllDeadLinks();
-            });
-        }
-        
-        const cleanAllEmptyfoldersBtn = document.getElementById('clean-all-emptyfolders-btn');
-        if (cleanAllEmptyfoldersBtn) {
-            cleanAllEmptyfoldersBtn.addEventListener('click', () => {
-                this.cleanAllEmptyFolders();
-            });
-        }
-        
-        // 绑定操作按钮事件
-        const actionBtns = document.querySelectorAll('.action-btn');
-        actionBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const itemId = e.target.closest('.action-btn').dataset.itemId;
-                const action = e.target.closest('.action-btn').dataset.action;
-                
-                if (action === 'accept') {
-                    this.acceptSuggestion(itemId);
-                } else if (action === 'delete') {
-                    this.deleteItem(itemId);
-                }
-            });
-        });
-    }
-    
-    /**
-     * 渲染结果摘要
-     */
-    renderResultsSummary(results) {
-        const summaries = {
-            smart: `发现 ${results.length} 个未分类书签，已为它们生成智能分类建议。`,
-            duplicates: `共发现 ${results.length} 个重复书签。`,
-            deadlinks: `共发现 ${results.length} 个失效链接。`,
-            emptyfolders: `共发现 ${results.length} 个空文件夹。`
-        };
-        
-        return `
-            <div class="results-summary">
-                <h3 class="summary-title">分析结果摘要</h3>
-                <p class="summary-description">${summaries[this.activeTab]}</p>
-            </div>
-        `;
-    }
-    
-    /**
-     * 渲染结果列表
+     * 渲染结果列表 - 适配新布局
      */
     renderResultsList(results) {
-        if (this.activeTab === 'duplicates') {
-            return this.renderDuplicateResults(results);
+        if (results.length === 0) {
+            return `
+                <div class="empty-state">
+                    <div class="empty-icon">✅</div>
+                    <h3 class="empty-title">分析完成</h3>
+                    <p class="empty-desc">未发现需要处理的项目</p>
+                </div>
+            `;
         }
+
+        return `
+            <div style="padding: var(--space-3) 0;">
+                ${results.map(item => this.renderResultItem(item)).join('')}
+            </div>
+            ${results.length > 0 ? this.renderBatchBar(results) : ''}
+        `;
+    }
+
+    /**
+     * 渲染批量操作栏
+     */
+    renderBatchBar(results) {
+        const selectedCount = Object.values(this.selectedItems).filter(Boolean).length;
         
         return `
-            <div class="results-list">
-                ${results.map(item => this.renderResultItem(item)).join('')}
+            <div class="batch-bar">
+                <div class="batch-select">
+                    <input type="checkbox" onchange="window.analysisCenter.toggleSelectAll()">
+                    <span>全选 (${selectedCount}/${results.length})</span>
+                </div>
+                <div class="batch-actions">
+                    ${this.getTabBatchButton(results)}
+                </div>
             </div>
         `;
     }
@@ -1185,24 +1569,24 @@ class AnalysisCenter {
     }
     
     /**
-     * 渲染单个结果项
+     * 渲染单个结果项 - 简化版
      */
     renderResultItem(item) {
         const isSelected = this.selectedItems[item.id] || false;
         
         return `
-            <div class="result-item" data-id="${item.id}">
+            <div class="result-item">
                 <input type="checkbox" class="result-checkbox" ${isSelected ? 'checked' : ''} 
-                       data-item-id="${item.id}">
-                <div class="result-content">
-                    <div class="result-title">${item.title || '未命名书签'}</div>
-                    ${item.url ? `<div class="result-url">${item.url}</div>` : ''}
-                    ${item.folder ? `<div class="result-folder">文件夹: ${item.folder}</div>` : ''}
-                    ${item.path ? `<div class="result-folder">路径: ${item.path}</div>` : ''}
+                       data-item-id="${item.id}" onchange="window.analysisCenter.toggleSelectItem('${item.id}')">
+                <div class="result-info">
+                    <p class="result-title">${item.title || '未命名'}</p>
+                    <p class="result-meta">${item.url || item.path || item.folder || ''}</p>
                 </div>
                 <div class="result-actions">
-                    ${this.renderResultBadges(item)}
-                    ${this.renderResultButtons(item)}
+                    ${item.suggestedCategory ? `<span style="font-size: 0.75rem; color: var(--accent-blue);">${item.suggestedCategory}</span>` : ''}
+                    <button title="删除" onclick="window.analysisCenter.deleteItem('${item.id}')">
+                        <i data-lucide="trash-2" width="16" height="16"></i>
+                    </button>
                 </div>
             </div>
         `;
@@ -1649,71 +2033,65 @@ class AnalysisCenter {
     }
     
     /**
-     * 渲染日志
+     * 渲染日志 - 适配新布局
      */
     renderLogs() {
-        const logsContainer = document.getElementById('analysisLogs');
+        const logsPanel = document.getElementById('logsPanel');
         const logsContent = document.getElementById('logsContent');
         const logsCount = document.getElementById('logsCount');
         
-        if (!logsContainer || !logsContent || !logsCount) return;
+        if (!logsPanel || !logsContent || !logsCount) return;
         
-        // 显示日志容器
-        logsContainer.style.display = this.isAnalyzing ? 'block' : 'none';
+        // 显示日志面板
+        logsPanel.style.display = this.isAnalyzing || this.logs.length > 0 ? 'block' : 'none';
         
         // 更新日志计数
-        logsCount.textContent = `${this.logs.length} 条记录`;
+        logsCount.textContent = this.logs.length;
         
         // 渲染日志内容
         if (this.logs.length === 0) {
             logsContent.innerHTML = `
-                <div class="empty-state">
-                    <p>尚无分析日志</p>
+                <div style="padding: var(--space-4); text-align: center; color: var(--text-muted);">
+                    <p style="margin: 0; font-size: 0.875rem;">暂无日志</p>
                 </div>
             `;
         } else {
-            logsContent.innerHTML = `
-                <div class="logs-list">
-                    ${this.logs.map(log => this.renderLogEntry(log)).join('')}
-                </div>
-            `;
+            logsContent.innerHTML = this.logs.map(log => this.renderLogEntry(log)).join('');
         }
         
-        // 滚动到底部
+        // 自动滚动到底部
         logsContent.scrollTop = logsContent.scrollHeight;
     }
     
     /**
-     * 渲染日志条目
+     * 渲染单条日志条目 - 简化版
      */
     renderLogEntry(log) {
         const icons = {
-            success: 'check-circle',
-            error: 'x-circle',
-            warning: 'alert-triangle',
-            info: 'info'
+            success: '✅',
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
         };
         
-        const colors = {
-            success: 'var(--brand-success)',
-            error: 'var(--brand-danger)',
-            warning: 'var(--brand-warning)',
-            info: 'var(--accent-blue)'
-        };
+        const time = log.timestamp.toLocaleTimeString('zh-CN', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit' 
+        });
         
         return `
-            <div class="log-entry ${log.type}" style="border-left-color: ${colors[log.type]}">
-                <i data-lucide="${icons[log.type]}" class="log-icon"></i>
-                <div class="log-content">
-                    <div class="log-message">${log.message}</div>
-                    <div class="log-time">${log.timestamp.toLocaleTimeString()}</div>
-                </div>
+            <div class="log-entry">
+                <span class="log-icon">${icons[log.type]}</span>
+                <span class="log-msg">${log.message}</span>
+                <span class="log-time">${time}</span>
             </div>
         `;
     }
     
     /**
-     * 记录日志
+     * 记录日志 - 优化版
      */
     log(message, type = 'info') {
         const logEntry = {
@@ -1723,10 +2101,15 @@ class AnalysisCenter {
             type
         };
         
+        // 限制日志数量，保持最近 100 条
         this.logs.push(logEntry);
+        if (this.logs.length > 100) {
+            this.logs.shift();
+        }
+        
         this.renderLogs();
         
-        // 控制台输出
+        // 控制台输出（仅在开发时）
         const prefix = type === 'error' ? '❌' : type === 'warning' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
         console.log(`${prefix} [${logEntry.timestamp.toLocaleTimeString()}] ${message}`);
     }
@@ -1739,6 +2122,167 @@ class AnalysisCenter {
         this.log(`系统错误: ${error.message}`, 'error');
         this.isAnalyzing = false;
         this.updateAnalysisState();
+    }
+
+    /**
+     * 应用分类结果到浏览器书签 ✨ 新增方法
+     */
+    async applyToBookmarks() {
+        try {
+            // 1. 检查是否有选中的结果
+            const selectedResults = this.getSelectedResults();
+            
+            if (selectedResults.length === 0) {
+                this.log('请先选择要应用的分类', 'warning');
+                return;
+            }
+
+            // 2. 确认对话框
+            const confirmApply = await this.showConfirmDialog(
+                '确认应用',
+                `确定要将 ${selectedResults.length} 个书签应用到分类吗？\n\n此操作会将书签移动到相应的文件夹。`
+            );
+
+            if (!confirmApply) {
+                return;
+            }
+
+            // 3. 显示同步进度
+            this.isSyncing = true;
+            this.showSyncDialog();
+
+            // 4. 设置日志回调
+            this.bookmarkSyncer.setLogCallback((msg, type) => this.log(msg, type));
+
+            // 5. 执行同步
+            const syncResult = await this.bookmarkSyncer.syncCategorizedBookmarks(selectedResults);
+
+            // 6. 显示同步结果
+            this.showSyncResultDialog(syncResult);
+
+            // 7. 更新UI
+            this.isSyncing = false;
+            this.renderResults();
+
+            this.log('✨ 分类已成功应用到浏览器书签！', 'success');
+
+        } catch (error) {
+            this.isSyncing = false;
+            this.log(`❌ 应用到书签失败: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * 获取选中的结果 ✨ 辅助方法
+     */
+    getSelectedResults() {
+        const results = this.results[this.activeTab] || [];
+        
+        return results.filter(item => this.selectedItems[item.id]);
+    }
+
+    /**
+     * 显示确认对话框 ✨ 辅助方法
+     */
+    async showConfirmDialog(title, message) {
+        return new Promise((resolve) => {
+            const confirmed = window.confirm(`${title}\n\n${message}`);
+            resolve(confirmed);
+        });
+    }
+
+    /**
+     * 显示同步进度对话框 ✨ 辅助方法
+     */
+    showSyncDialog() {
+        const dialog = document.createElement('div');
+        dialog.id = 'sync-progress-dialog';
+        dialog.className = 'sync-dialog';
+        dialog.innerHTML = `
+            <div class="dialog-overlay"></div>
+            <div class="dialog-content">
+                <h3>📌 正在应用到书签...</h3>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <p class="progress-text">准备中...</p>
+                </div>
+                <div class="sync-logs" style="max-height: 200px; overflow-y: auto; background: var(--bg-secondary); border-radius: 8px; padding: 12px; margin-top: 12px; font-size: 12px;">
+                    <!-- 日志会动态添加到这里 -->
+                </div>
+            </div>
+        `;
+        document.body.appendChild(dialog);
+    }
+
+    /**
+     * 显示同步结果对话框 ✨ 辅助方法
+     */
+    showSyncResultDialog(result) {
+        const dialog = document.getElementById('sync-progress-dialog');
+        
+        if (dialog) {
+            dialog.innerHTML = `
+                <div class="dialog-overlay" onclick="this.parentElement.remove()"></div>
+                <div class="dialog-content">
+                    <h3>✨ 应用完成!</h3>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">✓ 成功</span>
+                            <span class="stat-value">${result.success.length}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">✗ 失败</span>
+                            <span class="stat-value">${result.failed.length}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">⏭️ 跳过</span>
+                            <span class="stat-value">${result.skipped.length}</span>
+                        </div>
+                    </div>
+                    
+                    ${result.failed.length > 0 ? `
+                        <div class="failed-list" style="margin-top: 12px; padding: 8px; background: rgba(220, 38, 38, 0.1); border-left: 3px solid #dc2626; border-radius: 4px;">
+                            <p style="margin: 0 0 8px 0; font-weight: bold;">失败的书签:</p>
+                            ${result.failed.map(item => `
+                                <div style="font-size: 12px; margin: 4px 0;">
+                                    • ${item.title || item.id} - ${item.reason}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 12px; display: flex; gap: 8px;">
+                        <button class="btn btn-primary" onclick="document.getElementById('sync-progress-dialog').remove()">
+                            完成
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.analysisCenter.undoLastApply()">
+                            ↩️ 撤销
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * 撤销最后一次应用 ✨ 新增方法
+     */
+    async undoLastApply() {
+        try {
+            const undoCount = await this.bookmarkSyncer.undoLastSync();
+            
+            if (undoCount === null) {
+                this.log('没有可撤销的操作', 'warning');
+                return;
+            }
+
+            this.log(`✅ 已撤销 ${undoCount} 个书签的应用`, 'success');
+
+        } catch (error) {
+            this.log(`❌ 撤销失败: ${error.message}`, 'error');
+        }
     }
 }
 
