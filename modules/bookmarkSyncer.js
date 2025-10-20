@@ -3,7 +3,7 @@
  * 支持自动创建分类文件夹、批量移动书签、撤销操作
  */
 
-class BookmarkSyncer {
+export class BookmarkSyncer {
   constructor() {
     this.syncHistory = [];  // 操作历史，用于撤销
     this.categoryFolders = new Map();  // 分类名称 -> 文件夹ID 映射
@@ -76,8 +76,13 @@ class BookmarkSyncer {
           const targetFolderId = this.categoryFolders.get(suggestion.suggestedCategory);
 
           // 移动书签
-          await chrome.bookmarks.move(suggestion.originalId, {
-            parentId: targetFolderId
+          await new Promise((resolve, reject) => {
+            chrome.bookmarks.move(suggestion.originalId, {
+              parentId: targetFolderId
+            }, (node) => {
+              if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+              else resolve(node);
+            });
           });
 
           // 记录成功
@@ -138,8 +143,14 @@ class BookmarkSyncer {
     try {
       // 获取根文件夹（通常是"其他"）
       if (!parentFolderId) {
-        const root = await chrome.bookmarks.getTree();
-        const otherNode = root[0].children.find(node => !node.url && node.title === '其他');
+        const root = await new Promise((resolve, reject) => {
+          try {
+            chrome.bookmarks.getTree(resolve);
+          } catch (e) {
+            reject(e);
+          }
+        });
+        const otherNode = root[0].children && root[0].children.find(node => !node.url && node.title === '其他');
         parentFolderId = otherNode ? otherNode.id : root[0].id;
       }
 
@@ -155,9 +166,14 @@ class BookmarkSyncer {
           this.log(`📂 使用现有文件夹: "${category}"`, 'info');
         } else {
           // 创建新文件夹
-          const newFolder = await chrome.bookmarks.create({
-            title: category,
-            parentId: parentFolderId
+          const newFolder = await new Promise((resolve, reject) => {
+            chrome.bookmarks.create({
+              title: category,
+              parentId: parentFolderId
+            }, (node) => {
+              if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+              else resolve(node);
+            });
           });
           this.categoryFolders.set(category, newFolder.id);
           this.log(`✨ 创建新文件夹: "${category}"`, 'info');
@@ -175,7 +191,12 @@ class BookmarkSyncer {
    */
   async getExistingFolders(parentFolderId) {
     try {
-      const node = await chrome.bookmarks.getSubTree(parentFolderId);
+      const node = await new Promise((resolve, reject) => {
+        chrome.bookmarks.getSubTree(parentFolderId, (nodes) => {
+          if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+          else resolve(nodes);
+        });
+      });
       return (node[0].children || []).filter(child => !child.url); // 过滤掉书签，只保留文件夹
     } catch (error) {
       this.log(`⚠️ 获取现有文件夹失败: ${error.message}`, 'warning');
@@ -188,7 +209,12 @@ class BookmarkSyncer {
    */
   async getBookmark(bookmarkId) {
     try {
-      const bookmarks = await chrome.bookmarks.get(bookmarkId);
+      const bookmarks = await new Promise((resolve, reject) => {
+        chrome.bookmarks.get(bookmarkId, (nodes) => {
+          if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+          else resolve(nodes);
+        });
+      });
       return bookmarks[0] || null;
     } catch (error) {
       this.log(`⚠️ 获取书签信息失败: ${bookmarkId}`, 'warning');
@@ -212,8 +238,13 @@ class BookmarkSyncer {
       let undoCount = 0;
       for (const item of lastOperation.success) {
         try {
-          await chrome.bookmarks.move(item.id, {
-            parentId: item.originalParentId
+          await new Promise((resolve, reject) => {
+            chrome.bookmarks.move(item.id, {
+              parentId: item.originalParentId
+            }, (node) => {
+              if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+              else resolve(node);
+            });
           });
           undoCount++;
         } catch (error) {
