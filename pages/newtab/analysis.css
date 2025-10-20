@@ -125,14 +125,14 @@
 }
 
 .task-card:hover {
-    border-color: var(--accent-blue);
+    border-color: var(--accent-primary);
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(var(--accent-blue-rgb), 0.1);
+    box-shadow: 0 4px 16px rgba(var(--accent-primary-rgb), 0.1);
 }
 
 .task-card.active {
-    background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-    border-color: var(--accent-blue);
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
     color: white;
 }
 
@@ -179,7 +179,7 @@
 .widget-icon {
     width: 20px;
     height: 20px;
-    color: var(--accent-blue);
+    color: var(--accent-primary);
 }
 
 .widget-title {
@@ -216,7 +216,7 @@
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+    background: var(--accent-primary);
     border-radius: var(--radius-full);
     transition: width 0.3s ease;
     animation: progress-shine 2s ease-in-out infinite;
@@ -332,13 +332,13 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+    background: var(--accent-primary);
     color: white;
 }
 
 .btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(var(--accent-blue-rgb), 0.2);
+    box-shadow: 0 4px 12px rgba(var(--accent-primary-rgb), 0.2);
 }
 
 .btn-secondary {
@@ -418,7 +418,7 @@
 
 .logs-count {
     font-size: 0.75rem;
-    background: var(--accent-blue);
+    background: var(--accent-primary);
     color: white;
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-full);
