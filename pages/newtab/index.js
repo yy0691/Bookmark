@@ -609,8 +609,8 @@ async function analyzeBookmarks() {
       analyzeBtn.disabled = false;
     }
     
-    // Redirect to detailed analysis page with resume capability
-    const analysisUrl = chrome.runtime.getURL('detailed-analysis.html');
+    // 打开智能分析中心页面（带恢复能力）
+    const analysisUrl = chrome.runtime.getURL('pages/newtab/analysis.html');
     window.open(analysisUrl, '_blank');
     
     updateAIStatus('Analysis page opened with resume capability', 'success');
@@ -1128,6 +1128,36 @@ function wireInteractions() {
     }
   });
 
+  // 打开智能分析中心（顶部导航按钮）
+  const analysisCenterBtn = document.getElementById('analysis-btn');
+  if (analysisCenterBtn) {
+    analysisCenterBtn.addEventListener('click', () => {
+      const url = chrome.runtime.getURL('pages/newtab/analysis.html');
+      window.open(url, '_blank');
+    });
+  }
+
+  // 统计常用书签容器点击，累计点击频率
+  const frequentListEl = document.getElementById('frequent-bookmarks-list');
+  if (frequentListEl) {
+    frequentListEl.addEventListener('click', (e) => {
+      const link = e.target.closest('a.bookmark-item');
+      if (!link) return;
+      const title = link.querySelector('.bookmark-title')?.textContent || link.href;
+      trackBookmarkClick(link.href, title);
+    });
+  }
+
+  // 主列表点击统计
+  if (bookmarksGridEl) {
+    bookmarksGridEl.addEventListener('click', (e) => {
+      const link = e.target.closest('a.bookmark-item');
+      if (!link) return;
+      const title = link.querySelector('.bookmark-title')?.textContent || link.href;
+      trackBookmarkClick(link.href, title);
+    });
+  }
+
   // AI Tools event listeners
   const analyzeBtn = document.getElementById('analyze-bookmarks-btn');
   const duplicatesBtn = document.getElementById('detect-duplicates-btn');
@@ -1367,6 +1397,8 @@ function subscribeToBookmarkChanges() {
     const activeFolder = folderListEl.querySelector('.folder-item.active');
     const folderId = activeFolder ? activeFolder.dataset.folderId : null;
     await loadAndRenderBookmarks(folderId);
+    await updateStatistics();
+    await updateFrequentBookmarks();
   };
 
   chrome.bookmarks.onCreated.addListener(refreshAll);
@@ -1396,6 +1428,7 @@ async function bootstrap() {
   await loadAndRenderBookmarks();
   subscribeToBookmarkChanges();
   await updateStatistics(); // Update statistics display
+  await updateFrequentBookmarks(); // 更新常用书签区域
   
   // 确保所有图标都已正确初始化
   setTimeout(() => {
@@ -1583,6 +1616,124 @@ function displayTopDomains(topDomains) {
     `;
     container.appendChild(domainItem);
   });
+}
+
+// ==========================
+// 常用书签：点击频率 + 历史访问综合
+// ==========================
+const CLICK_STATS_KEY = 'bookmarkClickStats';
+
+async function trackBookmarkClick(url, title) {
+  try {
+    if (!chrome?.storage?.local || !url) return;
+    const result = await chrome.storage.local.get([CLICK_STATS_KEY]);
+    const stats = result[CLICK_STATS_KEY] || {};
+    const now = Date.now();
+    const prev = stats[url] || { count: 0 };
+    stats[url] = {
+      title: title || prev.title || url,
+      count: (prev.count || 0) + 1,
+      lastClick: now
+    };
+    await chrome.storage.local.set({ [CLICK_STATS_KEY]: stats });
+    // 点击后刷新常用列表
+    await updateFrequentBookmarks();
+  } catch (e) {
+    console.warn('trackBookmarkClick failed:', e);
+  }
+}
+
+async function updateFrequentBookmarks(limit = 8) {
+  const container = document.getElementById('frequent-bookmarks-list');
+  if (!container) return;
+  try {
+    container.innerHTML = '<div class="loading-spinner"></div>';
+
+    const bookmarks = await bookmarkService.getAllBookmarks();
+    const urlSet = new Set();
+    const urlToTitle = new Map();
+    bookmarks.forEach(b => { if (b.url) { urlSet.add(b.url); urlToTitle.set(b.url, b.title || b.url); } });
+
+    // 本地点击统计
+    const result = await chrome.storage?.local.get([CLICK_STATS_KEY]);
+    const clickStats = (result && result[CLICK_STATS_KEY]) ? result[CLICK_STATS_KEY] : {};
+
+    // 浏览历史统计（如果有权限）
+    const historyCounts = {};
+    const historyLastVisit = {};
+    if (chrome?.history && typeof chrome.history.search === 'function') {
+      try {
+        const startTime = Date.now() - 90 * 24 * 60 * 60 * 1000; // 最近90天
+        const historyItems = await new Promise(resolve => chrome.history.search({ text: '', maxResults: 5000, startTime }, resolve));
+        historyItems.forEach(item => {
+          if (urlSet.has(item.url)) {
+            historyCounts[item.url] = (historyCounts[item.url] || 0) + (item.visitCount || 0);
+            historyLastVisit[item.url] = Math.max(historyLastVisit[item.url] || 0, item.lastVisitTime || 0);
+          }
+        });
+      } catch (e) {
+        console.warn('history.search failed:', e);
+      }
+    }
+
+    // 综合评分：历史访问 + 本地点击*2
+    const scores = [];
+    urlSet.forEach(url => {
+      const visits = historyCounts[url] || 0;
+      const clicks = (clickStats[url]?.count) || 0;
+      const score = visits + clicks * 2;
+      const lastTime = Math.max(historyLastVisit[url] || 0, clickStats[url]?.lastClick || 0);
+      if (score > 0) {
+        scores.push({ url, title: urlToTitle.get(url) || clickStats[url]?.title || url, visits, clicks, score, lastTime });
+      }
+    });
+
+    // 兜底：如果没有数据，展示最近书签
+    if (scores.length === 0) {
+      const recents = await bookmarkService.getRecent(limit);
+      container.innerHTML = recents.map(b => renderFrequentItem({ url: b.url, title: b.title || b.url, visits: 0, clicks: 0 })).join('');
+      return;
+    }
+
+    scores.sort((a, b) => b.score - a.score || b.lastTime - a.lastTime);
+    const top = scores.slice(0, limit);
+    container.innerHTML = top.map(renderFrequentItem).join('');
+  } catch (e) {
+    console.warn('updateFrequentBookmarks failed:', e);
+    container.innerHTML = '<div class="empty-state"><div class="empty-title">暂无数据</div><div class="empty-desc">还没有足够的使用记录</div></div>';
+  }
+}
+
+function renderFrequentItem(item) {
+  try {
+    const domain = new URL(item.url).hostname;
+    const faviconUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+    const meta = [];
+    if (item.visits) meta.push(`访问 ${item.visits}`);
+    if (item.clicks) meta.push(`点击 ${item.clicks}`);
+    const metaText = meta.length > 0 ? meta.join(' · ') : domain;
+
+    return `
+      <a class="bookmark-item" href="${item.url}" target="_blank" rel="noopener noreferrer" title="${item.url}">
+        <img src="${faviconUrl}" alt="" class="favicon" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzM3NDE1MSIvPgo8cGF0aCBkPSJNMTYgOEMxMi42ODYzIDggMTAgMTAuNjg2MyAxMCAxNEMxMCAxNy4zMTM3IDEyLjY4NjMgMjAgMTYgMjBDMTkuMzEzNyAyMCAyMiAxNy4zMTM3IDIyIDE0QzIyIDEwLjY4NjMgMTkuMzEzNyA4IDE2IDhaIiBmaWxsPSIjNjM2NjcwIi8+CjxwYXRoIGQ9Ik1WNCAyNEMxMy43OTA5IDI0IDEyIDIyLjIwOTEgMTIgMjBIMjBDMjAgMjIuMjA5MSAxOC4yMDkxIDI0IDE2IDI0WiIgZmlsbD0iIzYzNjY3MCIvPgo8L3N2Zz4K'"/>
+        <div class="bookmark-info">
+          <div class="bookmark-title">${escapeHtml(item.title)}</div>
+          <div class="bookmark-url">${escapeHtml(metaText)}</div>
+        </div>
+      </a>
+    `;
+  } catch (e) {
+    return '';
+  }
+}
+
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Detection report generation

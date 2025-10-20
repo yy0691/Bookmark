@@ -394,6 +394,15 @@ class AnalysisCenter {
             });
         }
         
+        // 返回首页按钮
+        const backBtn = document.querySelector('.nav-btn[title="返回首页"]');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                const url = chrome.runtime.getURL('pages/newtab/index.html');
+                window.open(url, '_blank');
+            });
+        }
+
         // 刷新按钮
         const refreshBtn = document.querySelector('.nav-btn[title="刷新"]');
         if (refreshBtn) {
