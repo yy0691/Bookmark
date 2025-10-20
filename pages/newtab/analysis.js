@@ -441,6 +441,61 @@ class AnalysisCenter {
                 this.toggleSelectAll();
             });
         }
+
+        // ✨ 新增：结果区域事件代理，避免内联事件受CSP限制
+        const resultsContentEl = document.getElementById('resultsContent');
+        if (resultsContentEl) {
+            // 选择项变更（单项/全选）
+            resultsContentEl.addEventListener('change', (e) => {
+                const checkbox = e.target.closest('.result-checkbox');
+                if (checkbox) {
+                    const id = checkbox.getAttribute('data-item-id');
+                    if (id) this.toggleSelectItem(id);
+                    return;
+                }
+                const selectAll = e.target.closest('.batch-select-all');
+                if (selectAll) {
+                    this.toggleSelectAll();
+                }
+            });
+
+            // 动作按钮（删除/接受/批量操作）
+            resultsContentEl.addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (btn) {
+                    const action = btn.getAttribute('data-action');
+                    const itemId = btn.getAttribute('data-item-id');
+                    if (action === 'delete' && itemId) {
+                        e.preventDefault();
+                        this.deleteItem(itemId);
+                        return;
+                    }
+                    if (action === 'accept' && itemId) {
+                        e.preventDefault();
+                        this.acceptSuggestion(itemId);
+                        return;
+                    }
+                }
+
+                // 动态批量操作按钮
+                if (e.target.closest('#apply-all-suggestions-btn')) {
+                    e.preventDefault();
+                    this.applyAllSuggestions();
+                } else if (e.target.closest('#clean-all-duplicates-btn')) {
+                    e.preventDefault();
+                    this.cleanAllDuplicates();
+                } else if (e.target.closest('#delete-all-deadlinks-btn')) {
+                    e.preventDefault();
+                    this.deleteAllDeadLinks();
+                } else if (e.target.closest('#clean-all-emptyfolders-btn')) {
+                    e.preventDefault();
+                    this.cleanAllEmptyFolders();
+                } else if (e.target.closest('#export-results-btn')) {
+                    e.preventDefault();
+                    this.exportResults();
+                }
+            });
+        }
     }
     
     /**
@@ -485,7 +540,10 @@ class AnalysisCenter {
             this.progress = 0;
             this.logs = [];
             
+            // 立即渲染分析中的界面，给出可见反馈
             this.updateAnalysisState();
+            this.renderResults();
+
             await this.performAnalysis();
             
         } catch (error) {
@@ -1546,7 +1604,7 @@ ${bookmarksList}
         return `
             <div class="batch-bar">
                 <div class="batch-select">
-                    <input type="checkbox" onchange="window.analysisCenter.toggleSelectAll()">
+                    <input type="checkbox" class="batch-select-all">
                     <span>全选 (${selectedCount}/${results.length})</span>
                 </div>
                 <div class="batch-actions">
@@ -1599,14 +1657,14 @@ ${bookmarksList}
         return `
             <div class="result-item">
                 <input type="checkbox" class="result-checkbox" ${isSelected ? 'checked' : ''} 
-                       data-item-id="${item.id}" onchange="window.analysisCenter.toggleSelectItem('${item.id}')">
+                       data-item-id="${item.id}">
                 <div class="result-info">
                     <p class="result-title">${item.title || '未命名'}</p>
                     <p class="result-meta">${item.url || item.path || item.folder || ''}</p>
                 </div>
                 <div class="result-actions">
                     ${item.suggestedCategory ? `<span style="font-size: 0.75rem; color: var(--accent-blue);">${item.suggestedCategory}</span>` : ''}
-                    <button title="删除" onclick="window.analysisCenter.deleteItem('${item.id}')">
+                    <button title="删除" data-action="delete" data-item-id="${item.id}">
                         <i data-lucide="trash-2" width="16" height="16"></i>
                     </button>
                 </div>
@@ -1711,6 +1769,13 @@ ${bookmarksList}
         };
         
         return buttons[this.activeTab] || '';
+    }
+
+    /**
+     * 兼容旧的调用，返回当前标签页的批量操作按钮
+     */
+    getTabBatchButton(results) {
+        return this.renderBatchActionButton(results);
     }
     
     /**
