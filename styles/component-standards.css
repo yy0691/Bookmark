@@ -308,7 +308,7 @@
 .bookmarks-grid.list-view {
   grid-template-columns: 1fr;
   gap: 0.5rem;
-  max-width: 700px;
+  max-width: 100%;
 }
 
 .list-view .bookmark-item {
