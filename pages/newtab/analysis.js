@@ -65,11 +65,21 @@ class CacheManager {
 
         for (const bookmark of bookmarks) {
             const cachedData = this.bookmarkCache.get(bookmark.id);
-            
             if (!cachedData) {
                 needsClassification.push(bookmark);
             } else if (this.isValidCache(cachedData)) {
-                cached.push({ ...bookmark, ...cachedData });
+                // 规范化缓存结果，确保包含 originalId，并统一使用 cat- 前缀的UI id
+                cached.push({
+                    id: `cat-${bookmark.id}`,
+                    originalId: bookmark.id,
+                    title: bookmark.title,
+                    url: bookmark.url,
+                    folder: bookmark.parentId,
+                    suggestedCategory: cachedData.suggestedCategory,
+                    confidence: typeof cachedData.confidence === 'number' ? cachedData.confidence : 0.7,
+                    source: cachedData.source || 'cache',
+                    ...(cachedData.llmReason ? { llmReason: cachedData.llmReason } : {})
+                });
             } else {
                 needsUpdate.push(bookmark);
             }
@@ -533,7 +543,8 @@ class AnalysisCenter {
             // 1. 获取书签数据
             this.log('📚 获取书签数据...', 'info');
             const bookmarks = await this.bookmarkService.getAllBookmarks();
-            const urls = bookmarks.filter(b => b.url).slice(0, 50);
+            // 读取所有包含URL的书签进行分类
+            const urls = bookmarks.filter(b => b.url);
             
             if (urls.length === 0) {
                 this.log('⚠️ 没有找到书签', 'warning');
@@ -649,6 +660,7 @@ class AnalysisCenter {
             if (keywords.some(kw => url.includes(kw) || title.includes(kw))) {
                 return {
                     id: `cat-${bookmark.id || Date.now()}`,
+                    originalId: bookmark.id,
                     title: bookmark.title || '未命名',
                     url: bookmark.url,
                     suggestedCategory: category,
@@ -662,6 +674,7 @@ class AnalysisCenter {
         // 默认分类
         return {
             id: `cat-${bookmark.id || Date.now()}`,
+            originalId: bookmark.id,
             title: bookmark.title || '未命名',
             url: bookmark.url,
             suggestedCategory: '其他',
