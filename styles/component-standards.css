@@ -295,6 +295,72 @@
   opacity: 0.8;
 }
 
+/* --- 常用书签紧凑视图 --- */
+.frequent-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.frequent-list .frequent-compact-item {
+  padding: var(--space-2) var(--space-3);
+  padding-right: calc(var(--space-3) + 48px);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  transition: all var(--transition-normal);
+}
+
+.frequent-list .frequent-compact-item .bookmark-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.frequent-list .frequent-compact-item:hover,
+.frequent-list .frequent-compact-item:focus-visible {
+  background: rgba(var(--accent-primary-rgb, var(--accent-blue-rgb)), 0.08);
+  border-color: var(--accent-primary, var(--accent-blue));
+  color: var(--text-primary);
+  transform: none;
+  box-shadow: none;
+}
+
+.frequent-list .frequent-compact-item::after {
+  content: attr(data-count);
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%) scale(0.8);
+  transform-origin: center;
+  background: var(--accent-primary, var(--accent-blue));
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal), transform var(--transition-normal);
+}
+
+.frequent-list .frequent-compact-item:hover::after,
+.frequent-list .frequent-compact-item:focus-visible::after {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
 /* --- 书签网格组件 --- */
 .bookmarks-grid {
   display: grid;
