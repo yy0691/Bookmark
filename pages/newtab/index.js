@@ -1706,20 +1706,24 @@ async function updateFrequentBookmarks(limit = 8) {
 
 function renderFrequentItem(item) {
   try {
-    const domain = new URL(item.url).hostname;
-    const faviconUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-    const meta = [];
-    if (item.visits) meta.push(`访问 ${item.visits}`);
-    if (item.clicks) meta.push(`点击 ${item.clicks}`);
-    const metaText = meta.length > 0 ? meta.join(' · ') : domain;
+    const safeUrl = item.url || '#';
+    const href = escapeHtml(safeUrl);
+    const visitsRaw = Number(item.visits ?? 0);
+    const clicksRaw = Number(item.clicks ?? 0);
+    const visits = Number.isFinite(visitsRaw) ? Math.max(Math.round(visitsRaw), 0) : 0;
+    const clicks = Number.isFinite(clicksRaw) ? Math.max(Math.round(clicksRaw), 0) : 0;
+    const usageTotal = visits + clicks;
+    const displayTitle = escapeHtml(item.title || safeUrl);
+    const detailParts = [];
+    if (visits) detailParts.push(`历史访问 ${visits}`);
+    if (clicks) detailParts.push(`快捷点击 ${clicks}`);
+    const tooltipSource = detailParts.length ? detailParts.join(' / ') : (item.url || item.title || safeUrl);
+    const accessibleDetailParts = [...detailParts, `访问次数 ${usageTotal}`];
+    const accessibleLabel = `${item.title || safeUrl}，${accessibleDetailParts.join('，')}`;
 
     return `
-      <a class="bookmark-item" href="${item.url}" target="_blank" rel="noopener noreferrer" title="${item.url}">
-        <img src="${faviconUrl}" alt="" class="favicon" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzM3NDE1MSIvPgo8cGF0aCBkPSJNMTYgOEMxMi42ODYzIDggMTAgMTAuNjg2MyAxMCAxNEMxMCAxNy4zMTM3IDEyLjY4NjMgMjAgMTYgMjBDMTkuMzEzNyAyMCAyMiAxNy4zMTM3IDIyIDE0QzIyIDEwLjY4NjMgMTkuMzEzNyA4IDE2IDhaIiBmaWxsPSIjNjM2NjcwIi8+CjxwYXRoIGQ9Ik1WNCAyNEMxMy43OTA5IDI0IDEyIDIyLjIwOTEgMTIgMjBIMjBDMjAgMjIuMjA5MSAxOC4yMDkxIDI0IDE2IDI0WiIgZmlsbD0iIzYzNjY3MCIvPgo8L3N2Zz4K'"/>
-        <div class="bookmark-info">
-          <div class="bookmark-title">${escapeHtml(item.title)}</div>
-          <div class="bookmark-url">${escapeHtml(metaText)}</div>
-        </div>
+      <a class="bookmark-item frequent-compact-item" data-count="${usageTotal}" href="${href}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(tooltipSource)}" aria-label="${escapeHtml(accessibleLabel)}">
+        <span class="bookmark-title">${displayTitle}</span>
       </a>
     `;
   } catch (e) {
