@@ -47,6 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 检查API状态
   checkApiStatus();
   
+  // AI智能中枢
+  document.getElementById('open-ai-hub').addEventListener('click', openAIHub);
+  document.getElementById('quick-analysis').addEventListener('click', startQuickAnalysis);
+  
   // 主要功能分类
   document.getElementById('open-visualization').addEventListener('click', openVisualization);
   document.getElementById('open-manager').addEventListener('click', openBookmarkManager);
@@ -625,5 +629,60 @@ document.addEventListener('visibilitychange', () => {
     loadBookmarkStats();
   }
 });
+
+// AI智能中枢函数
+function openAIHub() {
+  console.log('🚀 打开AI智能中枢...');
+  showLoading('open-ai-hub');
+  
+  try {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('ai-hub.html'),
+      active: true
+    }, () => {
+      hideLoading('open-ai-hub');
+      window.close(); // 关闭popup
+    });
+  } catch (error) {
+    console.error('打开AI智能中枢失败:', error);
+    showError('打开AI智能中枢失败');
+    hideLoading('open-ai-hub');
+  }
+}
+
+function startQuickAnalysis() {
+  console.log('⚡ 开始快速AI分析...');
+  showLoading('quick-analysis');
+  
+  try {
+    // 检查API状态
+    if (!apiStatus) {
+      showError('请先配置API密钥');
+      hideLoading('quick-analysis');
+      // 打开设置页面
+      setTimeout(() => {
+        chrome.tabs.create({
+          url: chrome.runtime.getURL('options.html'),
+          active: true
+        });
+        window.close();
+      }, 1000);
+      return;
+    }
+    
+    // 打开分析中心并自动开始分析
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('ai-analysis-center.html?auto=true'),
+      active: true
+    }, () => {
+      hideLoading('quick-analysis');
+      window.close(); // 关闭popup
+    });
+  } catch (error) {
+    console.error('快速分析启动失败:', error);
+    showError('快速分析启动失败');
+    hideLoading('quick-analysis');
+  }
+}
 
 console.log('✅ 书签助手 Popup 初始化完成（性能优化版本）');

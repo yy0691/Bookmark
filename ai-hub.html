@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI智能中枢 - 书签助手</title>
+  <link rel="icon" type="image/svg+xml" href="images/icon.svg">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #ffffff;
+      line-height: 1.6;
+    }
+
+    .hub-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* 头部 */
+    .hero-section {
+      text-align: center;
+      padding: 60px 20px;
+      margin-bottom: 40px;
+    }
+
+    .hero-title {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      background: linear-gradient(45deg, #ffffff, #e3f2fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 20px;
+      font-weight: 400;
+      opacity: 0.9;
+      margin-bottom: 32px;
+    }
+
+    .hero-description {
+      font-size: 16px;
+      opacity: 0.8;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* 快速操作区 */
+    .quick-actions {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 40px 0;
+      flex-wrap: wrap;
+    }
+
+    .quick-btn {
+      background: rgba(255, 255, 255, 0.2);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      padding: 16px 32px;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .quick-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 功能卡片网格 */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.15);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 32px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    }
+
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-8px);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+
+    .feature-description {
+      font-size: 15px;
+      line-height: 1.6;
+      opacity: 0.9;
+      margin-bottom: 24px;
+    }
+
+    .feature-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 10px 20px;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
+      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4);
+    }
+
+    /* 状态面板 */
+    .status-panel {
+      background: rgba(255, 255, 255, 0.15);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 40px;
+    }
+
+    .status-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #ffffff;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .status-item {
+      text-align: center;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .status-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .status-label {
+      font-size: 14px;
+      opacity: 0.8;
+      color: #ffffff;
+    }
+
+    /* 最近活动 */
+    .recent-activity {
+      background: rgba(255, 255, 255, 0.15);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 32px;
+    }
+
+    .activity-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #ffffff;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .activity-item:last-child {
+      border-bottom: none;
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-text {
+      font-size: 15px;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .activity-time {
+      font-size: 13px;
+      opacity: 0.7;
+      color: #ffffff;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .hero-title {
+        font-size: 32px;
+      }
+
+      .hero-subtitle {
+        font-size: 18px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .quick-actions {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .quick-btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+
+      .feature-card {
+        padding: 24px;
+      }
+    }
+
+    /* 动画效果 */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .feature-card {
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .feature-card:nth-child(1) { animation-delay: 0.1s; }
+    .feature-card:nth-child(2) { animation-delay: 0.2s; }
+    .feature-card:nth-child(3) { animation-delay: 0.3s; }
+    .feature-card:nth-child(4) { animation-delay: 0.4s; }
+    .feature-card:nth-child(5) { animation-delay: 0.5s; }
+    .feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+    /* 浮动动画 */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .hero-title {
+      animation: float 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="hub-container">
+    <!-- 英雄区域 -->
+    <div class="hero-section">
+      <h1 class="hero-title">🤖 AI智能中枢</h1>
+      <p class="hero-subtitle">让AI为您的书签管理提供强大助力</p>
+      <p class="hero-description">
+        集成先进的人工智能技术，为您提供智能分类、重复检测、失效链接清理、
+        数据可视化等全方位的书签管理解决方案。
+      </p>
+    </div>
+
+    <!-- 快速操作 -->
+    <div class="quick-actions">
+      <a href="ai-analysis-center.html" class="quick-btn">
+        🧠 AI分析中心
+      </a>
+      <a href="enhanced-bookmark-manager.html" class="quick-btn">
+        📚 增强书签管理器
+      </a>
+      <a href="options.html" class="quick-btn">
+        ⚙️ 设置配置
+      </a>
+    </div>
+
+    <!-- 系统状态 -->
+    <div class="status-panel">
+      <h2 class="status-title">📊 系统状态</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <div class="status-number" id="bookmark-count">-</div>
+          <div class="status-label">书签总数</div>
+        </div>
+        <div class="status-item">
+          <div class="status-number" id="category-count">-</div>
+          <div class="status-label">分类数量</div>
+        </div>
+        <div class="status-item">
+          <div class="status-number" id="api-status">检查中</div>
+          <div class="status-label">API状态</div>
+        </div>
+        <div class="status-item">
+          <div class="status-number" id="last-analysis">从未</div>
+          <div class="status-label">上次分析</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 功能卡片 -->
+    <div class="features-grid">
+      <!-- AI智能分析 -->
+      <div class="feature-card" onclick="openAnalysisCenter()">
+        <span class="feature-icon">🧠</span>
+        <h3 class="feature-title">AI智能分析</h3>
+        <p class="feature-description">
+          使用先进的AI算法自动分析和分类您的书签，支持多种AI服务提供商，
+          包括Google Gemini、OpenAI等，让书签管理更加智能高效。
+        </p>
+        <div class="feature-actions">
+          <button class="btn btn-primary" onclick="event.stopPropagation(); startQuickAnalysis()">
+            🚀 快速分析
+          </button>
+          <button class="btn" onclick="event.stopPropagation(); openAnalysisCenter()">
+            🎛️ 打开控制台
+          </button>
+        </div>
+      </div>
+
+      <!-- 智能检测 -->
+      <div class="feature-card" onclick="openDetectionCenter()">
+        <span class="feature-icon">🔍</span>
+        <h3 class="feature-title">智能问题检测</h3>
+        <p class="feature-description">
+          自动检测书签库中的各种问题，包括重复书签、失效链接、空文件夹
+          和格式异常，保持书签库的整洁和高效。
+        </p>
+        <div class="feature-actions">
+          <button class="btn btn-primary" onclick="event.stopPropagation(); startFullDetection()">
+            🔍 全面检测
+          </button>
+          <button class="btn" onclick="event.stopPropagation(); openDetectionCenter()">
+            📋 查看报告
+          </button>
+        </div>
+      </div>
+
+      <!-- 增强管理器 -->
+      <div class="feature-card" onclick="openBookmarkManager()">
+        <span class="feature-icon">📚</span>
+        <h3 class="feature-title">增强书签管理器</h3>
+        <p class="feature-description">
+          功能强大的书签管理界面，支持拖拽操作、批量编辑、搜索筛选、
+          文件夹管理等高级功能，让书签管理更加便捷。
+        </p>
+        <div class="feature-actions">
+          <button class="btn btn-primary" onclick="event.stopPropagation(); openBookmarkManager()">
+            📂 打开管理器
+          </button>
+          <button class="btn" onclick="event.stopPropagation(); createQuickFolder()">
+            📁 新建文件夹
+          </button>
+        </div>
+      </div>
+
+      <!-- 数据可视化 -->
+      <div class="feature-card" onclick="openVisualization()">
+        <span class="feature-icon">📊</span>
+        <h3 class="feature-title">数据可视化</h3>
+        <p class="feature-description">
+          通过图表、词云、统计摘要等方式直观展示您的书签数据，
+          帮助您更好地理解和优化书签结构。
+        </p>
+        <div class="feature-actions">
+          <button class="btn btn-primary" onclick="event.stopPropagation(); generateCharts()">
+            📈 生成图表
+          </button>
+          <button class="btn" onclick="event.stopPropagation(); openVisualization()">
+            🎨 可视化中心
+          </button>
+        </div>
+      </div>
+
+      <!-- 数据管理 -->
+      <div class="feature-card" onclick="openDataCenter()">
+        <span class="feature-icon">💾</span>
+        <h3 class="feature-title">数据管理中心</h3>
+        <p class="feature-description">
+          完整的数据导入导出功能，支持多种格式，包括HTML、JSON、CSV等，
+          还提供自动备份和同步功能。
+        </p>
+        <div class="feature-actions">
+          <button class="btn btn-primary" onclick="event.stopPropagation(); createBackup()">
+            💾 创建备份
+          </button>
+          <button class="btn" onclick="event.stopPropagation(); openDataCenter()">
+            📋 数据中心
+          </button>
+        </div>
+      </div>
+
+      <!-- 设置与配置 -->
+      <div class="feature-card" onclick="openSettings()">
+        <span class="feature-icon">⚙️</span>
+        <h3 class="feature-title">系统设置</h3>
+        <p class="feature-description">
+          配置AI服务、自定义分类规则、调整系统参数、管理API密钥等，
+          让系统按照您的需求运行。
+        </p>
+        <div class="feature-actions">
+          <button class="btn btn-primary" onclick="event.stopPropagation(); openSettings()">
+            ⚙️ 打开设置
+          </button>
+          <button class="btn" onclick="event.stopPropagation(); testApiConnection()">
+            🧪 测试API
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 最近活动 -->
+    <div class="recent-activity">
+      <h2 class="activity-title">📈 最近活动</h2>
+      <div id="activity-list">
+        <div class="activity-item">
+          <div class="activity-icon">🎉</div>
+          <div class="activity-content">
+            <div class="activity-text">AI智能中枢已启动</div>
+            <div class="activity-time">刚刚</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="ai-hub.js"></script>
+</body>
+</html>

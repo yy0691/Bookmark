@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能书签管理器 - 书签助手</title>
+  <link rel="icon" type="image/svg+xml" href="images/icon.svg">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      min-height: 100vh;
+      color: #1d1d1f;
+      line-height: 1.6;
+    }
+
+    .manager-container {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 侧边栏 */
+    .sidebar {
+      width: 300px;
+      background: rgba(255, 255, 255, 0.25);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.3);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .sidebar-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1d1d1f;
+      margin-bottom: 8px;
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.4);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1d1d1f;
+      transition: all 0.2s ease;
+    }
+
+    .search-box:focus {
+      outline: none;
+      border-color: #007aff;
+      background: rgba(255, 255, 255, 0.6);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 0;
+    }
+
+    /* 书签树 */
+    .bookmark-tree {
+      padding: 0 20px;
+    }
+
+    .tree-node {
+      margin-bottom: 4px;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .tree-item:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .tree-item.selected {
+      background: rgba(0, 122, 255, 0.2);
+      color: #007aff;
+    }
+
+    .tree-item.dragging {
+      opacity: 0.5;
+    }
+
+    .tree-expand {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .tree-expand.expanded {
+      transform: rotate(90deg);
+    }
+
+    .tree-icon {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+
+    .tree-title {
+      flex: 1;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tree-count {
+      font-size: 11px;
+      color: #6e6e73;
+      background: rgba(255, 255, 255, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 8px;
+    }
+
+    .tree-children {
+      margin-left: 24px;
+      display: none;
+    }
+
+    .tree-children.expanded {
+      display: block;
+    }
+
+    /* 主内容区 */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* 工具栏 */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: rgba(255, 255, 255, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .toolbar-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .toolbar-path {
+      font-size: 14px;
+      color: #6e6e73;
+      margin-left: 16px;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.2);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1d1d1f;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+      color: white;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ff3b30 0%, #ff6b35 100%);
+      color: white;
+      border: none;
+    }
+
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    /* 书签列表 */
+    .content-area {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .bookmark-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bookmark-item {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .bookmark-item:hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .bookmark-item.selected {
+      background: rgba(0, 122, 255, 0.15);
+      border-color: #007aff;
+    }
+
+    .bookmark-favicon {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      border-radius: 4px;
+      background: #f5f5f5;
+    }
+
+    .bookmark-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .bookmark-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: #1d1d1f;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bookmark-url {
+      font-size: 13px;
+      color: #6e6e73;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bookmark-actions {
+      display: flex;
+      gap: 8px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .bookmark-item:hover .bookmark-actions {
+      opacity: 1;
+    }
+
+    /* 批量操作栏 */
+    .batch-toolbar {
+      position: sticky;
+      bottom: 0;
+      padding: 16px 24px;
+      background: rgba(255, 255, 255, 0.9);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .batch-toolbar.visible {
+      display: flex;
+    }
+
+    .batch-info {
+      font-size: 14px;
+      color: #1d1d1f;
+      font-weight: 500;
+    }
+
+    .batch-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* 右键菜单 */
+    .context-menu {
+      position: fixed;
+      background: rgba(255, 255, 255, 0.9);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      overflow: hidden;
+      display: none;
+    }
+
+    .context-menu-item {
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #1d1d1f;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .context-menu-item:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .context-menu-item.danger {
+      color: #ff3b30;
+    }
+
+    .context-menu-separator {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.3);
+      margin: 4px 0;
+    }
+
+    /* 模态框 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      -webkit-backdrop-filter: blur(5px);
+      backdrop-filter: blur(5px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal {
+      background: rgba(255, 255, 255, 0.9);
+      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 16px;
+      padding: 24px;
+      min-width: 400px;
+      max-width: 80vw;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .modal-body {
+      margin-bottom: 20px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    /* 表单 */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #1d1d1f;
+      font-size: 14px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: #1d1d1f;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #007aff;
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+
+    /* 拖拽状态 */
+    .drag-over {
+      background: rgba(0, 122, 255, 0.1);
+      border-color: #007aff;
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6e6e73;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+
+    .empty-title {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #1d1d1f;
+    }
+
+    .empty-desc {
+      font-size: 14px;
+    }
+
+    /* 加载状态 */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      color: #6e6e73;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #007aff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .manager-container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .sidebar-content {
+        max-height: 200px;
+      }
+
+      .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .toolbar-left,
+      .toolbar-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="manager-container">
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">📚 书签管理器</div>
+        <input type="text" class="search-box" placeholder="搜索书签..." id="search-input">
+      </div>
+      <div class="sidebar-content">
+        <div class="bookmark-tree" id="bookmark-tree">
+          <div class="loading">
+            <div class="spinner"></div>
+            正在加载书签...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- 工具栏 -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="toolbar-title" id="current-folder-name">所有书签</div>
+          <div class="toolbar-path" id="folder-path"></div>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn btn-primary" onclick="createNewFolder()">📁 新建文件夹</button>
+          <button class="btn btn-primary" onclick="addNewBookmark()">➕ 添加书签</button>
+          <button class="btn" onclick="refreshBookmarks()">🔄 刷新</button>
+          <button class="btn" onclick="showImportModal()">📥 导入</button>
+          <button class="btn" onclick="exportBookmarks()">📤 导出</button>
+          <button class="btn" onclick="openSettings()">⚙️ 设置</button>
+        </div>
+      </div>
+
+      <!-- 内容区域 -->
+      <div class="content-area">
+        <div class="bookmark-list" id="bookmark-list">
+          <!-- 书签列表将在这里动态生成 -->
+        </div>
+      </div>
+
+      <!-- 批量操作工具栏 -->
+      <div class="batch-toolbar" id="batch-toolbar">
+        <div class="batch-info">
+          已选择 <span id="selected-count">0</span> 个项目
+        </div>
+        <div class="batch-actions">
+          <button class="btn" onclick="selectAll()">全选</button>
+          <button class="btn" onclick="clearSelection()">取消选择</button>
+          <button class="btn" onclick="moveSelected()">移动到</button>
+          <button class="btn" onclick="exportSelected()">导出选中</button>
+          <button class="btn btn-danger" onclick="deleteSelected()">删除选中</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右键菜单 -->
+  <div class="context-menu" id="context-menu">
+    <!-- 菜单项将动态生成 -->
+  </div>
+
+  <!-- 模态框容器 -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <!-- 模态框内容将动态生成 -->
+    </div>
+  </div>
+
+  <script type="module" src="enhanced-bookmark-manager.js"></script>
+</body>
+</html>
