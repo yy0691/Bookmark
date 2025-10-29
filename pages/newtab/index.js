@@ -2227,8 +2227,18 @@ function openAnalysisCenter() {
   chrome.tabs.create({ url: analysisUrl });
 }
 
+//打开文件夹可视化管理页面
+function openFolderManager() {
+  // 在新标签页中打开文件夹可视化管理页面
+  const folderManagerUrl = chrome.runtime.getURL('pages/newtab/folder-manager.html');
+  chrome.tabs.create({ url: folderManagerUrl });
+}
+
 // 订阅Dashboard按钮事件
 subscribe('dashboard-btn', openDashboard);
 
 // 订阅智能分析中心按钮事件
 subscribe('analysis-btn', openAnalysisCenter);
+
+// 订阅文件夹可视化管理按钮事件
+subscribe('folder-manager-btn', openFolderManager);

@@ -302,6 +302,213 @@
       font-weight: 600;
       letter-spacing: 0.5px;
     }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-normal);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      transform: scale(0.9);
+      transition: transform var(--transition-normal);
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--border-primary);
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-normal);
+    }
+
+    .modal-close:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      margin-bottom: var(--space-4);
+    }
+
+    .form-group {
+      margin-bottom: var(--space-4);
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: var(--space-2);
+      color: var(--text-primary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: var(--space-3);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      transition: all var(--transition-normal);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent-primary, var(--accent-blue));
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: var(--space-2);
+      justify-content: flex-end;
+    }
+
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--border-primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-tertiary);
+    }
+
+    /* Drag and Drop Styles */
+    .folder-tree-item.dragging {
+      opacity: 0.5;
+    }
+
+    .folder-tree-item.drag-over {
+      background: var(--bg-secondary);
+      border-left: 3px solid var(--accent-primary, var(--accent-blue));
+    }
+
+    .folder-tree-item.drag-over-before {
+      position: relative;
+    }
+
+    .folder-tree-item.drag-over-before::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-primary, var(--accent-blue));
+      z-index: 10;
+    }
+
+    .folder-tree-item.drag-over-after {
+      position: relative;
+    }
+
+    .folder-tree-item.drag-over-after::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-primary, var(--accent-blue));
+      z-index: 10;
+    }
+
+    .folder-tree-item-content.draggable {
+      cursor: move;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: var(--space-4);
+      right: var(--space-4);
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      min-width: 300px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      transform: translateY(120%);
+      transition: transform var(--transition-normal);
+      z-index: 2000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    .toast-success {
+      border-left: 4px solid var(--accent-green);
+    }
+
+    .toast-error {
+      border-left: 4px solid var(--accent-red);
+    }
+
+    .toast-content {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .toast-icon {
+      font-size: 1.5rem;
+    }
+
+    .toast-message {
+      flex: 1;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
   </style>
 </head>
 <body>
@@ -311,6 +518,14 @@
         <h1>📁 文件夹可视化管理</h1>
       </div>
       <div class="folder-manager-actions">
+        <button class="btn btn-primary" id="add-bookmark-btn">
+          <span>➕</span>
+          <span>添加书签</span>
+        </button>
+        <button class="btn btn-primary" id="add-folder-btn">
+          <span>📁</span>
+          <span>添加文件夹</span>
+        </button>
         <button class="btn" id="refresh-btn">
           <span>🔄</span>
           <span>刷新</span>
@@ -401,6 +616,10 @@
               </div>
             </div>
             <div class="folder-actions">
+              <button class="btn" id="edit-item-btn">
+                <span>✏️</span>
+                <span>编辑</span>
+              </button>
               <button class="btn btn-primary" id="open-folder-btn">
                 <span>📂</span>
                 <span>打开文件夹</span>
@@ -409,13 +628,57 @@
                 <span>📤</span>
                 <span>导出文件夹</span>
               </button>
-              <button class="btn btn-danger" id="delete-empty-btn" style="display: none;">
+              <button class="btn btn-danger" id="delete-item-btn">
                 <span>🗑️</span>
-                <span>删除空文件夹</span>
+                <span>删除</span>
               </button>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Add/Edit Bookmark -->
+  <div id="bookmark-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="bookmark-modal-title">添加书签</h3>
+        <button class="modal-close" id="bookmark-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="bookmark-title">标题</label>
+          <input type="text" class="form-input" id="bookmark-title" placeholder="输入书签标题">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="bookmark-url">URL</label>
+          <input type="url" class="form-input" id="bookmark-url" placeholder="https://example.com">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="bookmark-modal-cancel">取消</button>
+        <button class="btn btn-primary" id="bookmark-modal-save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Add/Edit Folder -->
+  <div id="folder-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="folder-modal-title">添加文件夹</h3>
+        <button class="modal-close" id="folder-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="folder-title">文件夹名称</label>
+          <input type="text" class="form-input" id="folder-title" placeholder="输入文件夹名称">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="folder-modal-cancel">取消</button>
+        <button class="btn btn-primary" id="folder-modal-save">保存</button>
       </div>
     </div>
   </div>
