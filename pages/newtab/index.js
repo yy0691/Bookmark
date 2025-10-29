@@ -72,7 +72,9 @@ const icons = {
   'moon': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
   'sun': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>',
   'monitor': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>',
-  'folder-open': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><path d="M2 7h20"></path></svg>'
+  'folder-open': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><path d="M2 7h20"></path></svg>',
+  'pin': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"></path><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path></svg>',
+  'folder-tree': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"></path><path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.92-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"></path><path d="M3 5a2 2 0 0 0 2 2h3"></path><path d="M3 3v13a2 2 0 0 0 2 2h3"></path></svg>'
 };
 
 function initIcons() {
@@ -275,9 +277,25 @@ async function loadAndRenderBookmarks(folderId) {
     bookmarks = await bookmarkService.getRecent(100);
   }
   
+  // Get pinned bookmarks
+  const pinnedBookmarks = await getPinnedBookmarks();
+  const pinnedIds = new Set(pinnedBookmarks.map(b => b.id));
+  
+  // Separate pinned and unpinned bookmarks
+  const unpinnedBookmarks = bookmarks.filter(b => !pinnedIds.has(b.id));
+  
+  // Combine: pinned first, then unpinned
+  const allBookmarks = [...pinnedBookmarks, ...unpinnedBookmarks];
+  
   // Apply tag filtering
-  const filteredBookmarks = filterBookmarksByTags(bookmarks);
+  const filteredBookmarks = filterBookmarksByTags(allBookmarks);
   currentBookmarks = filteredBookmarks;
+  
+  // Mark pinned bookmarks for rendering
+  currentBookmarks.forEach(bookmark => {
+    bookmark.isPinned = pinnedIds.has(bookmark.id);
+  });
+  
   visualizationService.renderBookmarks(bookmarksGridEl, currentBookmarks, currentView);
 }
 
@@ -391,9 +409,20 @@ async function loadAndRenderTags() {
 }
 
 // Show context menu
-function showContextMenu(e, bookmarkData) {
+async function showContextMenu(e, bookmarkData) {
   e.preventDefault();
   contextMenuTarget = bookmarkData;
+  
+  // Check if bookmark is pinned and update menu item
+  const pinnedBookmarks = await getPinnedBookmarks();
+  const isPinned = pinnedBookmarks.some(b => b.id === bookmarkData.id);
+  const pinMenuItem = document.getElementById('pin-menu-item');
+  if (pinMenuItem) {
+    const pinText = pinMenuItem.querySelector('span');
+    if (pinText) {
+      pinText.textContent = isPinned ? '取消置顶' : '置顶';
+    }
+  }
   
   contextMenu.style.left = `${e.clientX}px`;
   contextMenu.style.top = `${e.clientY}px`;
@@ -431,6 +460,11 @@ async function handleContextMenuAction(action) {
       
     case 'open-new-tab':
       window.open(bookmark.url, '_blank');
+      break;
+      
+    case 'pin':
+      await togglePinBookmark(bookmark);
+      await loadAndRenderBookmarks(); // Refresh bookmark list
       break;
       
     case 'copy-url':
@@ -1137,6 +1171,15 @@ function wireInteractions() {
     });
   }
 
+  // 打开文件夹可视化管理（顶部导航按钮）
+  const folderManagerBtn = document.getElementById('folder-manager-btn');
+  if (folderManagerBtn) {
+    folderManagerBtn.addEventListener('click', () => {
+      const url = chrome.runtime.getURL('pages/newtab/folder-manager.html');
+      window.open(url, '_blank');
+    });
+  }
+
   // 统计常用书签容器点击，累计点击频率
   const frequentListEl = document.getElementById('frequent-bookmarks-list');
   if (frequentListEl) {
@@ -1622,6 +1665,45 @@ function displayTopDomains(topDomains) {
 // 常用书签：点击频率 + 历史访问综合
 // ==========================
 const CLICK_STATS_KEY = 'bookmarkClickStats';
+const PINNED_BOOKMARKS_KEY = 'pinnedBookmarks';
+
+// Pin/Unpin bookmark functions
+async function getPinnedBookmarks() {
+  try {
+    const result = await chrome.storage.local.get([PINNED_BOOKMARKS_KEY]);
+    return result[PINNED_BOOKMARKS_KEY] || [];
+  } catch (error) {
+    console.error('Failed to get pinned bookmarks:', error);
+    return [];
+  }
+}
+
+async function togglePinBookmark(bookmark) {
+  try {
+    const pinnedBookmarks = await getPinnedBookmarks();
+    const existingIndex = pinnedBookmarks.findIndex(b => b.id === bookmark.id);
+    
+    if (existingIndex >= 0) {
+      // Unpin
+      pinnedBookmarks.splice(existingIndex, 1);
+      console.log(`Unpinned bookmark: ${bookmark.title}`);
+    } else {
+      // Pin - add to beginning
+      pinnedBookmarks.unshift({
+        id: bookmark.id,
+        title: bookmark.title,
+        url: bookmark.url,
+        dateAdded: bookmark.dateAdded,
+        pinnedAt: Date.now()
+      });
+      console.log(`Pinned bookmark: ${bookmark.title}`);
+    }
+    
+    await chrome.storage.local.set({ [PINNED_BOOKMARKS_KEY]: pinnedBookmarks });
+  } catch (error) {
+    console.error('Failed to toggle pin bookmark:', error);
+  }
+}
 
 async function trackBookmarkClick(url, title) {
   try {

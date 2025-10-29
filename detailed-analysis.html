@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>书签智能分析 - 书签助手</title>
+  <link rel="icon" type="image/svg+xml" href="images/icon.svg">
+  <link rel="stylesheet" href="styles/index.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+    }
+
+    .analysis-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+
+    .analysis-header {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      margin-bottom: var(--space-6);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .analysis-header h1 {
+      margin: 0 0 var(--space-2) 0;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .analysis-header p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-6);
+      border-bottom: 2px solid var(--border-primary);
+      padding-bottom: 0;
+    }
+
+    .nav-tab {
+      padding: var(--space-3) var(--space-5);
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all var(--transition-normal);
+      margin-bottom: -2px;
+    }
+
+    .nav-tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .nav-tab.active {
+      color: var(--accent-primary, var(--accent-blue));
+      border-bottom-color: var(--accent-primary, var(--accent-blue));
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .analysis-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      margin-bottom: var(--space-4);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .btn {
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      border: 1px solid var(--border-primary);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .btn:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary {
+      background: var(--accent-primary, var(--accent-blue));
+      color: white;
+      border-color: var(--accent-primary, var(--accent-blue));
+    }
+
+    .results-container {
+      margin-top: var(--space-4);
+    }
+
+    .result-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      margin-bottom: var(--space-3);
+      transition: all var(--transition-normal);
+    }
+
+    .result-item:hover {
+      background: var(--bg-tertiary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-2);
+    }
+
+    .result-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+
+    .result-url {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      word-break: break-all;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+    }
+
+    .btn-small {
+      padding: var(--space-1) var(--space-3);
+      font-size: 0.75rem;
+    }
+
+    .btn-danger {
+      background: var(--accent-red);
+      color: white;
+      border-color: var(--accent-red);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-primary, var(--accent-blue));
+      margin-bottom: var(--space-2);
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--space-8);
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: var(--space-2);
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      color: var(--text-muted);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin: var(--space-4) 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      transition: width 0.3s ease;
+      border-radius: var(--radius-full);
+    }
+
+    .duplicate-group {
+      background: var(--bg-tertiary);
+      border-left: 3px solid var(--accent-orange);
+      padding: var(--space-3);
+      margin-bottom: var(--space-3);
+      border-radius: var(--radius-md);
+    }
+
+    .duplicate-count {
+      font-size: 0.875rem;
+      color: var(--accent-orange);
+      font-weight: 600;
+      margin-bottom: var(--space-2);
+    }
+  </style>
+</head>
+<body>
+  <div class="analysis-container">
+    <div class="analysis-header">
+      <h1>🔍 书签智能分析</h1>
+      <p>全面分析和管理您的书签，发现问题并优化组织结构</p>
+    </div>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="ai-analysis">🤖 AI智能分析</button>
+      <button class="nav-tab" data-tab="duplicates">🔄 重复检测</button>
+      <button class="nav-tab" data-tab="invalid">❌ 失效检测</button>
+      <button class="nav-tab" data-tab="empty-folders">📁 空文件夹</button>
+      <button class="nav-tab" data-tab="wordcloud">☁️ 词云分析</button>
+      <button class="nav-tab" data-tab="export">📤 导出数据</button>
+      <button class="nav-tab" data-tab="import">📥 导入数据</button>
+      <button class="nav-tab" data-tab="backup">💾 备份恢复</button>
+      <button class="nav-tab" data-tab="batch-operations">⚡ 批量操作</button>
+    </nav>
+
+    <!-- AI Analysis Tab -->
+    <div class="tab-content active" id="ai-analysis">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>🤖</span>
+            <span>AI智能分析与分类</span>
+          </h2>
+          <button class="btn btn-primary" id="start-ai-analysis">开始分析</button>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
+          使用AI自动分析和分类您的书签，识别主题和建议更好的组织结构。
+        </p>
+        <div id="ai-analysis-results" class="results-container"></div>
+      </div>
+    </div>
+
+    <!-- Duplicates Tab -->
+    <div class="tab-content" id="duplicates">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>🔄</span>
+            <span>重复书签检测</span>
+          </h2>
+          <button class="btn btn-primary" id="detect-duplicates">开始检测</button>
+        </div>
+        <div id="duplicates-results" class="results-container"></div>
+      </div>
+    </div>
+
+    <!-- Invalid Bookmarks Tab -->
+    <div class="tab-content" id="invalid">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>❌</span>
+            <span>失效书签检测</span>
+          </h2>
+          <button class="btn btn-primary" id="detect-invalid">开始检测</button>
+        </div>
+        <div id="invalid-results" class="results-container"></div>
+      </div>
+    </div>
+
+    <!-- Empty Folders Tab -->
+    <div class="tab-content" id="empty-folders">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>📁</span>
+            <span>空文件夹检测</span>
+          </h2>
+          <button class="btn btn-primary" id="detect-empty">开始检测</button>
+        </div>
+        <div id="empty-folders-results" class="results-container"></div>
+      </div>
+    </div>
+
+    <!-- Word Cloud Tab -->
+    <div class="tab-content" id="wordcloud">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>☁️</span>
+            <span>书签词云分析</span>
+          </h2>
+          <button class="btn btn-primary" id="generate-wordcloud">生成词云</button>
+        </div>
+        <div id="wordcloud-results" class="results-container"></div>
+      </div>
+    </div>
+
+    <!-- Export Tab -->
+    <div class="tab-content" id="export">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>📤</span>
+            <span>导出书签数据</span>
+          </h2>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
+          将您的书签导出为JSON或CSV格式，方便备份和迁移。
+        </p>
+        <div style="display: flex; gap: var(--space-3);">
+          <button class="btn btn-primary" id="export-json">导出为 JSON</button>
+          <button class="btn" id="export-csv">导出为 CSV</button>
+          <button class="btn" id="export-html">导出为 HTML</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Tab -->
+    <div class="tab-content" id="import">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>📥</span>
+            <span>导入书签数据</span>
+          </h2>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
+          从JSON、CSV或HTML文件导入书签。
+        </p>
+        <div style="display: flex; gap: var(--space-3);">
+          <button class="btn btn-primary" id="import-file">选择文件导入</button>
+        </div>
+        <div id="import-results" class="results-container"></div>
+      </div>
+    </div>
+
+    <!-- Backup Tab -->
+    <div class="tab-content" id="backup">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>💾</span>
+            <span>备份与恢复</span>
+          </h2>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
+          创建完整的书签备份，并在需要时恢复。
+        </p>
+        <div style="display: flex; gap: var(--space-3);">
+          <button class="btn btn-primary" id="create-backup">创建备份</button>
+          <button class="btn" id="restore-backup">恢复备份</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Operations Tab -->
+    <div class="tab-content" id="batch-operations">
+      <div class="analysis-section">
+        <div class="section-header">
+          <h2 class="section-title">
+            <span>⚡</span>
+            <span>批量操作</span>
+          </h2>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
+          对选定的书签执行批量操作。
+        </p>
+        <div style="display: flex; gap: var(--space-3); flex-wrap: wrap;">
+          <button class="btn" id="batch-delete-duplicates">批量删除重复</button>
+          <button class="btn" id="batch-delete-invalid">批量删除失效</button>
+          <button class="btn" id="batch-delete-empty">批量删除空文件夹</button>
+          <button class="btn btn-danger" id="batch-delete-all">全部清理</button>
+        </div>
+        <div id="batch-results" class="results-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="detailed-analysis.js"></script>
+</body>
+</html>

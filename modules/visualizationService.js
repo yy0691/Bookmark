@@ -567,7 +567,7 @@ export class VisualizationService {
 
       const item = document.createElement('a');
       item.href = bookmark.url;
-      item.className = 'bookmark-item';
+      item.className = bookmark.isPinned ? 'bookmark-item pinned' : 'bookmark-item';
       item.title = `${bookmark.title}\n${bookmark.url}`;
       item.target = '_blank';
       item.rel = 'noopener noreferrer';
@@ -594,7 +594,10 @@ export class VisualizationService {
       const domain = new URL(bookmark.url).hostname;
       const faviconUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
       
+      const pinIndicator = bookmark.isPinned ? '<div class="pin-indicator" title="已置顶">📌</div>' : '';
+      
       item.innerHTML = `
+        ${pinIndicator}
         <img src="${faviconUrl}" alt="" class="favicon" loading="lazy" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNCIgZmlsbD0iIzM3NDE1MSIvPgo8cGF0aCBkPSJNMTYgOEMxMi42ODYzIDggMTAgMTAuNjg2MyAxMCAxNEMxMCAxNy4zMTM3IDEyLjY4NjMgMjAgMTYgMjBDMTkuMzEzNyAyMCAyMiAxNy4zMTM3IDIyIDE0QzIyIDEwLjY4NjMgMTkuMzEzNyA4IDE2IDhaIiBmaWxsPSIjNjM2NjcwIi8+CjxwYXRoIGQ9Ik0xNiAyNEMxMy43OTA5IDI0IDEyIDIyLjIwOTEgMTIgMjBIMjBDMjAgMjIuMjA5MSAxOC4yMDkxIDI0IDE2IDI0WiIgZmlsbD0iIzYzNjY3MCIvPgo8L3N2Zz4K'"/>
         <div class="bookmark-info">
           <div class="bookmark-title">${cleanTitle}</div>
