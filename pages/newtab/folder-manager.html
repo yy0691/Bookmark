@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark" data-accent="blue">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文件夹可视化管理 - 书签助手</title>
+  <link rel="icon" type="image/svg+xml" href="../../images/icon.svg">
+  <link rel="stylesheet" href="../../styles/index.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .folder-manager-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .folder-manager-header {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-primary);
+      padding: var(--space-4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+
+    .folder-manager-title {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+    }
+
+    .folder-manager-title h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .folder-manager-actions {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .folder-manager-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+      padding: var(--space-4);
+      height: calc(100vh - 80px);
+      overflow: hidden;
+    }
+
+    .folder-tree-panel,
+    .folder-visualization-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: var(--space-4);
+      border-bottom: 1px solid var(--border-primary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-4);
+    }
+
+    .folder-tree {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .folder-tree-item {
+      margin: var(--space-1) 0;
+    }
+
+    .folder-tree-item-content {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      position: relative;
+    }
+
+    .folder-tree-item-content:hover {
+      background: var(--bg-secondary);
+    }
+
+    .folder-tree-item-content.active {
+      background: var(--accent-primary, var(--accent-blue));
+      color: white;
+    }
+
+    .folder-toggle {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform var(--transition-normal);
+    }
+
+    .folder-tree-item.expanded > .folder-tree-item-content .folder-toggle {
+      transform: rotate(90deg);
+    }
+
+    .folder-icon-wrapper {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .folder-name {
+      flex: 1;
+      font-size: 0.875rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .folder-stats {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: var(--bg-glass);
+      padding: 0.125rem 0.5rem;
+      border-radius: var(--radius-full);
+    }
+
+    .folder-tree-children {
+      list-style: none;
+      padding-left: var(--space-6);
+      margin: var(--space-1) 0;
+      border-left: 1px solid var(--border-primary);
+      display: none;
+    }
+
+    .folder-tree-item.expanded > .folder-tree-children {
+      display: block;
+    }
+
+    .visualization-canvas {
+      width: 100%;
+      height: 400px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-4);
+    }
+
+    .folder-details {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+    }
+
+    .folder-details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-4);
+    }
+
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .detail-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .folder-actions {
+      display: flex;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
+    .btn {
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      border: 1px solid var(--border-primary);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .btn:hover {
+      background: var(--bg-tertiary);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--accent-primary, var(--accent-blue));
+      color: white;
+      border-color: var(--accent-primary, var(--accent-blue));
+    }
+
+    .btn-danger {
+      background: var(--accent-red);
+      color: white;
+      border-color: var(--accent-red);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--space-8);
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: var(--space-4);
+      opacity: 0.5;
+    }
+
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-8);
+      color: var(--text-muted);
+    }
+
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      text-align: center;
+      border: 1px solid var(--border-primary);
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-primary, var(--accent-blue));
+      margin-bottom: var(--space-1);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="folder-manager-container">
+    <header class="folder-manager-header">
+      <div class="folder-manager-title">
+        <h1>📁 文件夹可视化管理</h1>
+      </div>
+      <div class="folder-manager-actions">
+        <button class="btn" id="refresh-btn">
+          <span>🔄</span>
+          <span>刷新</span>
+        </button>
+        <button class="btn" id="collapse-all-btn">
+          <span>📦</span>
+          <span>全部折叠</span>
+        </button>
+        <button class="btn" id="expand-all-btn">
+          <span>📂</span>
+          <span>全部展开</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="folder-manager-content">
+      <!-- Left Panel: Folder Tree -->
+      <div class="folder-tree-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span>🌳</span>
+            <span>文件夹树</span>
+          </h2>
+        </div>
+        <div class="panel-content">
+          <ul class="folder-tree" id="folder-tree">
+            <li class="loading-spinner">加载中...</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Right Panel: Visualization & Details -->
+      <div class="folder-visualization-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span>📊</span>
+            <span>可视化 & 详情</span>
+          </h2>
+        </div>
+        <div class="panel-content">
+          <!-- Statistics Summary -->
+          <div class="stats-summary">
+            <div class="stat-card">
+              <div class="stat-value" id="total-folders">0</div>
+              <div class="stat-label">总文件夹</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="total-bookmarks">0</div>
+              <div class="stat-label">总书签</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="empty-folders">0</div>
+              <div class="stat-label">空文件夹</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="max-depth">0</div>
+              <div class="stat-label">最大深度</div>
+            </div>
+          </div>
+
+          <!-- Visualization Canvas -->
+          <div class="visualization-canvas" id="visualization-canvas">
+            <div style="text-align: center;">
+              <div style="font-size: 2rem; margin-bottom: 1rem;">📊</div>
+              <div style="color: var(--text-muted);">选择一个文件夹查看详情</div>
+            </div>
+          </div>
+
+          <!-- Folder Details -->
+          <div class="folder-details" id="folder-details" style="display: none;">
+            <h3 style="margin-top: 0;">文件夹详情</h3>
+            <div class="folder-details-grid">
+              <div class="detail-item">
+                <div class="detail-label">文件夹名称</div>
+                <div class="detail-value" id="detail-name">-</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">书签数量</div>
+                <div class="detail-value" id="detail-bookmarks">0</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">子文件夹数量</div>
+                <div class="detail-value" id="detail-subfolders">0</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">深度层级</div>
+                <div class="detail-value" id="detail-depth">0</div>
+              </div>
+            </div>
+            <div class="folder-actions">
+              <button class="btn btn-primary" id="open-folder-btn">
+                <span>📂</span>
+                <span>打开文件夹</span>
+              </button>
+              <button class="btn" id="export-folder-btn">
+                <span>📤</span>
+                <span>导出文件夹</span>
+              </button>
+              <button class="btn btn-danger" id="delete-empty-btn" style="display: none;">
+                <span>🗑️</span>
+                <span>删除空文件夹</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./folder-manager.js"></script>
+</body>
+</html>
