@@ -620,41 +620,67 @@ function setupModalEvents(type) {
   const cancelBtn = document.getElementById(`${type}-modal-cancel`);
   const saveBtn = document.getElementById(`${type}-modal-save`);
   
-  // Close modal
-  const closeModal = () => {
+  // Check if already initialized to prevent duplicate event listeners
+  if (modal.dataset.initialized === 'true') {
+    return;
+  }
+  modal.dataset.initialized = 'true';
+  
+  // Close modal function
+  const closeModal = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     modal.classList.remove('active');
     editingItem = null;
   };
   
+  // Close button click handler
   closeBtn.addEventListener('click', closeModal);
+  
+  // Cancel button click handler
   cancelBtn.addEventListener('click', closeModal);
   
-  // Click outside to close
+  // Click outside to close (click on overlay background)
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      closeModal();
+    // Only close if clicking directly on the modal overlay (not its children)
+    if (e.target === modal || e.target.classList.contains('modal-overlay')) {
+      closeModal(e);
     }
   });
   
-  // Save button
-  saveBtn.addEventListener('click', async () => {
-    if (type === 'bookmark') {
-      await saveBookmark();
-    } else {
-      await saveFolder();
+  // ESC key to close - only for this specific modal
+  const handleEscapeKey = (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      closeModal(e);
     }
-    closeModal();
-  });
+  };
+  document.addEventListener('keydown', handleEscapeKey);
   
-  // Enter key to save
-  modal.addEventListener('keypress', async (e) => {
-    if (e.key === 'Enter') {
+  // Save button handler
+  const handleSave = async (e) => {
+    if (e) {
+      e.preventDefault();
+    }
+    try {
       if (type === 'bookmark') {
         await saveBookmark();
       } else {
         await saveFolder();
       }
       closeModal();
+    } catch (error) {
+      console.error('Error saving:', error);
+    }
+  };
+  
+  saveBtn.addEventListener('click', handleSave);
+  
+  // Enter key to save (only when modal is active)
+  modal.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter' && modal.classList.contains('active')) {
+      await handleSave(e);
     }
   });
 }
@@ -665,6 +691,11 @@ function openBookmarkModal(mode, bookmark = null) {
   const title = document.getElementById('bookmark-modal-title');
   const titleInput = document.getElementById('bookmark-title');
   const urlInput = document.getElementById('bookmark-url');
+  
+  if (!modal || !title || !titleInput || !urlInput) {
+    console.error('Bookmark modal elements not found');
+    return;
+  }
   
   if (mode === 'edit' && bookmark) {
     title.textContent = '编辑书签';
@@ -679,7 +710,10 @@ function openBookmarkModal(mode, bookmark = null) {
   }
   
   modal.classList.add('active');
-  titleInput.focus();
+  // Use setTimeout to ensure DOM is ready and focus works
+  setTimeout(() => {
+    titleInput.focus();
+  }, 50);
 }
 
 // Open folder modal
@@ -687,6 +721,11 @@ function openFolderModal(mode, folder = null) {
   const modal = document.getElementById('folder-modal');
   const title = document.getElementById('folder-modal-title');
   const titleInput = document.getElementById('folder-title');
+  
+  if (!modal || !title || !titleInput) {
+    console.error('Folder modal elements not found');
+    return;
+  }
   
   if (mode === 'edit' && folder) {
     title.textContent = '编辑文件夹';
@@ -699,7 +738,10 @@ function openFolderModal(mode, folder = null) {
   }
   
   modal.classList.add('active');
-  titleInput.focus();
+  // Use setTimeout to ensure DOM is ready and focus works
+  setTimeout(() => {
+    titleInput.focus();
+  }, 50);
 }
 
 // Save bookmark
