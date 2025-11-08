@@ -12,6 +12,10 @@ let stats = {
 let editingItem = null; // Current item being edited (for add/edit modals)
 let draggedItem = null; // Item being dragged
 
+// Batch selection mode
+let batchMode = false;
+let selectedItems = new Set(); // Set of selected item IDs
+
 // Theme management
 let currentTheme = 'dark';
 let currentAccent = 'blue';
@@ -174,7 +178,11 @@ function createFolderTreeItem(item, depth) {
   
   if (isBookmark) {
     // Bookmark item
+    const checkboxHtml = batchMode 
+      ? `<span class="checkbox-wrapper"><input type="checkbox" class="item-checkbox" data-item-id="${item.id}"></span>`
+      : '';
     content.innerHTML = `
+      ${checkboxHtml}
       <span class="folder-toggle" style="opacity: 0;">▶</span>
       <span class="folder-icon-wrapper">🔖</span>
       <span class="folder-name" title="${item.title || item.url}">${item.title || item.url}</span>
@@ -196,7 +204,12 @@ function createFolderTreeItem(item, depth) {
       ? '📁' 
       : (folderCount > 0 ? '📂' : '📚');
     
+    const checkboxHtml = batchMode 
+      ? `<span class="checkbox-wrapper"><input type="checkbox" class="item-checkbox" data-item-id="${item.id}"></span>`
+      : '';
+    
     content.innerHTML = `
+      ${checkboxHtml}
       ${toggleIcon}
       <span class="folder-icon-wrapper">${folderIcon}</span>
       <span class="folder-name" title="${item.title}">${item.title || '未命名文件夹'}</span>
@@ -208,10 +221,37 @@ function createFolderTreeItem(item, depth) {
   content.addEventListener('click', (e) => {
     if (e.target.classList.contains('folder-toggle')) {
       toggleFolder(li);
+    } else if (e.target.classList.contains('item-checkbox')) {
+      // Checkbox click - toggle selection
+      toggleItemSelection(item.id, e.target.checked);
+    } else if (batchMode) {
+      // In batch mode, clicking the item toggles its checkbox
+      const checkbox = content.querySelector('.item-checkbox');
+      if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        toggleItemSelection(item.id, checkbox.checked);
+      }
     } else {
       selectItem(item, content);
     }
   });
+  
+  // Setup checkbox change listener
+  if (batchMode) {
+    const checkbox = content.querySelector('.item-checkbox');
+    if (checkbox) {
+      checkbox.addEventListener('change', (e) => {
+        e.stopPropagation();
+        toggleItemSelection(item.id, e.target.checked);
+      });
+      
+      // Set checkbox state if item is already selected
+      if (selectedItems.has(item.id)) {
+        checkbox.checked = true;
+        content.classList.add('selected');
+      }
+    }
+  }
   
   // Drag and drop handlers
   setupDragAndDrop(li, item);
@@ -611,6 +651,43 @@ function setupEventListeners() {
   
   // Folder modal events
   setupModalEvents('folder');
+  
+  // Batch mode toggle
+  document.getElementById('batch-mode-btn').addEventListener('click', () => {
+    toggleBatchMode();
+  });
+  
+  // Selection toolbar events
+  document.getElementById('select-all-btn').addEventListener('click', () => {
+    selectAllItems();
+  });
+  
+  document.getElementById('deselect-all-btn').addEventListener('click', () => {
+    deselectAllItems();
+  });
+  
+  document.getElementById('batch-move-btn').addEventListener('click', () => {
+    if (selectedItems.size === 0) {
+      showToast('请先选择要移动的项目', 'error');
+      return;
+    }
+    openBatchMoveModal();
+  });
+  
+  document.getElementById('batch-delete-btn').addEventListener('click', async () => {
+    if (selectedItems.size === 0) {
+      showToast('请先选择要删除的项目', 'error');
+      return;
+    }
+    await batchDeleteItems();
+  });
+  
+  document.getElementById('close-selection-btn').addEventListener('click', () => {
+    toggleBatchMode();
+  });
+  
+  // Batch move modal events
+  setupBatchMoveModalEvents();
 }
 
 // Setup modal events
@@ -904,6 +981,298 @@ function showToast(message, type = 'success') {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 300);
   }, 3000);
+}
+
+// Toggle batch selection mode
+function toggleBatchMode() {
+  batchMode = !batchMode;
+  const batchBtn = document.getElementById('batch-mode-btn');
+  const toolbar = document.getElementById('selection-toolbar');
+  
+  if (batchMode) {
+    batchBtn.classList.add('active');
+    toolbar.classList.add('show');
+    selectedItems.clear();
+  } else {
+    batchBtn.classList.remove('active');
+    toolbar.classList.remove('show');
+    selectedItems.clear();
+  }
+  
+  // Re-render tree to show/hide checkboxes
+  renderFolderTree(folderTree);
+  updateSelectionCount();
+}
+
+// Toggle item selection
+function toggleItemSelection(itemId, selected) {
+  if (selected) {
+    selectedItems.add(itemId);
+  } else {
+    selectedItems.delete(itemId);
+  }
+  
+  // Update visual state
+  const element = document.querySelector(`[data-item-id="${itemId}"] .folder-tree-item-content`);
+  if (element) {
+    if (selected) {
+      element.classList.add('selected');
+    } else {
+      element.classList.remove('selected');
+    }
+  }
+  
+  updateSelectionCount();
+}
+
+// Update selection count display
+function updateSelectionCount() {
+  const countElement = document.getElementById('selected-count');
+  if (countElement) {
+    countElement.textContent = selectedItems.size;
+  }
+}
+
+// Select all items
+function selectAllItems() {
+  const allCheckboxes = document.querySelectorAll('.item-checkbox');
+  allCheckboxes.forEach(checkbox => {
+    checkbox.checked = true;
+    const itemId = checkbox.dataset.itemId;
+    selectedItems.add(itemId);
+    
+    const content = checkbox.closest('.folder-tree-item-content');
+    if (content) {
+      content.classList.add('selected');
+    }
+  });
+  
+  updateSelectionCount();
+  showToast(`已选择 ${selectedItems.size} 项`, 'success');
+}
+
+// Deselect all items
+function deselectAllItems() {
+  const allCheckboxes = document.querySelectorAll('.item-checkbox');
+  allCheckboxes.forEach(checkbox => {
+    checkbox.checked = false;
+    const itemId = checkbox.dataset.itemId;
+    selectedItems.delete(itemId);
+    
+    const content = checkbox.closest('.folder-tree-item-content');
+    if (content) {
+      content.classList.remove('selected');
+    }
+  });
+  
+  selectedItems.clear();
+  updateSelectionCount();
+  showToast('已取消所有选择', 'success');
+}
+
+// Batch delete items
+async function batchDeleteItems() {
+  const count = selectedItems.size;
+  const confirmed = confirm(`确定要删除选中的 ${count} 项吗？此操作无法撤销。`);
+  
+  if (!confirmed) return;
+  
+  let successCount = 0;
+  let errorCount = 0;
+  
+  for (const itemId of selectedItems) {
+    try {
+      // Check if it's a folder or bookmark
+      const items = await new Promise(resolve => chrome.bookmarks.get(itemId, resolve));
+      if (items && items.length > 0) {
+        const item = items[0];
+        if (item.url) {
+          await chrome.bookmarks.remove(itemId);
+        } else {
+          await chrome.bookmarks.removeTree(itemId);
+        }
+        successCount++;
+      }
+    } catch (error) {
+      console.error(`Failed to delete item ${itemId}:`, error);
+      errorCount++;
+    }
+  }
+  
+  if (successCount > 0) {
+    showToast(`成功删除 ${successCount} 项${errorCount > 0 ? `，失败 ${errorCount} 项` : ''}`, errorCount > 0 ? 'error' : 'success');
+  } else {
+    showToast('删除失败', 'error');
+  }
+  
+  selectedItems.clear();
+  updateSelectionCount();
+  await loadFolderTree();
+}
+
+// Setup batch move modal events
+function setupBatchMoveModalEvents() {
+  const modal = document.getElementById('batch-move-modal');
+  const closeBtn = document.getElementById('batch-move-modal-close');
+  const cancelBtn = document.getElementById('batch-move-modal-cancel');
+  const saveBtn = document.getElementById('batch-move-modal-save');
+  
+  if (modal.dataset.initialized === 'true') {
+    return;
+  }
+  modal.dataset.initialized = 'true';
+  
+  const closeModal = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    modal.classList.remove('active');
+  };
+  
+  closeBtn.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target.classList.contains('modal-overlay')) {
+      closeModal(e);
+    }
+  });
+  
+  const handleEscapeKey = (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+      closeModal(e);
+    }
+  };
+  document.addEventListener('keydown', handleEscapeKey);
+  
+  saveBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await performBatchMove();
+    closeModal();
+  });
+}
+
+// Open batch move modal
+function openBatchMoveModal() {
+  const modal = document.getElementById('batch-move-modal');
+  const select = document.getElementById('target-folder-select');
+  const countElement = document.getElementById('move-items-count');
+  
+  if (!modal || !select || !countElement) {
+    console.error('Batch move modal elements not found');
+    return;
+  }
+  
+  // Update count
+  countElement.textContent = selectedItems.size;
+  
+  // Populate folder select
+  select.innerHTML = '<option value="">-- 选择文件夹 --</option>';
+  populateFolderSelect(select, folderTree);
+  
+  modal.classList.add('active');
+}
+
+// Populate folder select recursively
+function populateFolderSelect(select, node, depth = 0) {
+  if (!node.children) return;
+  
+  for (const child of node.children) {
+    if (!child.url) {
+      // It's a folder
+      const indent = '　'.repeat(depth);
+      const option = document.createElement('option');
+      option.value = child.id;
+      option.textContent = `${indent}${child.title || '未命名文件夹'}`;
+      
+      // Disable if this folder is in the selection (can't move into itself)
+      if (selectedItems.has(child.id)) {
+        option.disabled = true;
+        option.textContent += ' (已选中)';
+      }
+      
+      select.appendChild(option);
+      
+      // Recurse for subfolders
+      populateFolderSelect(select, child, depth + 1);
+    }
+  }
+}
+
+// Perform batch move
+async function performBatchMove() {
+  const select = document.getElementById('target-folder-select');
+  const targetFolderId = select.value;
+  
+  if (!targetFolderId) {
+    showToast('请选择目标文件夹', 'error');
+    return;
+  }
+  
+  let successCount = 0;
+  let errorCount = 0;
+  
+  for (const itemId of selectedItems) {
+    try {
+      // Check if target is a descendant of item being moved
+      const items = await new Promise(resolve => chrome.bookmarks.get(itemId, resolve));
+      if (items && items.length > 0) {
+        const item = items[0];
+        
+        // For folders, check if target is a descendant
+        if (!item.url) {
+          const targetIsDescendant = await checkIfDescendant(targetFolderId, itemId);
+          if (targetIsDescendant) {
+            console.warn(`Cannot move folder ${itemId} into its own descendant ${targetFolderId}`);
+            errorCount++;
+            continue;
+          }
+        }
+        
+        await chrome.bookmarks.move(itemId, { parentId: targetFolderId });
+        successCount++;
+      }
+    } catch (error) {
+      console.error(`Failed to move item ${itemId}:`, error);
+      errorCount++;
+    }
+  }
+  
+  if (successCount > 0) {
+    showToast(`成功移动 ${successCount} 项${errorCount > 0 ? `，失败 ${errorCount} 项` : ''}`, errorCount > 0 ? 'error' : 'success');
+  } else {
+    showToast('移动失败', 'error');
+  }
+  
+  selectedItems.clear();
+  updateSelectionCount();
+  await loadFolderTree();
+}
+
+// Check if targetId is a descendant of parentId
+async function checkIfDescendant(targetId, parentId) {
+  if (targetId === parentId) return true;
+  
+  try {
+    const target = await new Promise(resolve => chrome.bookmarks.getSubTree(targetId, resolve));
+    if (!target || !target[0]) return false;
+    
+    const parent = await new Promise(resolve => chrome.bookmarks.getSubTree(parentId, resolve));
+    if (!parent || !parent[0]) return false;
+    
+    // Check if target is within parent's subtree
+    const checkNode = (node) => {
+      if (node.id === targetId) return true;
+      if (!node.children) return false;
+      return node.children.some(child => checkNode(child));
+    };
+    
+    return checkNode(parent[0]);
+  } catch (error) {
+    console.error('Error checking descendant:', error);
+    return false;
+  }
 }
 
 // Initialize when DOM is loaded

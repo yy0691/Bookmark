@@ -312,7 +312,7 @@
       height: 100%;
       background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(8px);
-      display: flex;
+      display: none;
       align-items: center;
       justify-content: center;
       z-index: 1000;
@@ -322,6 +322,7 @@
     }
 
     .modal-overlay.active {
+      display: flex;
       opacity: 1;
       pointer-events: all;
     }
@@ -509,6 +510,72 @@
       font-size: 0.875rem;
       color: var(--text-primary);
     }
+
+    /* Batch Selection Styles */
+    .checkbox-wrapper {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      margin-right: var(--space-2);
+    }
+
+    .item-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--accent-primary, var(--accent-blue));
+    }
+
+    .selection-toolbar {
+      position: fixed;
+      bottom: var(--space-4);
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      z-index: 900;
+      transition: transform var(--transition-normal);
+      min-width: 400px;
+    }
+
+    .selection-toolbar.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .selection-info {
+      flex: 1;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .selection-actions {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .folder-tree-item-content.selected {
+      background: var(--accent-primary, var(--accent-blue));
+      color: white;
+      opacity: 0.8;
+    }
+
+    .batch-mode-toggle {
+      position: relative;
+    }
+
+    .batch-mode-toggle.active {
+      background: var(--accent-primary, var(--accent-blue));
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -537,6 +604,10 @@
         <button class="btn" id="expand-all-btn">
           <span>📂</span>
           <span>全部展开</span>
+        </button>
+        <button class="btn batch-mode-toggle" id="batch-mode-btn">
+          <span>☑️</span>
+          <span>批量操作</span>
         </button>
       </div>
     </header>
@@ -635,6 +706,60 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selection Toolbar for Batch Operations -->
+  <div id="selection-toolbar" class="selection-toolbar">
+    <div class="selection-info">
+      已选择 <strong id="selected-count">0</strong> 项
+    </div>
+    <div class="selection-actions">
+      <button class="btn" id="select-all-btn">
+        <span>☑️</span>
+        <span>全选</span>
+      </button>
+      <button class="btn" id="deselect-all-btn">
+        <span>⬜</span>
+        <span>取消全选</span>
+      </button>
+      <button class="btn btn-primary" id="batch-move-btn">
+        <span>📦</span>
+        <span>移动</span>
+      </button>
+      <button class="btn btn-danger" id="batch-delete-btn">
+        <span>🗑️</span>
+        <span>删除</span>
+      </button>
+      <button class="btn" id="close-selection-btn">
+        <span>✕</span>
+        <span>关闭</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal for Batch Move -->
+  <div id="batch-move-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">批量移动到文件夹</h3>
+        <button class="modal-close" id="batch-move-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">选择目标文件夹</label>
+          <select class="form-input" id="target-folder-select" style="cursor: pointer;">
+            <option value="">-- 选择文件夹 --</option>
+          </select>
+        </div>
+        <div style="margin-top: var(--space-3); padding: var(--space-3); background: var(--bg-secondary); border-radius: var(--radius-md); font-size: 0.875rem; color: var(--text-muted);">
+          将选中的 <strong id="move-items-count">0</strong> 项移动到目标文件夹
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="batch-move-modal-cancel">取消</button>
+        <button class="btn btn-primary" id="batch-move-modal-save">确认移动</button>
       </div>
     </div>
   </div>
