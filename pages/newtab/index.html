@@ -12,41 +12,57 @@
   <!-- ==========================
        顶部导航栏 (Top Navigation)
        ========================== -->
-  <header class="top-nav">
-    <div class="nav-left">
-      <a href="#" class="logo">📚 BookmarkHub</a>
-      <!-- 侧边栏收起/展开按钮 (未来功能) -->
-      <button class="nav-btn" id="toggle-left-sidebar" title="收起左侧栏">
-        <i data-lucide="panel-left-close"></i>
-      </button>
-    </div>
+  <header class="top-nav enhanced-nav">
+    <div class="navbar-container">
+      <div class="navbar-left">
+        <a href="#" class="navbar-title">📚 BookmarkHub</a>
+        <div class="navbar-links">
+          <button class="navbar-link active" id="dashboard-btn" type="button">概览</button>
+          <button class="navbar-link" id="analysis-btn" type="button">智能分析中心</button>
+          <button class="navbar-link" id="folder-manager-btn" type="button">文件夹管理</button>
+        </div>
+      </div>
 
-    <div class="search-container">
-      <i data-lucide="search" class="search-icon"></i>
-      <input type="text" class="search-input" placeholder="搜索书签和文件夹... (Ctrl + K)" />
-    </div>
+      <div class="navbar-center">
+        <div class="navbar-search search-container">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" class="search-input" placeholder="搜索书签和文件夹... (Ctrl + K)" />
+        </div>
+      </div>
 
-    <div class="nav-right">
-      <!-- 功能按钮 -->
-      <button class="nav-btn" id="dashboard-btn" title="Dashboard">
-        <i data-lucide="bar-chart-3"></i>
-      </button>
-      <button class="nav-btn" id="analysis-btn" title="智能分析中心">
-        <i data-lucide="brain"></i>
-      </button>
-      <button class="nav-btn" id="folder-manager-btn" title="文件夹可视化管理">
-        <i data-lucide="folder-tree"></i>
-      </button>
-      <button class="nav-btn" id="settings-btn" title="Settings">
-        <i data-lucide="settings"></i>
-      </button>
-      <!-- “添加组件”和“编辑布局”按钮 (未来功能) -->
-      <button class="nav-btn" id="add-widget-btn" title="添加组件">
-        <i data-lucide="layout-grid"></i>
-      </button>
-      <button class="nav-btn btn-primary" id="edit-layout-btn" title="编辑布局">
-        <i data-lucide="edit"></i>
-      </button>
+      <div class="navbar-right">
+        <button class="navbar-btn" id="navbar-refresh-btn" type="button" title="刷新数据">
+          <i data-lucide="refresh-cw"></i>
+          <span>刷新</span>
+        </button>
+        <div class="navbar-dropdown" id="navbar-export-menu">
+          <button class="navbar-btn" id="navbar-export-trigger" type="button" title="导入 / 导出">
+            <i data-lucide="download"></i>
+            <span>导入/导出</span>
+            <i data-lucide="chevron-down" class="navbar-caret"></i>
+          </button>
+          <div class="dropdown-menu" role="menu">
+            <button class="dropdown-item" id="navbar-export-bookmarks" type="button">
+              <i data-lucide="download"></i>
+              导出书签 (JSON)
+            </button>
+            <button class="dropdown-item" id="navbar-import-bookmarks" type="button">
+              <i data-lucide="upload"></i>
+              导入书签
+            </button>
+          </div>
+        </div>
+        <div class="navbar-divider" role="presentation"></div>
+        <button class="navbar-icon-btn" id="add-widget-btn" type="button" title="添加组件">
+          <i data-lucide="layout-grid"></i>
+        </button>
+        <button class="navbar-icon-btn" id="edit-layout-btn" type="button" title="编辑布局">
+          <i data-lucide="edit"></i>
+        </button>
+        <button class="navbar-icon-btn" id="settings-btn" type="button" title="打开设置">
+          <i data-lucide="settings"></i>
+        </button>
+      </div>
     </div>
   </header>
 
