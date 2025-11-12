@@ -19,6 +19,8 @@ let allBookmarks = []; // Cache all bookmarks for tag filtering
 let currentView = 'grid'; // 'grid' or 'list'
 let activeTags = new Set(); // Currently selected tags
 let contextMenuTarget = null; // Currently right-clicked bookmark
+const expandedFolderIds = new Set(); // Persist expanded folder state
+let activeFolderId = null; // Currently selected folder
 
 // Initialize settings panel and get current settings
 let settings = settingsPanel.getSettings();
@@ -269,7 +271,7 @@ function filterBookmarksByTags(bookmarks) {
 async function loadAndRenderBookmarks(folderId) {
   bookmarksGridEl.innerHTML = '<div class="loading-spinner"></div>';
   let bookmarks = [];
-  
+
   if (folderId) {
     const children = await new Promise(resolve => chrome.bookmarks.getChildren(folderId, resolve));
     bookmarks = children.filter(item => item.url);
@@ -295,8 +297,13 @@ async function loadAndRenderBookmarks(folderId) {
   currentBookmarks.forEach(bookmark => {
     bookmark.isPinned = pinnedIds.has(bookmark.id);
   });
-  
+
   visualizationService.renderBookmarks(bookmarksGridEl, currentBookmarks, currentView);
+}
+
+function refreshBookmarks() {
+  const targetFolderId = activeFolderId || undefined;
+  return loadAndRenderBookmarks(targetFolderId);
 }
 
 function renderFolderNode(node) {
@@ -344,14 +351,65 @@ function renderFolderNode(node) {
   return li;
 }
 
+function setFolderExpandedState(folderId, isExpanded) {
+  if (!folderId) return;
+  if (isExpanded) {
+    expandedFolderIds.add(folderId);
+  } else {
+    expandedFolderIds.delete(folderId);
+  }
+}
+
+function clearActiveFolderSelection() {
+  activeFolderId = null;
+  folderListEl.querySelectorAll('.folder-item.active').forEach(item => item.classList.remove('active'));
+}
+
+function restoreFolderState() {
+  const items = folderListEl.querySelectorAll('.folder-item');
+  const presentIds = new Set();
+
+  items.forEach(item => {
+    const folderId = item.dataset.folderId;
+    if (!folderId) return;
+    presentIds.add(folderId);
+
+    if (expandedFolderIds.has(folderId)) {
+      item.classList.add('expanded');
+      updateFolderToggleIcon(item);
+    }
+
+    if (activeFolderId && folderId === activeFolderId) {
+      item.classList.add('active');
+    }
+  });
+
+  expandedFolderIds.forEach(id => {
+    if (!presentIds.has(id)) {
+      expandedFolderIds.delete(id);
+    }
+  });
+
+  if (activeFolderId && !presentIds.has(activeFolderId)) {
+    activeFolderId = null;
+  }
+}
+
 async function loadAndRenderFolders() {
   console.log('Loading folders...');
   const [tree] = await bookmarkService.getTree();
   console.log('Bookmark tree:', tree);
-  
+
+  if (expandedFolderIds.size === 0 && tree?.children?.length) {
+    const firstFolder = tree.children.find(child => !child.url);
+    if (firstFolder) {
+      expandedFolderIds.add(firstFolder.id);
+    }
+  }
+
   folderListEl.innerHTML = '';
   const fragment = document.createDocumentFragment();
-  
+
   // Chrome书签树结构：根节点 -> 书签栏、其他书签等
   if (tree && tree.children) {
     console.log('Found', tree.children.length, 'root folders');
@@ -368,10 +426,11 @@ async function loadAndRenderFolders() {
   } else {
     console.log('No tree or children found');
   }
-  
+
   folderListEl.appendChild(fragment);
   console.log('Folders rendered, total nodes:', fragment.childNodes.length);
   initIcons(); // Re-initialize icons for newly added elements
+  restoreFolderState();
 }
 
 // Load and render tags
@@ -464,7 +523,7 @@ async function handleContextMenuAction(action) {
       
     case 'pin':
       await togglePinBookmark(bookmark);
-      await loadAndRenderBookmarks(); // Refresh bookmark list
+      await refreshBookmarks(); // Refresh bookmark list without losing context
       break;
       
     case 'copy-url':
@@ -950,6 +1009,7 @@ function wireInteractions() {
         searchInput.value = '';
         searchInput.blur();
         // Reload recent bookmarks
+        clearActiveFolderSelection();
         loadAndRenderBookmarks();
         return;
       }
@@ -1069,6 +1129,7 @@ function wireInteractions() {
   const handleSearch = debounce(async (query) => {
     bookmarksGridEl.innerHTML = '<div class="loading-spinner"></div>';
     if (query.trim() === '') {
+      clearActiveFolderSelection();
       await loadAndRenderBookmarks(); // Load recents if query is empty
       return;
     }
@@ -1408,7 +1469,9 @@ function wireInteractions() {
     if (toggleIcon) {
       e.stopPropagation(); // Prevent folder from loading
       if (folderItem) {
-        folderItem.classList.toggle('expanded');
+        const folderId = folderItem.dataset.folderId;
+        const isExpanded = folderItem.classList.toggle('expanded');
+        setFolderExpandedState(folderId, isExpanded);
         updateFolderToggleIcon(folderItem);
       }
       return;
@@ -1418,18 +1481,117 @@ function wireInteractions() {
     if (folderContent) {
       if (folderItem) {
         // Toggle expanded state
-        folderItem.classList.toggle('expanded');
+        const folderId = folderItem.dataset.folderId;
+        const isExpanded = folderItem.classList.toggle('expanded');
+        setFolderExpandedState(folderId, isExpanded);
         updateFolderToggleIcon(folderItem);
-        
+
         // Clear active state from all folders
         document.querySelectorAll('.folder-item').forEach(item => item.classList.remove('active'));
         // Set current folder to active
         folderItem.classList.add('active');
-        const folderId = folderItem.dataset.folderId;
+        activeFolderId = folderId;
         loadAndRenderBookmarks(folderId);
       }
     }
   });
+}
+
+function setupNavbarInteractions() {
+  const dropdown = document.getElementById('navbar-export-menu');
+  const trigger = document.getElementById('navbar-export-trigger');
+  const exportBtn = document.getElementById('navbar-export-bookmarks');
+  const importBtn = document.getElementById('navbar-import-bookmarks');
+  const refreshBtn = document.getElementById('navbar-refresh-btn');
+
+  const closeMenu = () => {
+    if (dropdown) {
+      dropdown.classList.remove('open');
+    }
+  };
+
+  if (dropdown && trigger) {
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropdown.classList.toggle('open');
+    });
+
+    dropdown.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+
+    document.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeMenu();
+      }
+    });
+  }
+
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      await exportBookmarks();
+      closeMenu();
+    });
+  }
+
+  if (importBtn) {
+    importBtn.addEventListener('click', () => {
+      importBookmarks();
+      closeMenu();
+    });
+  }
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', handleManualRefresh);
+  }
+}
+
+async function handleManualRefresh() {
+  const refreshBtn = document.getElementById('navbar-refresh-btn');
+  if (!refreshBtn || refreshBtn.dataset.loading === 'true') {
+    return;
+  }
+
+  const label = refreshBtn.querySelector('span');
+  refreshBtn.dataset.loading = 'true';
+  refreshBtn.disabled = true;
+  refreshBtn.classList.add('is-loading');
+  refreshBtn.setAttribute('aria-busy', 'true');
+  if (label) {
+    label.textContent = '刷新中...';
+  }
+
+  let hadError = false;
+  try {
+    await loadAndRenderFolders();
+    await loadAndRenderTags();
+    await refreshBookmarks();
+    await updateStatistics();
+    await updateFrequentBookmarks();
+    if (label) {
+      label.textContent = '刷新完成';
+    }
+  } catch (error) {
+    hadError = true;
+    console.error('Manual refresh failed:', error);
+    if (label) {
+      label.textContent = '刷新失败';
+    }
+  } finally {
+    refreshBtn.dataset.loading = 'false';
+    refreshBtn.disabled = false;
+    refreshBtn.classList.remove('is-loading');
+    refreshBtn.removeAttribute('aria-busy');
+
+    if (label) {
+      const delay = hadError ? 2000 : 1200;
+      setTimeout(() => {
+        label.textContent = '刷新';
+      }, delay);
+    }
+  }
 }
 
 function subscribeToBookmarkChanges() {
@@ -1466,6 +1628,7 @@ async function bootstrap() {
   updateClock();
   setInterval(updateClock, 1000);
   wireInteractions();
+  setupNavbarInteractions();
   await loadAndRenderFolders();
   await loadAndRenderTags();
   await loadAndRenderBookmarks();
