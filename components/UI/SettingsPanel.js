@@ -6,16 +6,16 @@ export class SettingsPanel {
   constructor() {
     this.isOpen = false;
     this.settings = {
-      theme: 'dark',
+      theme: 'light',
       accentColor: 'blue',
       recentCount: 20,
       autoRefresh: true,
       showFavicons: true,
       groupByDomain: false,
       defaultView: 'grid',
-      backgroundStyle: 'gradient',
-      blurIntensity: 20,
-      opacityLevel: 0.7,
+      backgroundStyle: 'solid',
+      blurIntensity: 12,
+      opacityLevel: 0.9,
       enableAnimations: true,
       compactMode: false
     };
@@ -457,16 +457,16 @@ export class SettingsPanel {
   resetSettings() {
     if (confirm('Are you sure you want to reset all settings to defaults?')) {
       this.settings = {
-        theme: 'dark',
+        theme: 'light',
         accentColor: 'blue',
         recentCount: 20,
         autoRefresh: true,
         showFavicons: true,
         groupByDomain: false,
         defaultView: 'grid',
-        backgroundStyle: 'gradient',
-        blurIntensity: 20,
-        opacityLevel: 0.7,
+        backgroundStyle: 'solid',
+        blurIntensity: 12,
+        opacityLevel: 0.9,
         enableAnimations: true,
         compactMode: false
       };

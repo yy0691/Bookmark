@@ -21,6 +21,10 @@ let activeTags = new Set(); // Currently selected tags
 let contextMenuTarget = null; // Currently right-clicked bookmark
 const expandedFolderIds = new Set(); // Persist expanded folder state
 let activeFolderId = null; // Currently selected folder
+let cachedFolderIndex = null;
+let cachedTagIndex = null;
+const FAVORITE_FOLDERS_KEY = 'favoriteFolders';
+let favoriteFolderIds = [];
 
 // Initialize settings panel and get current settings
 let settings = settingsPanel.getSettings();
@@ -42,6 +46,7 @@ const icons = {
   'folder': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>',
   'bookmark': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>',
   'tag': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>',
+  'globe': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
   'brain': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"></path><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"></path><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M19.938 10.5a4 4 0 0 1 .585.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M19.967 17.484A4 4 0 0 1 18 18"></path></svg>',
   'bar-chart': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
   'bar-chart-3': '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
@@ -50,7 +55,10 @@ const icons = {
   'grid': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
   'list': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
   'search': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>',
+  'grip-vertical': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>',
   'x': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+  'sliders-horizontal': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>',
+  'more-horizontal': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>',
   'download': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7,10 12,15 17,10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
   'upload': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17,8 12,3 7,8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
   'external-link': '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15,3 21,3 21,9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>',
@@ -299,6 +307,9 @@ async function loadAndRenderBookmarks(folderId) {
   });
 
   visualizationService.renderBookmarks(bookmarksGridEl, currentBookmarks, currentView);
+  updateBookmarkPagination();
+  syncBookmarkPagination();
+  updateFolderQuickActive();
 }
 
 function refreshBookmarks() {
@@ -363,6 +374,7 @@ function setFolderExpandedState(folderId, isExpanded) {
 function clearActiveFolderSelection() {
   activeFolderId = null;
   folderListEl.querySelectorAll('.folder-item.active').forEach(item => item.classList.remove('active'));
+  updateFolderQuickActive();
 }
 
 function restoreFolderState() {
@@ -397,6 +409,7 @@ function restoreFolderState() {
 
 async function loadAndRenderFolders() {
   console.log('Loading folders...');
+  cachedFolderIndex = null;
   const [tree] = await bookmarkService.getTree();
   console.log('Bookmark tree:', tree);
 
@@ -463,8 +476,101 @@ async function loadAndRenderTags() {
   
   tagsContainerEl.innerHTML = '';
   tagsContainerEl.appendChild(fragment);
+
+  cachedTagIndex = sortedTags.map(([tag, count]) => ({ tag, count }));
   
   console.log('Tags rendered:', sortedTags.length);
+}
+
+async function getTopLevelFolders() {
+  const [tree] = await bookmarkService.getTree();
+  if (!tree?.children) return [];
+  return tree.children
+    .filter(child => !child.url)
+    .map(child => ({ id: child.id, title: child.title || '未命名文件夹' }));
+}
+
+async function loadFavoriteFolders() {
+  try {
+    const result = await chrome.storage?.local.get([FAVORITE_FOLDERS_KEY]);
+    const stored = result?.[FAVORITE_FOLDERS_KEY];
+    if (Array.isArray(stored)) {
+      favoriteFolderIds = stored;
+      return;
+    }
+  } catch (error) {
+    console.warn('Failed to load favorite folders:', error);
+  }
+
+  const topFolders = await getTopLevelFolders();
+  favoriteFolderIds = topFolders.slice(0, 3).map(folder => folder.id);
+  await saveFavoriteFolders();
+}
+
+async function saveFavoriteFolders() {
+  try {
+    await chrome.storage?.local.set({ [FAVORITE_FOLDERS_KEY]: favoriteFolderIds });
+  } catch (error) {
+    console.warn('Failed to save favorite folders:', error);
+  }
+}
+
+async function renderFolderQuickList() {
+  const listEl = document.getElementById('folder-quick-list');
+  if (!listEl) return;
+
+  const topFolders = await getTopLevelFolders();
+  const availableIds = new Set(topFolders.map(folder => folder.id));
+  favoriteFolderIds = favoriteFolderIds.filter(id => availableIds.has(id));
+  if (favoriteFolderIds.length === 0) {
+    favoriteFolderIds = topFolders.slice(0, 3).map(folder => folder.id);
+    await saveFavoriteFolders();
+  }
+
+  const favorites = topFolders.filter(folder => favoriteFolderIds.includes(folder.id));
+  const fragment = document.createDocumentFragment();
+
+  const allChip = document.createElement('button');
+  allChip.type = 'button';
+  allChip.className = 'folder-chip';
+  allChip.dataset.folderId = '';
+  allChip.textContent = '全部';
+  fragment.appendChild(allChip);
+
+  favorites.forEach(folder => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'folder-chip';
+    chip.dataset.folderId = folder.id;
+    chip.textContent = folder.title;
+    fragment.appendChild(chip);
+  });
+
+  listEl.innerHTML = '';
+  listEl.appendChild(fragment);
+  updateFolderQuickActive();
+}
+
+function updateFolderQuickActive() {
+  const listEl = document.getElementById('folder-quick-list');
+  if (!listEl) return;
+  listEl.querySelectorAll('.folder-chip').forEach(chip => {
+    const folderId = chip.dataset.folderId || '';
+    const isActive = (!folderId && !activeFolderId) || folderId === activeFolderId;
+    chip.classList.toggle('is-active', isActive);
+  });
+}
+
+async function renderFolderQuickOptions() {
+  const optionsEl = document.getElementById('folder-quick-options');
+  if (!optionsEl) return;
+  const topFolders = await getTopLevelFolders();
+  optionsEl.innerHTML = topFolders.map(folder => `
+    <label class="folder-option">
+      <input type="checkbox" data-folder-id="${escapeHtml(folder.id)}" ${favoriteFolderIds.includes(folder.id) ? 'checked' : ''}>
+      <span>${escapeHtml(folder.title)}</span>
+    </label>
+  `).join('');
 }
 
 // Show context menu
@@ -895,6 +1001,7 @@ async function cleanEmptyFolders() {
 // Theme management functions
 function applyTheme(theme) {
   const body = document.body;
+  const root = document.documentElement;
   
   if (theme === 'auto') {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -902,11 +1009,13 @@ function applyTheme(theme) {
   }
   
   body.setAttribute('data-theme', theme);
+  root.setAttribute('data-theme', theme);
   currentTheme = theme;
 }
 
 function applyAccentColor(color) {
   document.body.setAttribute('data-accent', color);
+  document.documentElement.setAttribute('data-accent', color);
   currentAccent = color;
 }
 
@@ -961,7 +1070,837 @@ function saveSettings() {
   chrome.storage?.local.set({ userSettings: settings });
 }
 
+function getHeroEngine() {
+  const activeOption = document.querySelector('.engine-option.active');
+  const label = activeOption?.textContent?.trim() || 'Google';
+  return {
+    label,
+    template: activeOption?.dataset.template || 'https://www.google.com/search?q={query}',
+    home: activeOption?.dataset.home || 'https://www.google.com/',
+    element: activeOption
+  };
+}
+
+function buildHeroSearchUrl(query, engineOverride = null) {
+  const engine = engineOverride || getHeroEngine();
+  if (!query) {
+    return engine.home || 'https://www.google.com/';
+  }
+  const template = engine.template || 'https://www.google.com/search?q={query}';
+  return template.replace('{query}', encodeURIComponent(query));
+}
+
+function getHeroFilters() {
+  const currentFolder = document.getElementById('filter-current-folder')?.checked ?? false;
+  const onlyPinned = document.getElementById('filter-only-pinned')?.checked ?? false;
+  const uncategorized = document.getElementById('filter-uncategorized')?.checked ?? false;
+  const tagsRaw = document.getElementById('filter-tags')?.value ?? '';
+  const domainRaw = document.getElementById('filter-domain')?.value ?? '';
+  const tags = tagsRaw
+    .split(/[,\s]+/)
+    .map(tag => tag.trim())
+    .filter(Boolean);
+
+  return {
+    currentFolder,
+    onlyPinned,
+    uncategorized,
+    tags,
+    domain: domainRaw.trim()
+  };
+}
+
+async function applyHeroFilters(bookmarks, filters) {
+  if (!Array.isArray(bookmarks) || bookmarks.length === 0) return [];
+  let filtered = [...bookmarks];
+
+  if (filters.currentFolder && activeFolderId) {
+    filtered = filtered.filter(bookmark => bookmark.parentId === activeFolderId);
+  }
+
+  if (filters.domain) {
+    const domainQuery = filters.domain.toLowerCase();
+    filtered = filtered.filter(bookmark => {
+      try {
+        const host = new URL(bookmark.url).hostname.toLowerCase();
+        return host.includes(domainQuery);
+      } catch (error) {
+        return false;
+      }
+    });
+  }
+
+  if (filters.tags.length > 0) {
+    const normalizedTags = filters.tags.map(tag => tag.toLowerCase());
+    filtered = filtered.filter(bookmark => {
+      const bookmarkTags = extractTags(bookmark.title).map(tag => tag.toLowerCase());
+      return normalizedTags.every(tag => bookmarkTags.includes(tag));
+    });
+  }
+
+  if (filters.uncategorized) {
+    filtered = filtered.filter(bookmark => extractTags(bookmark.title).length === 0);
+  }
+
+  if (filters.onlyPinned) {
+    const pinnedBookmarks = await getPinnedBookmarks();
+    const pinnedIds = new Set(pinnedBookmarks.map(b => b.id));
+    filtered = filtered.filter(bookmark => pinnedIds.has(bookmark.id));
+  }
+
+  return filtered;
+}
+
+async function buildFolderIndex() {
+  if (cachedFolderIndex) return cachedFolderIndex;
+  const [tree] = await bookmarkService.getTree();
+  const folders = [];
+
+  const walk = (node, path = '') => {
+    if (!node || node.url) return;
+    const title = node.title || '未命名文件夹';
+    const nextPath = path ? `${path} / ${title}` : title;
+    if (node.id && node.id !== '0') {
+      folders.push({
+        id: node.id,
+        title,
+        path: nextPath,
+        parentId: node.parentId || null
+      });
+    }
+    if (node.children) {
+      node.children.forEach(child => walk(child, nextPath));
+    }
+  };
+
+  tree?.children?.forEach(child => walk(child));
+  cachedFolderIndex = folders;
+  return folders;
+}
+
+async function buildTagIndex() {
+  if (cachedTagIndex) return cachedTagIndex;
+  const bookmarks = allBookmarks.length ? allBookmarks : await bookmarkService.getAllBookmarks();
+  const tagCounts = new Map();
+  bookmarks.forEach(bookmark => {
+    extractTags(bookmark.title).forEach(tag => {
+      tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+    });
+  });
+  cachedTagIndex = Array.from(tagCounts.entries()).map(([tag, count]) => ({ tag, count }));
+  return cachedTagIndex;
+}
+
+async function searchFolders(query) {
+  if (!query) return [];
+  const folders = await buildFolderIndex();
+  const needle = query.toLowerCase();
+  return folders.filter(folder => folder.title.toLowerCase().includes(needle));
+}
+
+async function searchTags(query) {
+  if (!query) return [];
+  const tags = await buildTagIndex();
+  const needle = query.toLowerCase();
+  return tags.filter(item => item.tag.toLowerCase().includes(needle));
+}
+
+async function updateHeroSuggestions(query, bookmarkResults = []) {
+  const suggestionsEl = document.getElementById('hero-suggestions');
+  if (!suggestionsEl) return;
+
+  const inputEl = document.getElementById('hero-search-input');
+  const currentValue = inputEl?.value?.trim() ?? '';
+  const trimmedQuery = query.trim();
+  if (inputEl && currentValue !== trimmedQuery) {
+    return;
+  }
+
+  const recentGroup = suggestionsEl.querySelector('[data-group="recent"]');
+  const bookmarkGroup = suggestionsEl.querySelector('[data-group="bookmarks"]');
+  const folderGroup = suggestionsEl.querySelector('[data-group="folders"]');
+  const tagGroup = suggestionsEl.querySelector('[data-group="tags"]');
+  const webGroup = suggestionsEl.querySelector('[data-group="web"]');
+
+  const recentList = document.getElementById('suggestion-recent');
+  const bookmarkList = document.getElementById('suggestion-bookmarks');
+  const folderList = document.getElementById('suggestion-folders');
+  const tagList = document.getElementById('suggestion-tags');
+  const webList = document.getElementById('suggestion-web');
+
+  const setGroupContent = (groupEl, listEl, html, emptyText) => {
+    if (!groupEl || !listEl) return;
+    if (!html) {
+      listEl.innerHTML = `<div class="suggestion-empty">${emptyText}</div>`;
+    } else {
+      listEl.innerHTML = html;
+    }
+    groupEl.classList.toggle('hidden', false);
+  };
+
+  const hideGroup = (groupEl) => {
+    if (groupEl) groupEl.classList.add('hidden');
+  };
+
+  if (!trimmedQuery) {
+    const recentBookmarks = await bookmarkService.getRecent(5);
+    if (inputEl && inputEl.value.trim() !== currentValue) {
+      return;
+    }
+    const recentHtml = (recentBookmarks || []).map(bookmark => {
+      const url = bookmark.url || '#';
+      const title = bookmark.title || url;
+      const id = bookmark.id ? escapeHtml(bookmark.id) : '';
+      const meta = (() => {
+        try {
+          return new URL(url).hostname;
+        } catch (error) {
+          return url;
+        }
+      })();
+      return `
+        <a class="suggestion-item" data-type="bookmark" data-id="${id}" data-url="${escapeHtml(url)}" data-title="${escapeHtml(title)}" href="${escapeHtml(url)}" target="_blank" rel="noopener">
+          <span class="suggestion-icon"><i data-lucide="bookmark"></i></span>
+          <span class="suggestion-content">
+            <span class="suggestion-name">${escapeHtml(title)}</span>
+            <span class="suggestion-meta">${escapeHtml(meta)}</span>
+          </span>
+          <span class="suggestion-actions">
+            <button class="suggestion-action" data-action="copy" type="button" title="复制链接"><i data-lucide="copy"></i></button>
+            <button class="suggestion-action" data-action="pin" type="button" title="置顶"><i data-lucide="pin"></i></button>
+            <button class="suggestion-action" data-action="more" type="button" title="更多"><i data-lucide="more-horizontal"></i></button>
+          </span>
+        </a>
+      `;
+    }).join('');
+
+    setGroupContent(recentGroup, recentList, recentHtml, '暂无最近访问');
+    hideGroup(bookmarkGroup);
+    hideGroup(folderGroup);
+    hideGroup(tagGroup);
+    hideGroup(webGroup);
+    initIcons();
+    return;
+  }
+
+  hideGroup(recentGroup);
+
+  const bookmarkHtml = (bookmarkResults || []).slice(0, 5).map(bookmark => {
+    const url = bookmark.url || '#';
+    const title = bookmark.title || url;
+    const id = bookmark.id ? escapeHtml(bookmark.id) : '';
+    const meta = (() => {
+      try {
+        return new URL(url).hostname;
+      } catch (error) {
+        return url;
+      }
+    })();
+    return `
+      <a class="suggestion-item" data-type="bookmark" data-id="${id}" data-url="${escapeHtml(url)}" data-title="${escapeHtml(title)}" href="${escapeHtml(url)}" target="_blank" rel="noopener">
+        <span class="suggestion-icon"><i data-lucide="bookmark"></i></span>
+        <span class="suggestion-content">
+          <span class="suggestion-name">${escapeHtml(title)}</span>
+          <span class="suggestion-meta">${escapeHtml(meta)}</span>
+        </span>
+        <span class="suggestion-actions">
+          <button class="suggestion-action" data-action="copy" type="button" title="复制链接"><i data-lucide="copy"></i></button>
+          <button class="suggestion-action" data-action="pin" type="button" title="置顶"><i data-lucide="pin"></i></button>
+          <button class="suggestion-action" data-action="more" type="button" title="更多"><i data-lucide="more-horizontal"></i></button>
+        </span>
+      </a>
+    `;
+  }).join('');
+  setGroupContent(bookmarkGroup, bookmarkList, bookmarkHtml, '暂无匹配书签');
+
+  const folders = await searchFolders(trimmedQuery);
+  if (inputEl && inputEl.value.trim() !== trimmedQuery) {
+    return;
+  }
+  const folderHtml = folders.slice(0, 4).map(folder => `
+    <a class="suggestion-item" data-type="folder" data-folder-id="${escapeHtml(folder.id)}" href="#">
+      <span class="suggestion-icon"><i data-lucide="folder"></i></span>
+      <span class="suggestion-content">
+        <span class="suggestion-name">${escapeHtml(folder.title)}</span>
+        <span class="suggestion-meta">${escapeHtml(folder.path)}</span>
+      </span>
+    </a>
+  `).join('');
+  setGroupContent(folderGroup, folderList, folderHtml, '未找到文件夹');
+
+  const tags = await searchTags(trimmedQuery);
+  if (inputEl && inputEl.value.trim() !== trimmedQuery) {
+    return;
+  }
+  const tagHtml = tags.slice(0, 4).map(item => `
+    <a class="suggestion-item" data-type="tag" data-tag="${escapeHtml(item.tag)}" href="#">
+      <span class="suggestion-icon"><i data-lucide="tag"></i></span>
+      <span class="suggestion-content">
+        <span class="suggestion-name">${escapeHtml(item.tag)}</span>
+        <span class="suggestion-meta">${escapeHtml(`共 ${item.count} 条`)}</span>
+      </span>
+    </a>
+  `).join('');
+  setGroupContent(tagGroup, tagList, tagHtml, '未找到标签');
+
+  const engine = getHeroEngine();
+  const webUrl = buildHeroSearchUrl(trimmedQuery, engine);
+  const webHtml = `
+    <a class="suggestion-item" data-type="web" data-query="${escapeHtml(trimmedQuery)}" href="${escapeHtml(webUrl)}" target="_blank" rel="noopener">
+      <span class="suggestion-icon"><i data-lucide="globe"></i></span>
+      <span class="suggestion-content">
+        <span class="suggestion-name">用 ${escapeHtml(engine.label)} 搜索 “${escapeHtml(trimmedQuery)}”</span>
+        <span class="suggestion-meta">${escapeHtml(engine.home || '')}</span>
+      </span>
+    </a>
+  `;
+  setGroupContent(webGroup, webList, webHtml, '输入关键词搜索 Web');
+
+  initIcons();
+}
+
+function setupHeroSearch() {
+  const form = document.getElementById('hero-search-form');
+  const input = document.getElementById('hero-search-input');
+  const clearBtn = document.getElementById('hero-clear-btn');
+  const engineBtn = document.getElementById('hero-engine-btn');
+  const engineLabel = document.getElementById('hero-engine-label');
+  const filterBtn = document.getElementById('hero-filter-btn');
+  const suggestionsEl = document.getElementById('hero-suggestions');
+  const enginePopover = document.getElementById('engine-popover');
+  const filterPopover = document.getElementById('filter-popover');
+  const engineOptions = Array.from(document.querySelectorAll('.engine-option'));
+  const operatorButtons = Array.from(document.querySelectorAll('.operator-chip'));
+  const heroShell = document.getElementById('hero-search-shell');
+  const heroStack = document.querySelector('.hero-search-stack');
+  const clearFiltersBtn = document.getElementById('clear-filters-btn');
+
+  if (!form || !input) {
+    return;
+  }
+
+  const setActiveEngine = (option) => {
+    if (!option) return;
+    engineOptions.forEach(candidate => {
+      candidate.classList.toggle('active', candidate === option);
+    });
+    if (engineLabel) {
+      engineLabel.textContent = option.textContent.trim();
+    }
+  };
+
+  const defaultEngine = engineOptions.find(option => option.classList.contains('active')) || engineOptions[0];
+  if (defaultEngine) {
+    setActiveEngine(defaultEngine);
+  }
+
+  const updateShellState = () => {
+    if (!heroShell) return;
+    heroShell.classList.toggle('has-value', Boolean(input.value.trim()));
+  };
+
+  const updateFilterButtonState = () => {
+    if (!filterBtn) return;
+    const filters = getHeroFilters();
+    const active = filters.currentFolder || filters.onlyPinned || filters.uncategorized || filters.tags.length > 0 || filters.domain;
+    filterBtn.classList.toggle('is-active', active);
+  };
+
+  const closePopover = (popover, trigger) => {
+    if (!popover) return;
+    popover.classList.add('hidden');
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  const openPopover = (popover, trigger) => {
+    if (!popover) return;
+    popover.classList.remove('hidden');
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', 'true');
+    }
+  };
+
+  const hideSuggestions = () => {
+    if (suggestionsEl) {
+      suggestionsEl.classList.add('hidden');
+    }
+  };
+
+  const showSuggestions = async () => {
+    if (!suggestionsEl) return;
+    suggestionsEl.classList.remove('hidden');
+    await updateHeroSuggestions(input.value, currentBookmarks);
+  };
+
+  if (engineBtn && enginePopover) {
+    engineBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = !enginePopover.classList.contains('hidden');
+      closePopover(filterPopover, filterBtn);
+      if (isOpen) {
+        closePopover(enginePopover, engineBtn);
+      } else {
+        openPopover(enginePopover, engineBtn);
+      }
+    });
+  }
+
+  if (filterBtn && filterPopover) {
+    filterBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = !filterPopover.classList.contains('hidden');
+      closePopover(enginePopover, engineBtn);
+      if (isOpen) {
+        closePopover(filterPopover, filterBtn);
+      } else {
+        openPopover(filterPopover, filterBtn);
+      }
+    });
+  }
+
+  engineOptions.forEach(option => {
+    option.addEventListener('click', (event) => {
+      event.preventDefault();
+      setActiveEngine(option);
+      closePopover(enginePopover, engineBtn);
+      updateHeroSuggestions(input.value, currentBookmarks);
+    });
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+  });
+
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && event.shiftKey) {
+      event.preventDefault();
+      const query = input.value.trim();
+      const url = buildHeroSearchUrl(query);
+      window.open(url, '_blank', 'noopener');
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      return;
+    }
+  });
+
+  input.addEventListener('focus', () => {
+    showSuggestions();
+  });
+
+  input.addEventListener('input', () => {
+    updateShellState();
+    showSuggestions();
+  });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      updateShellState();
+      input.focus();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
+  const insertAtCursor = (insertText, cursorOffset = null, wrapStart = null, wrapEnd = null) => {
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    const currentValue = input.value;
+
+    if (wrapStart && wrapEnd && start !== end) {
+      const selected = currentValue.slice(start, end);
+      input.value = `${currentValue.slice(0, start)}${wrapStart}${selected}${wrapEnd}${currentValue.slice(end)}`;
+      const cursorPos = start + wrapStart.length + selected.length + wrapEnd.length;
+      input.setSelectionRange(cursorPos, cursorPos);
+      input.focus();
+      return;
+    }
+
+    const insertion = insertText ?? '';
+    input.value = `${currentValue.slice(0, start)}${insertion}${currentValue.slice(end)}`;
+    const offset = Number.isFinite(cursorOffset) ? cursorOffset : 0;
+    const cursorPos = start + insertion.length + offset;
+    input.setSelectionRange(cursorPos, cursorPos);
+    input.focus();
+  };
+
+  operatorButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const insertText = btn.dataset.insert ?? '';
+      const cursorRaw = btn.dataset.cursor;
+      const cursorOffset = cursorRaw !== undefined ? parseInt(cursorRaw, 10) : null;
+      const wrapStart = btn.dataset.wrapStart || null;
+      const wrapEnd = btn.dataset.wrapEnd || null;
+      insertAtCursor(insertText, Number.isNaN(cursorOffset) ? null : cursorOffset, wrapStart, wrapEnd);
+    });
+  });
+
+  const filterInputs = [
+    document.getElementById('filter-current-folder'),
+    document.getElementById('filter-only-pinned'),
+    document.getElementById('filter-uncategorized'),
+    document.getElementById('filter-tags'),
+    document.getElementById('filter-domain')
+  ].filter(Boolean);
+
+  filterInputs.forEach(inputEl => {
+    const eventName = inputEl.type === 'checkbox' ? 'change' : 'input';
+    inputEl.addEventListener(eventName, () => {
+      updateFilterButtonState();
+      document.dispatchEvent(new CustomEvent('hero-search:update'));
+    });
+  });
+
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener('click', () => {
+      filterInputs.forEach(inputEl => {
+        if (inputEl.type === 'checkbox') {
+          inputEl.checked = false;
+        } else {
+          inputEl.value = '';
+        }
+      });
+      updateFilterButtonState();
+      document.dispatchEvent(new CustomEvent('hero-search:update'));
+    });
+  }
+
+  if (suggestionsEl) {
+    suggestionsEl.addEventListener('click', async (event) => {
+      const actionBtn = event.target.closest('.suggestion-action');
+      if (actionBtn) {
+        event.preventDefault();
+        event.stopPropagation();
+        const item = actionBtn.closest('.suggestion-item');
+        if (!item) return;
+        const action = actionBtn.dataset.action;
+        const url = item.dataset.url;
+        const id = item.dataset.id;
+        const title = item.dataset.title;
+        if (action === 'copy' && url) {
+          try {
+            await navigator.clipboard.writeText(url);
+          } catch (error) {
+            console.warn('Copy failed:', error);
+          }
+        }
+        if (action === 'pin' && id) {
+          await togglePinBookmark({ id, title, url });
+          await refreshBookmarks();
+          await updateHeroSuggestions(input.value, currentBookmarks);
+        }
+        return;
+      }
+
+      const item = event.target.closest('.suggestion-item');
+      if (!item) return;
+      const type = item.dataset.type;
+      if (type === 'folder') {
+        event.preventDefault();
+        const folderId = item.dataset.folderId;
+        if (folderId) {
+          document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
+          const folderEl = folderListEl.querySelector(`.folder-item[data-folder-id="${folderId}"]`);
+          if (folderEl) {
+            folderEl.classList.add('active');
+            folderEl.classList.add('expanded');
+            updateFolderToggleIcon(folderEl);
+          }
+          activeFolderId = folderId;
+          loadAndRenderBookmarks(folderId);
+          hideSuggestions();
+        }
+        return;
+      }
+
+      if (type === 'tag') {
+        event.preventDefault();
+        const tag = item.dataset.tag;
+        if (tag) {
+          if (!tagsContainerEl) return;
+          const tagEl = tagsContainerEl.querySelector(`.filter-tag[data-tag="${tag}"]`);
+          if (tagEl) {
+            tagEl.click();
+            hideSuggestions();
+          }
+        }
+        return;
+      }
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (heroStack && heroStack.contains(event.target)) {
+      return;
+    }
+    hideSuggestions();
+    closePopover(enginePopover, engineBtn);
+    closePopover(filterPopover, filterBtn);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      hideSuggestions();
+      closePopover(enginePopover, engineBtn);
+      closePopover(filterPopover, filterBtn);
+    }
+  });
+
+  updateShellState();
+  updateFilterButtonState();
+}
+
+function setupSidebarTabs() {
+  const tabs = Array.from(document.querySelectorAll('.sidebar-tab'));
+  const panels = Array.from(document.querySelectorAll('.sidebar-panel'));
+  if (!tabs.length || !panels.length) return;
+
+  const activate = (panelName) => {
+    tabs.forEach(tab => {
+      tab.classList.toggle('active', tab.dataset.panel === panelName);
+    });
+    panels.forEach(panel => {
+      panel.classList.toggle('active', panel.dataset.panel === panelName);
+    });
+    try {
+      localStorage.setItem('sidebarPanel', panelName);
+    } catch (error) {
+      // Ignore storage errors in restricted contexts
+    }
+  };
+
+  const stored = (() => {
+    try {
+      return localStorage.getItem('sidebarPanel');
+    } catch (error) {
+      return null;
+    }
+  })();
+
+  const initialPanel = stored || tabs[0]?.dataset.panel;
+  if (initialPanel) {
+    activate(initialPanel);
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      activate(tab.dataset.panel);
+    });
+  });
+}
+
+function setupFolderQuickFilters() {
+  const listEl = document.getElementById('folder-quick-list');
+  const editBtn = document.getElementById('folder-quick-edit');
+  const popover = document.getElementById('folder-quick-popover');
+  const optionsEl = document.getElementById('folder-quick-options');
+
+  if (!listEl) return;
+
+  const closePopover = () => {
+    if (popover) popover.classList.add('hidden');
+  };
+
+  const openPopover = () => {
+    if (popover) popover.classList.remove('hidden');
+  };
+
+  const init = async () => {
+    await loadFavoriteFolders();
+    await renderFolderQuickList();
+    await renderFolderQuickOptions();
+  };
+
+  init();
+
+  listEl.addEventListener('click', async (event) => {
+    const chip = event.target.closest('.folder-chip');
+    if (!chip) return;
+    const folderId = chip.dataset.folderId || null;
+    if (folderId) {
+      activeFolderId = folderId;
+      const folderEl = folderListEl?.querySelector(`.folder-item[data-folder-id="${folderId}"]`);
+      document.querySelectorAll('.folder-item').forEach(item => item.classList.remove('active'));
+      if (folderEl) {
+        folderEl.classList.add('active');
+        folderEl.classList.add('expanded');
+        updateFolderToggleIcon(folderEl);
+      }
+      await loadAndRenderBookmarks(folderId);
+    } else {
+      clearActiveFolderSelection();
+      await loadAndRenderBookmarks();
+    }
+    updateFolderQuickActive();
+  });
+
+  if (editBtn && popover) {
+    editBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = !popover.classList.contains('hidden');
+      if (isOpen) {
+        closePopover();
+      } else {
+        openPopover();
+      }
+    });
+  }
+
+  if (optionsEl) {
+    optionsEl.addEventListener('change', async () => {
+      const checked = Array.from(optionsEl.querySelectorAll('input[type="checkbox"]'))
+        .filter(input => input.checked)
+        .map(input => input.dataset.folderId)
+        .filter(Boolean);
+
+      if (checked.length === 0) {
+        const firstOption = optionsEl.querySelector('input[type="checkbox"]');
+        if (firstOption) {
+          firstOption.checked = true;
+          favoriteFolderIds = [firstOption.dataset.folderId];
+        }
+      } else {
+        favoriteFolderIds = checked;
+      }
+
+      await saveFavoriteFolders();
+      await renderFolderQuickList();
+      await renderFolderQuickOptions();
+    });
+  }
+
+  if (popover) {
+    popover.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    if (popover && (popover.contains(event.target) || editBtn?.contains(event.target))) {
+      return;
+    }
+    closePopover();
+  });
+}
+
+let paginationBound = false;
+let paginationActiveIndex = 0;
+let paginationWheelLock = false;
+
+function getBookmarkPageWidth(pages, container) {
+  if (!pages.length) return container?.clientWidth || 0;
+  const firstPage = pages[0];
+  const gapValue = parseFloat(getComputedStyle(container).gap || 0);
+  return firstPage.getBoundingClientRect().width + (Number.isFinite(gapValue) ? gapValue : 0);
+}
+
+function updateBookmarkPagination() {
+  const paginationEl = document.getElementById('bookmarks-pagination');
+  if (!paginationEl || !bookmarksGridEl) return;
+
+  const pages = Array.from(bookmarksGridEl.querySelectorAll('.bookmark-page'));
+  if (currentView !== 'grid' || pages.length <= 1) {
+    paginationEl.classList.add('hidden');
+    paginationEl.innerHTML = '';
+    return;
+  }
+
+  bookmarksGridEl.scrollLeft = 0;
+  paginationActiveIndex = 0;
+  paginationEl.classList.remove('hidden');
+  paginationEl.innerHTML = pages.map((_, index) => `
+    <button class="page-dot${index === paginationActiveIndex ? ' is-active' : ''}" type="button" data-index="${index}" aria-label="第 ${index + 1} 页"></button>
+  `).join('');
+
+  const activeDot = paginationEl.querySelector(`.page-dot[data-index="${paginationActiveIndex}"]`);
+  if (activeDot) activeDot.classList.add('is-active');
+}
+
+function syncBookmarkPagination() {
+  const paginationEl = document.getElementById('bookmarks-pagination');
+  if (!paginationEl || !bookmarksGridEl) return;
+
+  const pages = Array.from(bookmarksGridEl.querySelectorAll('.bookmark-page'));
+  if (currentView !== 'grid' || pages.length <= 1) {
+    paginationActiveIndex = 0;
+    updateBookmarkPagination();
+    return;
+  }
+
+  const pageWidth = getBookmarkPageWidth(pages, bookmarksGridEl);
+  if (!pageWidth) return;
+  const index = Math.round(bookmarksGridEl.scrollLeft / pageWidth);
+  paginationActiveIndex = Math.max(0, Math.min(index, pages.length - 1));
+
+  paginationEl.querySelectorAll('.page-dot').forEach(dot => {
+    dot.classList.toggle('is-active', Number(dot.dataset.index) === paginationActiveIndex);
+  });
+}
+
+function scrollToBookmarkPage(index) {
+  const pages = Array.from(bookmarksGridEl.querySelectorAll('.bookmark-page'));
+  if (!pages.length) return;
+  const pageWidth = getBookmarkPageWidth(pages, bookmarksGridEl);
+  const targetIndex = Math.max(0, Math.min(index, pages.length - 1));
+  paginationActiveIndex = targetIndex;
+  bookmarksGridEl.scrollTo({ left: targetIndex * pageWidth, behavior: 'smooth' });
+  updateBookmarkPagination();
+}
+
+function setupBookmarkPagination() {
+  if (paginationBound || !bookmarksGridEl) return;
+  paginationBound = true;
+
+  const paginationEl = document.getElementById('bookmarks-pagination');
+  if (paginationEl) {
+    paginationEl.addEventListener('click', (event) => {
+      const dot = event.target.closest('.page-dot');
+      if (!dot) return;
+      const index = Number(dot.dataset.index);
+      if (!Number.isFinite(index)) return;
+      scrollToBookmarkPage(index);
+    });
+  }
+
+  bookmarksGridEl.addEventListener('scroll', () => {
+    if (currentView !== 'grid') return;
+    syncBookmarkPagination();
+  });
+
+  bookmarksGridEl.addEventListener('wheel', (event) => {
+    if (currentView !== 'grid') return;
+    if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) {
+      return;
+    }
+    event.preventDefault();
+    if (paginationWheelLock) return;
+    paginationWheelLock = true;
+    const direction = event.deltaY > 0 ? 1 : -1;
+    scrollToBookmarkPage(paginationActiveIndex + direction);
+    setTimeout(() => {
+      paginationWheelLock = false;
+    }, 480);
+  }, { passive: false });
+
+  window.addEventListener('resize', () => {
+    syncBookmarkPagination();
+    updateBookmarkPagination();
+  });
+}
+
 function wireInteractions() {
+  setupSidebarTabs();
+  setupHeroSearch();
+  setupFolderQuickFilters();
+  setupBookmarkPagination();
+
   // Enhanced keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     // Search shortcut (Ctrl/Cmd + K)
@@ -1007,6 +1946,7 @@ function wireInteractions() {
       const searchInput = document.querySelector('.search-input');
       if (searchInput && document.activeElement === searchInput) {
         searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
         searchInput.blur();
         // Reload recent bookmarks
         clearActiveFolderSelection();
@@ -1030,6 +1970,8 @@ function wireInteractions() {
 
       // Re-render with the new view using cached bookmarks
       visualizationService.renderBookmarks(bookmarksGridEl, currentBookmarks, currentView);
+      updateBookmarkPagination();
+      syncBookmarkPagination();
     });
   });
 
@@ -1128,20 +2070,30 @@ function wireInteractions() {
   const searchInput = document.querySelector('.search-input');
   const handleSearch = debounce(async (query) => {
     bookmarksGridEl.innerHTML = '<div class="loading-spinner"></div>';
-    if (query.trim() === '') {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery === '') {
       clearActiveFolderSelection();
       await loadAndRenderBookmarks(); // Load recents if query is empty
+      await updateHeroSuggestions('', []);
       return;
     }
-    const results = await bookmarkService.search(query);
+    let results = await bookmarkService.search(trimmedQuery);
+    const filters = getHeroFilters();
+    results = await applyHeroFilters(results, filters);
     const filteredResults = filterBookmarksByTags(results); // Apply tag filtering to search results
     currentBookmarks = filteredResults;
     visualizationService.renderBookmarks(bookmarksGridEl, currentBookmarks, currentView);
+    updateBookmarkPagination();
+    syncBookmarkPagination();
+    await updateHeroSuggestions(trimmedQuery, filteredResults);
   }, 300);
 
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       handleSearch(e.target.value);
+    });
+    document.addEventListener('hero-search:update', () => {
+      handleSearch(searchInput.value);
     });
   }
 
@@ -1492,6 +2444,7 @@ function wireInteractions() {
         folderItem.classList.add('active');
         activeFolderId = folderId;
         loadAndRenderBookmarks(folderId);
+        updateFolderQuickActive();
       }
     }
   });
@@ -1500,14 +2453,24 @@ function wireInteractions() {
 function setupNavbarInteractions() {
   const dropdown = document.getElementById('navbar-export-menu');
   const trigger = document.getElementById('navbar-export-trigger');
+  const userMenu = document.getElementById('navbar-user-menu');
+  const userTrigger = document.getElementById('user-menu-trigger');
   const exportBtn = document.getElementById('navbar-export-bookmarks');
   const importBtn = document.getElementById('navbar-import-bookmarks');
   const refreshBtn = document.getElementById('navbar-refresh-btn');
+  const userProfileBtn = document.getElementById('user-profile-btn');
+  const userSettingsBtn = document.getElementById('user-settings-btn');
+  const userLogoutBtn = document.getElementById('user-logout-btn');
 
-  const closeMenu = () => {
-    if (dropdown) {
-      dropdown.classList.remove('open');
+  const closeMenu = (menu) => {
+    if (menu) {
+      menu.classList.remove('open');
     }
+  };
+
+  const closeAllMenus = () => {
+    closeMenu(dropdown);
+    closeMenu(userMenu);
   };
 
   if (dropdown && trigger) {
@@ -1515,16 +2478,17 @@ function setupNavbarInteractions() {
       event.preventDefault();
       event.stopPropagation();
       dropdown.classList.toggle('open');
+      closeMenu(userMenu);
     });
 
     dropdown.addEventListener('click', (event) => {
       event.stopPropagation();
     });
 
-    document.addEventListener('click', closeMenu);
+    document.addEventListener('click', closeAllMenus);
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        closeMenu();
+        closeAllMenus();
       }
     });
   }
@@ -1532,19 +2496,56 @@ function setupNavbarInteractions() {
   if (exportBtn) {
     exportBtn.addEventListener('click', async () => {
       await exportBookmarks();
-      closeMenu();
+      closeMenu(dropdown);
     });
   }
 
   if (importBtn) {
     importBtn.addEventListener('click', () => {
       importBookmarks();
-      closeMenu();
+      closeMenu(dropdown);
     });
   }
 
   if (refreshBtn) {
     refreshBtn.addEventListener('click', handleManualRefresh);
+  }
+
+  if (userMenu && userTrigger) {
+    userTrigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      userMenu.classList.toggle('open');
+      closeMenu(dropdown);
+    });
+
+    userMenu.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+  }
+
+  if (userProfileBtn) {
+    userProfileBtn.addEventListener('click', () => {
+      const optionsUrl = chrome.runtime.getURL('options.html');
+      window.open(optionsUrl, '_blank');
+      closeMenu(userMenu);
+    });
+  }
+
+  if (userSettingsBtn) {
+    userSettingsBtn.addEventListener('click', () => {
+      const settingsModal = document.getElementById('settings-modal');
+      if (settingsModal) {
+        settingsModal.classList.remove('hidden');
+      }
+      closeMenu(userMenu);
+    });
+  }
+
+  if (userLogoutBtn) {
+    userLogoutBtn.addEventListener('click', () => {
+      closeMenu(userMenu);
+    });
   }
 }
 
@@ -1597,7 +2598,11 @@ async function handleManualRefresh() {
 function subscribeToBookmarkChanges() {
   const refreshAll = async () => {
     console.log('Bookmark change detected, refreshing UI.');
+    cachedFolderIndex = null;
+    cachedTagIndex = null;
     await loadAndRenderFolders();
+    await renderFolderQuickList();
+    await renderFolderQuickOptions();
     await loadAndRenderTags(); // Refresh tags when bookmarks change
     const activeFolder = folderListEl.querySelector('.folder-item.active');
     const folderId = activeFolder ? activeFolder.dataset.folderId : null;
@@ -2287,17 +3292,17 @@ function applyBackgroundStyle(style) {
   // Apply background based on style
   switch (style) {
     case 'gradient':
-      document.body.style.background = 'linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%)';
+      document.body.style.background = 'linear-gradient(180deg, #f5f5f7 0%, #ffffff 45%, #f0f0f2 100%)';
       document.body.style.backgroundAttachment = 'fixed';
       break;
     case 'solid':
-      document.body.style.background = '#0f0f0f';
+      document.body.style.background = '#f5f5f7';
       document.body.style.backgroundAttachment = 'initial';
       break;
     case 'pattern':
-      document.body.style.background = '#0f0f0f';
-      document.body.style.backgroundImage = 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)';
-      document.body.style.backgroundSize = '20px 20px';
+      document.body.style.background = '#f5f5f7';
+      document.body.style.backgroundImage = 'radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0)';
+      document.body.style.backgroundSize = '22px 22px';
       document.body.style.backgroundAttachment = 'fixed';
       break;
   }
@@ -2318,9 +3323,16 @@ function applyOpacityLevel(opacity) {
   document.documentElement.style.setProperty('--glass-opacity', opacity);
   
   // Update CSS variables for glass effects
-  document.documentElement.style.setProperty('--bg-card', `rgba(26, 26, 26, ${opacity})`);
-  document.documentElement.style.setProperty('--bg-glass', `rgba(255, 255, 255, ${opacity * 0.1})`);
-  document.documentElement.style.setProperty('--bg-glass-hover', `rgba(255, 255, 255, ${opacity * 0.15})`);
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    document.documentElement.style.setProperty('--bg-card', `rgba(26, 26, 26, ${opacity})`);
+    document.documentElement.style.setProperty('--bg-glass', `rgba(255, 255, 255, ${opacity * 0.1})`);
+    document.documentElement.style.setProperty('--bg-glass-hover', `rgba(255, 255, 255, ${opacity * 0.15})`);
+  } else {
+    document.documentElement.style.setProperty('--bg-card', `rgba(255, 255, 255, ${opacity})`);
+    document.documentElement.style.setProperty('--bg-glass', `rgba(255, 255, 255, ${opacity * 0.6})`);
+    document.documentElement.style.setProperty('--bg-glass-hover', `rgba(255, 255, 255, ${Math.min(1, opacity * 0.85)})`);
+  }
 }
 
 function applyAnimationSettings(enabled) {
@@ -2335,16 +3347,16 @@ function resetSettings() {
   if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
     // Reset to default settings
     settings = {
-      theme: 'dark',
+      theme: 'light',
       accentColor: 'blue',
       recentCount: 20,
       autoRefresh: true,
       showFavicons: true,
       groupByDomain: false,
       defaultView: 'grid',
-      backgroundStyle: 'gradient',
-      blurIntensity: 20,
-      opacityLevel: 0.7,
+      backgroundStyle: 'solid',
+      blurIntensity: 12,
+      opacityLevel: 0.9,
       enableAnimations: true,
       compactMode: false
     };
@@ -2405,3 +3417,7 @@ subscribe('analysis-btn', openAnalysisCenter);
 
 // 订阅文件夹可视化管理按钮事件
 subscribe('folder-manager-btn', openFolderManager);
+
+// 订阅快捷入口按钮事件
+subscribe('quick-ai-btn', openAnalysisCenter);
+subscribe('quick-folder-btn', openFolderManager);

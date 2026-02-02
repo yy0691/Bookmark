@@ -17,7 +17,7 @@ let batchMode = false;
 let selectedItems = new Set(); // Set of selected item IDs
 
 // Theme management
-let currentTheme = 'dark';
+let currentTheme = 'light';
 let currentAccent = 'blue';
 
 // Initialize the folder manager
@@ -41,7 +41,7 @@ async function loadThemeSettings() {
   try {
     const result = await chrome.storage.local.get('newtabSettings');
     if (result.newtabSettings) {
-      currentTheme = result.newtabSettings.theme || 'dark';
+      currentTheme = result.newtabSettings.theme || 'light';
       currentAccent = result.newtabSettings.accentColor || 'blue';
       applyTheme(currentTheme, currentAccent);
     }
@@ -62,7 +62,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local' && changes.newtabSettings) {
     const newSettings = changes.newtabSettings.newValue;
     if (newSettings) {
-      currentTheme = newSettings.theme || 'dark';
+      currentTheme = newSettings.theme || 'light';
       currentAccent = newSettings.accentColor || 'blue';
       applyTheme(currentTheme, currentAccent);
     }

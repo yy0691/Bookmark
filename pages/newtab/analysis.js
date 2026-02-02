@@ -2,7 +2,7 @@
 // MV3-compliant module script for the Analysis Center page
 
 const DEFAULT_SETTINGS = {
-  theme: 'dark',
+  theme: 'light',
   accentColor: 'blue',
   enableAnimations: true,
   compactMode: false,
@@ -12,7 +12,7 @@ function applyThemeFromSettings(settings) {
   const html = document.documentElement;
   const body = document.body;
 
-  const theme = settings.theme || 'dark';
+  const theme = settings.theme || 'light';
   const accent = settings.accentColor || 'blue';
 
   const setTheme = (value) => {

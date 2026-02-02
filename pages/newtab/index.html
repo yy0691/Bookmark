@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="dark" data-accent="blue">
+<html lang="zh-CN" data-theme="light" data-accent="blue">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,14 +8,14 @@
   <link rel="stylesheet" href="../../styles/index.css" />
   <link rel="stylesheet" href="../../components/UI/SettingsPanel.css" />
 </head>
-<body>
+<body class="layout-focus">
   <!-- ==========================
        顶部导航栏 (Top Navigation)
        ========================== -->
   <header class="top-nav enhanced-nav">
     <div class="navbar-container">
       <div class="navbar-left">
-        <a href="#" class="navbar-title">📚 BookmarkHub</a>
+        <a href="#" class="navbar-title">BookmarkHub</a>
         <div class="navbar-links">
           <button class="navbar-link active" id="dashboard-btn" type="button">概览</button>
           <button class="navbar-link" id="analysis-btn" type="button">智能分析中心</button>
@@ -23,14 +23,17 @@
         </div>
       </div>
 
-      <div class="navbar-center">
-        <div class="navbar-search search-container">
-          <i data-lucide="search" class="search-icon"></i>
-          <input type="text" class="search-input" placeholder="搜索书签和文件夹... (Ctrl + K)" />
-        </div>
-      </div>
-
       <div class="navbar-right">
+        <div class="navbar-segment" role="group" aria-label="视图切换">
+          <button class="segment-btn toggle-btn active" data-view="grid" title="卡片视图">
+            <i data-lucide="layout-grid"></i>
+            <span>卡片</span>
+          </button>
+          <button class="segment-btn toggle-btn" data-view="list" title="列表视图">
+            <i data-lucide="list"></i>
+            <span>列表</span>
+          </button>
+        </div>
         <button class="navbar-btn" id="navbar-refresh-btn" type="button" title="刷新数据">
           <i data-lucide="refresh-cw"></i>
           <span>刷新</span>
@@ -62,6 +65,23 @@
         <button class="navbar-icon-btn" id="settings-btn" type="button" title="打开设置">
           <i data-lucide="settings"></i>
         </button>
+        <div class="navbar-divider" role="presentation"></div>
+        <button class="navbar-icon-btn" id="quick-folder-btn" type="button" title="书签管理" data-tooltip="书签管理">
+          <i data-lucide="folder"></i>
+        </button>
+        <button class="navbar-icon-btn" id="quick-ai-btn" type="button" title="AI分析" data-tooltip="AI分析">
+          <i data-lucide="brain"></i>
+        </button>
+        <div class="navbar-dropdown navbar-user-menu" id="navbar-user-menu">
+          <button class="navbar-icon-btn user-avatar-btn" id="user-menu-trigger" type="button" title="个人信息" data-tooltip="个人信息">
+            <i data-lucide="user"></i>
+          </button>
+          <div class="dropdown-menu" role="menu">
+            <button class="dropdown-item" id="user-profile-btn" type="button">个人信息</button>
+            <button class="dropdown-item" id="user-settings-btn" type="button">设置</button>
+            <button class="dropdown-item" id="user-logout-btn" type="button">退出登录</button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -70,48 +90,322 @@
        主内容容器
        ========================== -->
   <div class="main-container">
+    <!-- ==========================
+         Hero Search
+         ========================== -->
+    <section class="hero-search" aria-label="主搜索">
+      <div class="hero-inner">
+        <div class="hero-search-stack">
+          <form class="hero-search-form" id="hero-search-form" autocomplete="off">
+            <label class="sr-only" for="hero-search-input">搜索书签、文件夹或 Web</label>
+            <div class="hero-search-shell" id="hero-search-shell">
+              <i data-lucide="search" class="hero-search-icon"></i>
+              <input id="hero-search-input" class="search-input hero-search-input" type="text" placeholder="搜索书签、文件夹或 Web" />
+              <div class="hero-search-actions">
+                <button class="hero-icon-btn hero-clear-btn" id="hero-clear-btn" type="button" title="清除">
+                  <i data-lucide="x"></i>
+                </button>
+                <button class="hero-engine-btn" id="hero-engine-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+                  <span class="engine-prefix">Web</span>
+                  <span class="engine-name" id="hero-engine-label">Google</span>
+                  <i data-lucide="chevron-down"></i>
+                </button>
+                <button class="hero-icon-btn hero-filter-btn" id="hero-filter-btn" type="button" title="高级筛选" aria-haspopup="dialog" aria-expanded="false">
+                  <i data-lucide="sliders-horizontal"></i>
+                </button>
+              </div>
+            </div>
+            <div class="hero-search-hint">回车：默认搜索 · Shift+回车：Web 搜索 · 右侧切换引擎</div>
+          </form>
+
+          <div class="hero-operators" aria-label="可选的搜索语法">
+            <div class="hero-operators-label">可选的搜索语法</div>
+            <div class="hero-operator-chips">
+              <button class="chip operator-chip" type="button" data-insert="&quot;&quot;" data-cursor="-1" data-wrap-start="&quot;" data-wrap-end="&quot;" data-tooltip="完全匹配">"" 精确</button>
+              <button class="chip operator-chip" type="button" data-insert="site:" data-tooltip="指定站点">site:</button>
+              <button class="chip operator-chip" type="button" data-insert="intitle:" data-tooltip="标题包含关键词">intitle:</button>
+              <button class="chip operator-chip" type="button" data-insert="inurl:" data-tooltip="URL 包含关键词">inurl:</button>
+              <button class="chip operator-chip" type="button" data-insert="filetype:" data-tooltip="指定文件格式">filetype:</button>
+              <button class="chip operator-chip" type="button" data-insert="intext:" data-tooltip="正文包含关键词">intext:</button>
+              <button class="chip operator-chip" type="button" data-insert="related:" data-tooltip="查找相似网站">related:</button>
+              <button class="chip operator-chip" type="button" data-insert="cache:" data-tooltip="查看缓存快照">cache:</button>
+              <button class="chip operator-chip" type="button" data-insert="define:" data-tooltip="查看定义">define:</button>
+              <button class="chip operator-chip" type="button" data-insert=" OR " data-tooltip="逻辑 OR">OR</button>
+              <button class="chip operator-chip" type="button" data-insert=" AROUND(4) " data-tooltip="关键词距离">AROUND(4)</button>
+              <button class="chip operator-chip" type="button" data-insert=" -" data-tooltip="排除结果">- 排除</button>
+            </div>
+          </div>
+
+          <div class="hero-suggestions hidden" id="hero-suggestions">
+            <div class="suggestion-group" data-group="recent">
+              <div class="suggestion-title">最近访问</div>
+              <div class="suggestion-list" id="suggestion-recent"></div>
+            </div>
+            <div class="suggestion-group" data-group="bookmarks">
+              <div class="suggestion-title">书签</div>
+              <div class="suggestion-list" id="suggestion-bookmarks"></div>
+            </div>
+            <div class="suggestion-group" data-group="folders">
+              <div class="suggestion-title">文件夹</div>
+              <div class="suggestion-list" id="suggestion-folders"></div>
+            </div>
+            <div class="suggestion-group" data-group="tags">
+              <div class="suggestion-title">标签</div>
+              <div class="suggestion-list" id="suggestion-tags"></div>
+            </div>
+            <div class="suggestion-group" data-group="web">
+              <div class="suggestion-title">Web</div>
+              <div class="suggestion-list" id="suggestion-web"></div>
+            </div>
+          </div>
+
+          <div class="hero-popover engine-popover hidden" id="engine-popover" role="listbox">
+            <div class="popover-title">搜索引擎</div>
+            <div class="engine-options">
+              <button class="engine-option active" type="button" data-engine="google" data-template="https://www.google.com/search?q={query}" data-home="https://www.google.com/" data-tooltip="全网综合 / 技术">Google</button>
+              <button class="engine-option" type="button" data-engine="bing" data-template="https://www.bing.com/search?q={query}" data-home="https://www.bing.com/" data-tooltip="综合搜索 / 国际">Bing</button>
+              <button class="engine-option" type="button" data-engine="duckduckgo" data-template="https://duckduckgo.com/?q={query}" data-home="https://duckduckgo.com/" data-tooltip="隐私优先">DuckDuckGo</button>
+              <button class="engine-option" type="button" data-engine="yahoo" data-template="https://sg.search.yahoo.com/search?p={query}" data-home="https://sg.search.yahoo.com/" data-tooltip="综合门户 / 新闻">Yahoo</button>
+              <button class="engine-option" type="button" data-engine="baidu" data-template="https://www.baidu.com/s?wd={query}" data-home="https://www.baidu.com/" data-tooltip="中文内容 / 综合搜索">Baidu</button>
+              <button class="engine-option" type="button" data-engine="sogou" data-template="https://www.sogou.com/web?query={query}" data-home="https://www.sogou.com/" data-tooltip="中文内容 / 资讯">Sogou</button>
+              <button class="engine-option" type="button" data-engine="weixin" data-template="https://weixin.sogou.com/weixin?query={query}" data-home="https://weixin.sogou.com/" data-tooltip="微信公众号 / 文章">微信搜狗</button>
+              <button class="engine-option" type="button" data-engine="wolfram" data-template="https://www.wolframalpha.com/input?i={query}" data-home="https://www.wolframalpha.com/" data-tooltip="计算 / 知识引擎">WolframAlpha</button>
+            </div>
+          </div>
+
+          <div class="hero-popover filter-popover hidden" id="filter-popover" role="dialog">
+            <div class="popover-title">高级筛选</div>
+            <div class="filter-grid">
+              <label class="filter-toggle"><input type="checkbox" id="filter-current-folder"> 当前文件夹</label>
+              <label class="filter-toggle"><input type="checkbox" id="filter-only-pinned"> 仅置顶</label>
+              <label class="filter-toggle"><input type="checkbox" id="filter-uncategorized"> 未分类</label>
+              <label class="filter-field">
+                <span>标签</span>
+                <input type="text" id="filter-tags" placeholder="输入标签">
+              </label>
+              <label class="filter-field">
+                <span>域名</span>
+                <input type="text" id="filter-domain" placeholder="输入域名">
+              </label>
+            </div>
+            <div class="filter-actions">
+              <button class="btn btn-ghost btn-sm" id="clear-filters-btn" type="button">清空筛选</button>
+            </div>
+            <div class="filter-operators">
+              <div class="filter-subtitle">高级语法</div>
+              <div class="operator-chips">
+                <button class="chip operator-chip" type="button" data-insert="&quot;&quot;" data-cursor="-1" data-wrap-start="&quot;" data-wrap-end="&quot;">"" 精确</button>
+                <button class="chip operator-chip" type="button" data-insert="site:">site:</button>
+                <button class="chip operator-chip" type="button" data-insert="intitle:">intitle:</button>
+                <button class="chip operator-chip" type="button" data-insert="inurl:">inurl:</button>
+                <button class="chip operator-chip" type="button" data-insert="filetype:">filetype:</button>
+                <button class="chip operator-chip" type="button" data-insert=" -">- 排除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-launch">
+          <div class="quick-launch-header">
+            <span class="quick-launch-title">Google应用/网页应用</span>
+            <a class="quick-launch-customize" href="options.html">自定义</a>
+          </div>
+          <div class="quick-launch-grid">
+            <a class="app-tile" data-app="gmail" href="https://mail.google.com/" target="_blank" rel="noopener">
+              <img class="app-icon" src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_32dp.png" alt="Gmail">
+              <span class="app-tile-label">Gmail</span>
+            </a>
+            <a class="app-tile" data-app="drive" href="https://drive.google.com/" target="_blank" rel="noopener">
+              <img class="app-icon" src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_32dp.png" alt="Drive">
+              <span class="app-tile-label">Drive</span>
+            </a>
+            <a class="app-tile" data-app="calendar" href="https://calendar.google.com/" target="_blank" rel="noopener">
+              <img class="app-icon" src="https://www.gstatic.com/images/branding/product/1x/calendar_2020q4_32dp.png" alt="Calendar">
+              <span class="app-tile-label">Calendar</span>
+            </a>
+            <a class="app-tile" data-app="maps" href="https://maps.google.com/" target="_blank" rel="noopener">
+              <img class="app-icon" src="https://www.gstatic.com/images/branding/product/1x/maps_2020q4_32dp.png" alt="Maps">
+              <span class="app-tile-label">Maps</span>
+            </a>
+            <a class="app-tile" data-app="youtube" href="https://www.youtube.com/" target="_blank" rel="noopener">
+              <img class="app-icon" src="https://www.gstatic.com/images/branding/product/1x/youtube_2020q4_32dp.png" alt="YouTube">
+              <span class="app-tile-label">YouTube</span>
+            </a>
+            <a class="app-tile" data-app="photos" href="https://photos.google.com/" target="_blank" rel="noopener">
+              <img class="app-icon" src="https://www.gstatic.com/images/branding/product/1x/photos_2020q4_32dp.png" alt="Photos">
+              <span class="app-tile-label">Photos</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <div class="dashboard-grid">
 
       <!-- ==========================
            左侧边栏 (Left Sidebar)
            ========================== -->
       <aside class="left-sidebar">
-        <!-- 文件夹组件 -->
-        <div class="widget" id="folders-widget">
-          <div class="widget-header">
-            <i data-lucide="folder" class="widget-icon"></i>
-            <h2 class="widget-title">文件夹</h2>
-            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
-          </div>
-          <ul class="folder-list" id="folder-list">
-            <!-- 动态填充 -->
-          </ul>
+        <div class="sidebar-tabs" role="tablist" aria-label="侧边栏切换">
+          <button class="sidebar-tab active" data-panel="folders" type="button">文件夹</button>
+          <button class="sidebar-tab" data-panel="tags" type="button">标签</button>
+          <button class="sidebar-tab" data-panel="smart" type="button">智能</button>
         </div>
 
-        <!-- 标签组件 -->
-        <div class="widget" id="tags-widget">
-          <div class="widget-header">
-            <i data-lucide="tag" class="widget-icon"></i>
-            <h2 class="widget-title">标签</h2>
-            <button class="clear-tags-btn" id="clear-tags-btn" title="清除标签筛选">
-              <i data-lucide="x"></i>
-            </button>
-            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
-          </div>
-          <div class="tags-container" id="tags-container">
-            <!-- 动态填充 -->
-          </div>
-        </div>
+        <div class="sidebar-panels">
+          <div class="sidebar-panel active" data-panel="folders">
+            <!-- 文件夹组件 -->
+            <div class="widget" id="folders-widget">
+              <div class="widget-header">
+                <i data-lucide="folder" class="widget-icon"></i>
+                <h2 class="widget-title">文件夹</h2>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <ul class="folder-list" id="folder-list">
+                <!-- 动态填充 -->
+              </ul>
+            </div>
 
-        <!-- 时钟组件 -->
-        <div class="widget clock-widget" id="clock-widget" data-clock-style="minimal">
-          <div class="widget-header">
-            <i data-lucide="clock" class="widget-icon"></i>
-            <h2 class="widget-title">世界时钟</h2>
-            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+            <!-- 时钟组件 -->
+            <div class="widget clock-widget" id="clock-widget" data-clock-style="minimal">
+              <div class="widget-header">
+                <i data-lucide="clock" class="widget-icon"></i>
+                <h2 class="widget-title">世界时钟</h2>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <div class="clock-time" id="current-time-large">--:--</div>
+              <div class="clock-date" id="current-date">--</div>
+            </div>
           </div>
-          <div class="clock-time" id="current-time-large">--:--</div>
-          <div class="clock-date" id="current-date">--</div>
+
+          <div class="sidebar-panel" data-panel="tags">
+            <!-- 标签组件 -->
+            <div class="widget" id="tags-widget">
+              <div class="widget-header">
+                <i data-lucide="tag" class="widget-icon"></i>
+                <h2 class="widget-title">标签</h2>
+                <button class="clear-tags-btn" id="clear-tags-btn" title="清除标签筛选">
+                  <i data-lucide="x"></i>
+                </button>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <div class="tags-container" id="tags-container">
+                <!-- 动态填充 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-panel" data-panel="smart">
+            <!-- 常用书签组件 -->
+            <div class="widget" id="frequent-bookmarks-widget">
+              <div class="widget-header">
+                <i data-lucide="bookmark" class="widget-icon"></i>
+                <h2 class="widget-title">常用书签</h2>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <div class="frequent-list" id="frequent-bookmarks-list">
+                <!-- 动态填充 -->
+              </div>
+            </div>
+
+            <!-- 常用域名组件 -->
+            <div class="widget" id="domains-widget">
+              <div class="widget-header">
+                <i data-lucide="globe" class="widget-icon"></i>
+                <h2 class="widget-title">常用域名</h2>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <div class="domains-list" id="top-domains-list">
+                <!-- 动态填充 -->
+              </div>
+            </div>
+
+            <!-- AI分析工具组件 -->
+            <div class="widget ai-tools-widget" id="ai-tools-widget">
+              <div class="widget-header">
+                <i data-lucide="brain" class="widget-icon"></i>
+                <h2 class="widget-title">AI 工具</h2>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <div class="ai-tools-grid">
+                <button class="ai-tool-btn" id="analyze-bookmarks-btn" title="分析和分类书签">
+                  <i data-lucide="zap"></i>
+                  <span>智能分析</span>
+                </button>
+                <button class="ai-tool-btn" id="detect-duplicates-btn" title="查找重复书签">
+                  <i data-lucide="copy"></i>
+                  <span>查找重复</span>
+                </button>
+                <button class="ai-tool-btn" id="check-broken-btn" title="检查失效链接">
+                  <i data-lucide="link-off"></i>
+                  <span>检查链接</span>
+                </button>
+                <button class="ai-tool-btn" id="clean-folders-btn" title="清理空文件夹">
+                  <i data-lucide="folder-minus"></i>
+                  <span>清理文件夹</span>
+                </button>
+                <button class="ai-tool-btn" id="generate-report-btn" title="生成检测报告">
+                  <i data-lucide="file-text"></i>
+                  <span>生成报告</span>
+                </button>
+              </div>
+              <div class="ai-status" id="ai-status">
+                <span class="status-text">准备就绪</span>
+              </div>
+            </div>
+
+            <!-- 快速笔记组件 -->
+            <div class="widget notes-widget" id="notes-widget">
+              <div class="widget-header">
+                <i data-lucide="sticky-note" class="widget-icon"></i>
+                <h2 class="widget-title">快速笔记</h2>
+                <div class="notes-actions">
+                  <button class="notes-action-btn" id="clear-notes-btn" title="清空笔记">
+                    <i data-lucide="trash-2"></i>
+                  </button>
+                  <button class="notes-action-btn" id="export-notes-btn" title="导出笔记">
+                    <i data-lucide="download"></i>
+                  </button>
+                </div>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <textarea class="notes-textarea" id="quick-notes" placeholder="点击添加您的快速笔记..."></textarea>
+              <div class="notes-footer">
+                <span class="notes-char-count" id="notes-char-count">0 字符</span>
+                <span class="notes-status" id="notes-status">已保存</span>
+              </div>
+            </div>
+
+            <!-- 统计数据组件（弱化展示） -->
+            <div class="widget stats-widget hidden" id="stats-widget">
+              <div class="widget-header">
+                <i data-lucide="bar-chart-3" class="widget-icon"></i>
+                <h2 class="widget-title">统计数据</h2>
+                <button class="stats-action-btn" id="view-detailed-stats" title="查看详细统计">
+                  <i data-lucide="external-link"></i>
+                </button>
+                <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
+              </div>
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <div class="stat-value" id="total-bookmarks">0</div>
+                  <div class="stat-label">书签总数</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value" id="total-folders">0</div>
+                  <div class="stat-label">文件夹</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value" id="unique-domains">0</div>
+                  <div class="stat-label">独立域名</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value" id="recent-added">0</div>
+                  <div class="stat-label">本周新增</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -119,130 +413,37 @@
            主内容区 (Main Content)
            ========================== -->
       <main class="bookmarks-section">
-        <div class="bookmarks-toolbar" style="display: flex; align-items: center; justify-content: space-between;">
-          <h2 class="section-title" style="margin: 0;">最近书签</h2>
-          <div class="view-toggle">
-            <button class="toggle-btn active" data-view="grid" title="网格视图"><i data-lucide="layout-grid"></i></button>
-            <button class="toggle-btn" data-view="list" title="列表视图"><i data-lucide="list"></i></button>
+        <div class="bookmarks-toolbar">
+          <div class="bookmarks-title-row">
+            <h2 class="section-title" style="margin: 0;">书签</h2>
+          </div>
+          <div class="folder-quick-row">
+            <div class="folder-quick-list" id="folder-quick-list"></div>
+            <button class="folder-quick-edit" id="folder-quick-edit" type="button" title="编辑显示文件夹">
+              <i data-lucide="edit"></i>
+            </button>
+            <div class="folder-quick-popover hidden" id="folder-quick-popover" role="dialog">
+              <div class="popover-title">选择显示文件夹</div>
+              <div class="folder-quick-options" id="folder-quick-options"></div>
+            </div>
           </div>
         </div>
-        <div class="bookmarks-grid" id="bookmarks-grid">
-          <!-- 动态填充 -->
+        <div class="bookmarks-carousel" id="bookmarks-carousel">
+          <div class="bookmarks-grid" id="bookmarks-grid">
+            <!-- 动态填充 -->
+          </div>
         </div>
+        <div class="bookmarks-pagination hidden" id="bookmarks-pagination" aria-label="分页"></div>
       </main>
 
       <!-- ==========================
            右侧边栏 (Right Sidebar)
            ========================== -->
-      <aside class="right-sidebar">
-        <!-- 常用书签组件 -->
-        <div class="widget" id="frequent-bookmarks-widget">
-          <div class="widget-header">
-            <i data-lucide="bookmark" class="widget-icon"></i>
-            <h2 class="widget-title">常用书签</h2>
-            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
-          </div>
-          <div class="frequent-list" id="frequent-bookmarks-list">
-            <!-- 动态填充 -->
-          </div>
-        </div>
-
-        <!-- 数据统计组件 -->
-        <div class="widget" id="stats-widget">
-          <div class="widget-header">
-            <i data-lucide="bar-chart-3" class="widget-icon"></i>
-            <h2 class="widget-title">统计数据</h2>
-            <button class="stats-action-btn" id="view-detailed-stats" title="查看详细统计">
-              <i data-lucide="external-link"></i>
-            </button>
-            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-value" id="total-bookmarks">0</div>
-              <div class="stat-label">书签总数</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value" id="total-folders">0</div>
-              <div class="stat-label">文件夹</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value" id="unique-domains">0</div>
-              <div class="stat-label">独立域名</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value" id="recent-added">0</div>
-              <div class="stat-label">本周新增</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 常用域名组件 -->
-        <div class="widget" id="domains-widget">
-            <div class="widget-header">
-              <i data-lucide="globe" class="widget-icon"></i>
-              <h2 class="widget-title">常用域名</h2>
-              <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
-            </div>
-            <div class="domains-list" id="top-domains-list">
-              <!-- 动态填充 -->
-            </div>
-        </div>
-
-        <!-- AI分析工具组件 -->
-        <div class="widget" id="ai-tools-widget">
-          <div class="widget-header">
-            <i data-lucide="brain" class="widget-icon"></i>
-            <h2 class="widget-title">AI 工具</h2>
-            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
-          </div>
-          <div class="ai-tools-grid">
-            <button class="ai-tool-btn" id="analyze-bookmarks-btn" title="分析和分类书签">
-              <i data-lucide="zap"></i>
-              <span>智能分析</span>
-            </button>
-            <button class="ai-tool-btn" id="detect-duplicates-btn" title="查找重复书签">
-              <i data-lucide="copy"></i>
-              <span>查找重复</span>
-            </button>
-            <button class="ai-tool-btn" id="check-broken-btn" title="检查失效链接">
-              <i data-lucide="link-off"></i>
-              <span>检查链接</span>
-            </button>
-            <button class="ai-tool-btn" id="clean-folders-btn" title="清理空文件夹">
-              <i data-lucide="folder-minus"></i>
-              <span>清理文件夹</span>
-            </button>
-            <button class="ai-tool-btn" id="generate-report-btn" title="生成检测报告">
-              <i data-lucide="file-text"></i>
-              <span>生成报告</span>
-            </button>
-          </div>
-          <div class="ai-status" id="ai-status">
-            <span class="status-text">准备就绪</span>
-          </div>
-        </div>
-
-        <!-- 快速笔记组件 -->
-        <div class="widget" id="notes-widget">
-          <div class="widget-header">
-            <i data-lucide="sticky-note" class="widget-icon"></i>
-            <h2 class="widget-title">快速笔记</h2>
-            <div class="notes-actions">
-              <button class="notes-action-btn" id="clear-notes-btn" title="清空笔记">
-                <i data-lucide="trash-2"></i>
-              </button>
-              <button class="notes-action-btn" id="export-notes-btn" title="导出笔记">
-                <i data-lucide="download"></i>
-              </button>
-            </div>
-            <i data-lucide="grip-vertical" class="widget-drag-handle"></i>
-          </div>
-          <textarea class="notes-textarea" id="quick-notes" placeholder="点击添加您的快速笔记..."></textarea>
-          <div class="notes-footer">
-            <span class="notes-char-count" id="notes-char-count">0 字符</span>
-            <span class="notes-status" id="notes-status">已保存</span>
-          </div>
+      <aside class="right-sidebar inspector-sidebar" aria-label="详情面板">
+        <div class="inspector-placeholder">
+          <div class="inspector-title">详情面板</div>
+          <p class="inspector-subtitle">选择书签以查看详情与编辑操作</p>
+          <div class="inspector-tip">默认隐藏 · 悬停右侧边缘显示</div>
         </div>
       </aside>
     </div>
@@ -289,4 +490,3 @@
   </script>
 </body>
 </html>
-

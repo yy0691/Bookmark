@@ -561,9 +561,8 @@ export class VisualizationService {
       return;
     }
 
-    const fragment = document.createDocumentFragment();
-    bookmarks.forEach(bookmark => {
-      if (!bookmark.url) return; // 只渲染书签，不渲染文件夹
+    const createBookmarkItem = (bookmark) => {
+      if (!bookmark?.url) return null; // 只渲染书签，不渲染文件夹
 
       const item = document.createElement('a');
       item.href = bookmark.url;
@@ -586,10 +585,6 @@ export class VisualizationService {
       const tagsHtml = tags.length > 0 ? 
         `<div class="bookmark-tags">${tags.map(tag => `<span class="bookmark-tag">${tag}</span>`).join('')}</div>` : '';
 
-      // Create favicon using DuckDuckGo's favicon service (more reliable than Google)
-      const faviconContainer = document.createElement('div');
-      faviconContainer.className = 'favicon-container';
-      
       // Use DuckDuckGo's favicon service for better reliability and privacy
       const domain = new URL(bookmark.url).hostname;
       const faviconUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
@@ -615,11 +610,47 @@ export class VisualizationService {
         });
         document.dispatchEvent(contextMenuEvent);
       });
-      
-      fragment.appendChild(item);
-    });
+
+      return item;
+    };
 
     container.innerHTML = ''; // 清空旧内容
+
+    if (view === 'grid') {
+      const pageSize = 24;
+      const pagesFragment = document.createDocumentFragment();
+      let pageEl = null;
+      let pageGrid = null;
+      let count = 0;
+
+      bookmarks.forEach(bookmark => {
+        const item = createBookmarkItem(bookmark);
+        if (!item) return;
+
+        if (count % pageSize === 0) {
+          pageEl = document.createElement('div');
+          pageEl.className = 'bookmark-page';
+          pageGrid = document.createElement('div');
+          pageGrid.className = 'bookmark-page-grid';
+          pageEl.appendChild(pageGrid);
+          pagesFragment.appendChild(pageEl);
+        }
+
+        pageGrid.appendChild(item);
+        count += 1;
+      });
+
+      container.appendChild(pagesFragment);
+      this.log(`成功渲染 ${bookmarks.length} 个书签到容器`, 'success');
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    bookmarks.forEach(bookmark => {
+      const item = createBookmarkItem(bookmark);
+      if (item) fragment.appendChild(item);
+    });
+
     container.appendChild(fragment);
     this.log(`成功渲染 ${bookmarks.length} 个书签到容器`, 'success');
   }
