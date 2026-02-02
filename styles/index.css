@@ -2080,6 +2080,8 @@ body.layout-focus .navbar-left:focus-within .navbar-links {
 .hero-operators .chip {
   opacity: 0.35;
   transition: opacity var(--transition-normal), transform var(--transition-normal);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
 }
 
 .hero-search-stack:hover .hero-operators .chip,
