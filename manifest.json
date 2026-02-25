@@ -33,7 +33,7 @@
     "128": "images/icon128.svg"
   },
   "chrome_url_overrides": {
-    "newtab": "pages/newtab/index.html"
+    "newtab": "pages/newtab/newtab-minimal.html"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

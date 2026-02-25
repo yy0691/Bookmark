@@ -1,685 +1,428 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>书签助手</title>
   <link rel="icon" type="image/svg+xml" href="images/icon.svg">
-  <link rel="stylesheet" href="styles/index.css">
+  <link rel="stylesheet" href="styles/apple-design-system.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      width: 420px;
+      width: 400px;
       min-height: 520px;
-      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-      color: #1d1d1f;
-      line-height: 1.5;
       overflow-x: hidden;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform;
     }
 
-    .container {
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+    .popup-container {
       padding: 20px;
-      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      position: relative;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform, opacity;
+      min-height: 100vh;
     }
 
-    .container::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-    }
-
-    .header {
+    /* Header */
+    .popup-header {
       display: flex;
       align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--apple-divider);
     }
 
-    .logo {
-      width: 40px;
-      height: 40px;
-      margin-right: 12px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform;
+    .popup-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .logo:hover {
-      transform: translateZ(0) scale(1.05);
+    .popup-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
     }
 
-    h1 {
-      font-size: 20px;
+    .popup-title {
+      font-size: 18px;
       font-weight: 600;
-      color: #1d1d1f;
-      letter-spacing: -0.3px;
+      color: var(--apple-text);
     }
 
-    .quick-stats {
+    /* API Status */
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .api-connected {
+      background: var(--apple-success-bg);
+      color: var(--apple-success);
+    }
+
+    .api-not-connected {
+      background: var(--apple-danger-bg);
+      color: var(--apple-danger);
+    }
+
+    .api-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Stats */
+    .popup-stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       margin-bottom: 20px;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform, opacity;
     }
 
-    .stat-card {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      padding: 8px;
+    .popup-stat {
+      background: var(--apple-bg-tertiary);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-md);
+      padding: 10px 8px;
       text-align: center;
-      font-size: 11px;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform;
     }
 
-    .stat-number {
-      font-size: 16px;
-      font-weight: 600;
-      color: #007aff;
+    .popup-stat-value {
       display: block;
-    }
-
-    .stat-label {
-      color: #6e6e73;
-      font-size: 10px;
-    }
-
-    .category {
-      margin-bottom: 20px;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform, opacity;
-    }
-
-    .category-title {
-      font-size: 12px;
+      font-size: 20px;
       font-weight: 600;
-      color: #6e6e73;
-      margin-bottom: 8px;
-      padding-left: 4px;
+      color: var(--apple-accent);
+      letter-spacing: -0.3px;
+    }
+
+    .popup-stat-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--apple-text-secondary);
+      margin-top: 2px;
+    }
+
+    /* Category Section */
+    .popup-section {
+      margin-bottom: 16px;
+    }
+
+    .popup-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--apple-text-tertiary);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      padding-left: 2px;
+    }
+
+    .popup-section-grid {
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 6px;
     }
 
-    .btn {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #1d1d1f;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      width: 100%;
-      margin-bottom: 8px;
+    /* Button */
+    .popup-btn {
       display: flex;
       align-items: center;
-      justify-content: flex-start;
       gap: 10px;
-      text-align: left;
-      position: relative;
-      overflow: hidden;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform, background-color, box-shadow;
-    }
-
-    /* 优化悬停效果，减少重绘 */
-    .btn::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
       width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform;
-    }
-
-    .btn:hover::before {
-      left: 100%;
-    }
-
-    .btn:hover {
-      background: rgba(255, 255, 255, 0.4);
-      transform: translateZ(0) translateY(-1px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    }
-
-    .btn:active {
-      transform: translateZ(0) translateY(0);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
-      color: white;
-      border: none;
-      font-weight: 600;
-    }
-
-    .btn-primary:hover {
-      background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
-      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
-    }
-
-    .btn-success {
-      background: linear-gradient(135deg, #30d158 0%, #00c896 100%);
-      color: white;
-      border: none;
-      font-weight: 600;
-    }
-
-    .btn-success:hover {
-      background: linear-gradient(135deg, #28a745 0%, #00a67a 100%);
-      box-shadow: 0 6px 20px rgba(48, 209, 88, 0.3);
-    }
-
-    .btn-warning {
-      background: linear-gradient(135deg, #ff9500 0%, #ffb347 100%);
-      color: white;
-      border: none;
-      font-weight: 600;
-    }
-
-    .btn-warning:hover {
-      background: linear-gradient(135deg, #e68500 0%, #e6a040 100%);
-      box-shadow: 0 6px 20px rgba(255, 149, 0, 0.3);
-    }
-
-    .btn-danger {
-      background: linear-gradient(135deg, #ff3b30 0%, #ff6b6b 100%);
-      color: white;
-      border: none;
-      font-weight: 600;
-    }
-
-    .btn-danger:hover {
-      background: linear-gradient(135deg, #dc3545 0%, #e55a5a 100%);
-      box-shadow: 0 6px 20px rgba(255, 59, 48, 0.3);
-    }
-
-    .btn-secondary {
-      background: rgba(142, 142, 147, 0.3);
-      color: #1d1d1f;
-      border: 1px solid rgba(142, 142, 147, 0.4);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(142, 142, 147, 0.4);
-    }
-
-    .btn-icon {
-      font-size: 16px;
-      min-width: 20px;
-      text-align: center;
-    }
-
-    .btn-text {
-      flex: 1;
-    }
-
-    .btn-badge {
-      background: rgba(255, 255, 255, 0.2);
-      color: inherit;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-size: 10px;
-      font-weight: 600;
-    }
-
-    .api-status {
-      margin-top: auto;
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 10px;
-      font-size: 12px;
-      text-align: center;
+      padding: 10px 14px;
+      background: var(--apple-bg-tertiary);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-sm);
+      font-size: 13px;
       font-weight: 500;
+      font-family: var(--apple-font);
+      color: var(--apple-text);
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--apple-duration-fast) var(--apple-ease);
+    }
+
+    .popup-btn:hover {
+      background: var(--apple-bg-hover);
+      border-color: var(--apple-border-focus);
+      transform: translateY(-0.5px);
+      box-shadow: var(--apple-shadow-sm);
+    }
+
+    .popup-btn:active {
+      transform: translateY(0) scale(0.99);
+    }
+
+    .popup-btn.loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .popup-btn-icon {
+      width: 28px;
+      height: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform, opacity;
+      border-radius: 7px;
+      flex-shrink: 0;
     }
 
-    .api-connected {
-      color: #30d158;
-    }
-
-    .api-not-connected {
-      color: #ff3b30;
-    }
-
-    .api-status-icon {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      /* 优化脉冲动画，使用更高效的属性 */
-      animation: pulse 2s ease-in-out infinite;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: opacity;
-    }
-
-    .api-connected .api-status-icon {
-      background: #30d158;
-    }
-
-    .api-not-connected .api-status-icon {
-      background: #ff3b30;
-    }
-
-    .footer {
-      margin-top: 12px;
-      text-align: center;
-      font-size: 11px;
-      color: rgba(29, 29, 31, 0.6);
-      font-weight: 500;
-    }
-
-    /* 优化动画效果 - 使用更高效的属性 */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateZ(0) translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateZ(0) translateY(0);
-      }
-    }
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateZ(0) translateX(50px);
-      }
-      to {
-        opacity: 1;
-        transform: translateZ(0) translateX(0);
-      }
-    }
-
-    /* 优化脉冲动画，只使用opacity */
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: 0.4;
-      }
-    }
-
-    /* 优化旋转动画 */
-    @keyframes spin {
-      0% { 
-        transform: translateZ(0) rotate(0deg); 
-      }
-      100% { 
-        transform: translateZ(0) rotate(360deg); 
-      }
-    }
-
-    /* 减少动画延迟，提高响应速度 */
-    .container {
-      animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .quick-stats {
-      animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      animation-delay: 0.05s;
-      animation-fill-mode: both;
-    }
-
-    .category {
-      animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      animation-fill-mode: both;
-    }
-
-    .category:nth-child(3) {
-      animation-delay: 0.08s;
-    }
-
-    .category:nth-child(4) {
-      animation-delay: 0.12s;
-    }
-
-    .category:nth-child(5) {
-      animation-delay: 0.16s;
-    }
-
-    .category:nth-child(6) {
-      animation-delay: 0.2s;
-    }
-
-    .api-status {
-      animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      animation-delay: 0.25s;
-      animation-fill-mode: both;
-    }
-
-    /* 响应式调整 */
-    @media (max-height: 400px) {
-      .container {
-        padding: 16px;
-      }
-      
-      .header {
-        margin-bottom: 16px;
-      }
-      
-      .quick-stats {
-        margin-bottom: 16px;
-      }
-      
-      .btn {
-        padding: 10px 16px;
-        font-size: 12px;
-        margin-bottom: 6px;
-      }
-      
-      .api-status {
-        margin-top: 12px;
-        padding: 8px 12px;
-      }
-    }
-
-    /* 优化加载状态 */
-    .loading {
-      opacity: 0.6;
-      pointer-events: none;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: opacity;
-    }
-
-    .loading::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
+    .popup-btn-icon svg {
       width: 16px;
       height: 16px;
-      margin: -8px 0 0 -8px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top: 2px solid #007aff;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      /* 启用硬件加速 */
-      transform: translateZ(0);
-      will-change: transform;
     }
 
-    /* 性能优化：减少重绘和回流 */
-    .btn,
-    .stat-card,
-    .category {
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
+    .popup-btn-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    /* 优化渐变背景，避免重复计算 */
-    .btn-primary,
-    .btn-success,
-    .btn-warning,
-    .btn-danger {
-      background-attachment: fixed;
+    .popup-btn-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 8px;
+      flex-shrink: 0;
     }
 
-    /* 减少阴影复杂度 */
-    .btn:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    /* Icon background colors */
+    .icon-blue {
+      background: var(--apple-accent-bg);
+      color: var(--apple-accent);
     }
 
-    .btn-primary:hover {
-      box-shadow: 0 6px 16px rgba(0, 122, 255, 0.25);
+    .icon-green {
+      background: var(--apple-success-bg);
+      color: var(--apple-success);
     }
 
-    .btn-success:hover {
-      box-shadow: 0 6px 16px rgba(48, 209, 88, 0.25);
+    .icon-orange {
+      background: var(--apple-warning-bg);
+      color: var(--apple-warning);
     }
 
-    .btn-warning:hover {
-      box-shadow: 0 6px 16px rgba(255, 149, 0, 0.25);
+    .icon-red {
+      background: var(--apple-danger-bg);
+      color: var(--apple-danger);
     }
 
-    .btn-danger:hover {
-      box-shadow: 0 6px 16px rgba(255, 59, 48, 0.25);
+    .icon-purple {
+      background: var(--apple-info-bg);
+      color: var(--apple-info);
     }
 
-    /* 添加动画性能检测 */
+    .badge-blue {
+      background: var(--apple-accent-bg);
+      color: var(--apple-accent);
+    }
+
+    .badge-green {
+      background: var(--apple-success-bg);
+      color: var(--apple-success);
+    }
+
+    .badge-orange {
+      background: var(--apple-warning-bg);
+      color: var(--apple-warning);
+    }
+
+    /* Primary action button */
+    .popup-btn-primary {
+      background: var(--apple-accent);
+      border-color: transparent;
+      color: #ffffff;
+    }
+
+    .popup-btn-primary:hover {
+      background: var(--apple-accent-hover);
+      border-color: transparent;
+    }
+
+    .popup-btn-primary .popup-btn-icon {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+    }
+
+    .popup-btn-primary .popup-btn-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+
+    /* Footer */
+    .popup-footer {
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--apple-divider);
+      text-align: center;
+      font-size: 11px;
+      color: var(--apple-text-tertiary);
+    }
+
     @media (prefers-reduced-motion: reduce) {
+
       *,
       *::before,
       *::after {
         animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
-      }
-    }
-
-    /* 高刷新率屏幕优化 */
-    @media (min-resolution: 2dppx) {
-      .btn {
-        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      
-      .logo {
-        transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
       }
     }
   </style>
 </head>
+
 <body>
-  <div class="container">
-    <div class="header">
-      <img src="images/icon.svg" alt="书签助手" class="logo">
-      <h1>书签助手</h1>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="popup-header-left">
+        <img src="images/icon.svg" alt="书签助手" class="popup-logo">
+        <span class="popup-title">书签助手</span>
+      </div>
+      <div class="api-status" id="api-status-container">
+        <span class="api-status-dot"></span>
+        <span id="api-status-text">检查中...</span>
+      </div>
     </div>
 
     <!-- 快速统计 -->
-    <div class="quick-stats">
-      <div class="stat-card">
-        <span class="stat-number" id="total-bookmarks">-</span>
-        <span class="stat-label">总书签</span>
+    <div class="popup-stats">
+      <div class="popup-stat">
+        <span class="popup-stat-value" id="total-bookmarks">-</span>
+        <span class="popup-stat-label">总书签</span>
       </div>
-      <div class="stat-card">
-        <span class="stat-number" id="total-folders">-</span>
-        <span class="stat-label">文件夹</span>
+      <div class="popup-stat">
+        <span class="popup-stat-value" id="total-folders">-</span>
+        <span class="popup-stat-label">文件夹</span>
       </div>
-      <div class="stat-card">
-        <span class="stat-number" id="duplicate-count">-</span>
-        <span class="stat-label">重复</span>
+      <div class="popup-stat">
+        <span class="popup-stat-value" id="duplicate-count">-</span>
+        <span class="popup-stat-label">重复</span>
       </div>
     </div>
 
-    <!-- AI智能中枢 -->
-    <div class="category">
-      <div class="category-title">
-        <span>🤖</span>
-        <span>AI智能中枢</span>
+    <!-- AI 智能 -->
+    <div class="popup-section">
+      <div class="popup-section-title">AI 智能</div>
+      <div class="popup-section-grid">
+        <button id="open-ai-hub" class="popup-btn popup-btn-primary">
+          <span class="popup-btn-icon" data-icon="rocket" data-icon-size="16"></span>
+          <span class="popup-btn-text">AI 智能中枢</span>
+          <span class="popup-btn-badge">NEW</span>
+        </button>
+        <button id="quick-analysis" class="popup-btn">
+          <span class="popup-btn-icon icon-green" data-icon="zap" data-icon-size="16"></span>
+          <span class="popup-btn-text">快速 AI 分析</span>
+        </button>
       </div>
-      <button id="open-ai-hub" class="btn btn-primary">
-        <span class="btn-icon">🚀</span>
-        <span class="btn-text">AI智能中枢</span>
-        <span class="btn-badge">新功能</span>
-      </button>
-      <button id="quick-analysis" class="btn btn-success">
-        <span class="btn-icon">⚡</span>
-        <span class="btn-text">快速AI分析</span>
-      </button>
     </div>
 
-    <!-- 主要功能分类 -->
-    <div class="category">
-      <div class="category-title">
-        <span>🎨</span>
-        <span>主要功能</span>
+    <!-- 主要功能 -->
+    <div class="popup-section">
+      <div class="popup-section-title">主要功能</div>
+      <div class="popup-section-grid">
+        <button id="open-visualization" class="popup-btn">
+          <span class="popup-btn-icon icon-purple" data-icon="palette" data-icon-size="16"></span>
+          <span class="popup-btn-text">书签可视化</span>
+          <span class="popup-btn-badge badge-green">推荐</span>
+        </button>
+        <button id="open-manager" class="popup-btn">
+          <span class="popup-btn-icon icon-blue" data-icon="folder" data-icon-size="16"></span>
+          <span class="popup-btn-text">书签管理器</span>
+        </button>
       </div>
-      <button id="open-visualization" class="btn btn-success">
-        <span class="btn-icon">🎨</span>
-        <span class="btn-text">书签可视化</span>
-        <span class="btn-badge">推荐</span>
-      </button>
-      <button id="open-manager" class="btn btn-primary">
-        <span class="btn-icon">📂</span>
-        <span class="btn-text">书签管理器</span>
-      </button>
     </div>
 
-    <!-- 智能分析分类 -->
-    <div class="category">
-      <div class="category-title">
-        <span>🤖</span>
-        <span>智能分析</span>
+    <!-- 智能分析 -->
+    <div class="popup-section">
+      <div class="popup-section-title">智能分析</div>
+      <div class="popup-section-grid">
+        <button id="ai-analysis" class="popup-btn">
+          <span class="popup-btn-icon icon-blue" data-icon="scan-search" data-icon-size="16"></span>
+          <span class="popup-btn-text">AI 智能分析</span>
+        </button>
+        <button id="data-visualization" class="popup-btn">
+          <span class="popup-btn-icon icon-purple" data-icon="bar-chart" data-icon-size="16"></span>
+          <span class="popup-btn-text">数据可视化</span>
+        </button>
+        <button id="export-data" class="popup-btn">
+          <span class="popup-btn-icon icon-green" data-icon="download" data-icon-size="16"></span>
+          <span class="popup-btn-text">导出数据</span>
+        </button>
       </div>
-      <button id="ai-analysis" class="btn btn-primary">
-        <span class="btn-icon">🔍</span>
-        <span class="btn-text">AI智能分析</span>
-      </button>
-      <button id="data-visualization" class="btn btn-secondary">
-        <span class="btn-icon">📊</span>
-        <span class="btn-text">数据可视化</span>
-      </button>
-      <button id="export-data" class="btn btn-secondary">
-        <span class="btn-icon">📤</span>
-        <span class="btn-text">导出数据</span>
-      </button>
     </div>
 
-    <!-- 数据管理分类 -->
-    <div class="category">
-      <div class="category-title">
-        <span>📦</span>
-        <span>数据管理</span>
+    <!-- 数据管理 -->
+    <div class="popup-section">
+      <div class="popup-section-title">数据管理</div>
+      <div class="popup-section-grid">
+        <button id="batch-operations" class="popup-btn">
+          <span class="popup-btn-icon icon-orange" data-icon="layers" data-icon-size="16"></span>
+          <span class="popup-btn-text">批量操作</span>
+        </button>
+        <button id="import-export" class="popup-btn">
+          <span class="popup-btn-icon icon-blue" data-icon="refresh-cw" data-icon-size="16"></span>
+          <span class="popup-btn-text">导入导出</span>
+        </button>
+        <button id="backup-restore" class="popup-btn">
+          <span class="popup-btn-icon icon-green" data-icon="save" data-icon-size="16"></span>
+          <span class="popup-btn-text">备份恢复</span>
+        </button>
       </div>
-      <button id="batch-operations" class="btn btn-warning">
-        <span class="btn-icon">⚡</span>
-        <span class="btn-text">批量操作</span>
-      </button>
-      <button id="import-export" class="btn btn-secondary">
-        <span class="btn-icon">🔄</span>
-        <span class="btn-text">导入导出</span>
-      </button>
-      <button id="backup-restore" class="btn btn-secondary">
-        <span class="btn-icon">💾</span>
-        <span class="btn-text">备份恢复</span>
-      </button>
     </div>
 
-    <!-- 检测清理分类 -->
-    <div class="category">
-      <div class="category-title">
-        <span>🔧</span>
-        <span>检测清理</span>
+    <!-- 检测清理 -->
+    <div class="popup-section">
+      <div class="popup-section-title">检测清理</div>
+      <div class="popup-section-grid">
+        <button id="detect-duplicates" class="popup-btn">
+          <span class="popup-btn-icon icon-orange" data-icon="copy" data-icon-size="16"></span>
+          <span class="popup-btn-text">检测重复</span>
+          <span class="popup-btn-badge badge-orange" id="duplicate-badge" style="display: none;">0</span>
+        </button>
+        <button id="detect-invalid" class="popup-btn">
+          <span class="popup-btn-icon icon-orange" data-icon="link-2" data-icon-size="16"></span>
+          <span class="popup-btn-text">检测失效</span>
+          <span class="popup-btn-badge badge-orange" id="invalid-badge" style="display: none;">0</span>
+        </button>
+        <button id="cleanup-bookmarks" class="popup-btn">
+          <span class="popup-btn-icon icon-red" data-icon="trash" data-icon-size="16"></span>
+          <span class="popup-btn-text">清理书签</span>
+        </button>
       </div>
-      <button id="detect-duplicates" class="btn btn-warning">
-        <span class="btn-icon">🔄</span>
-        <span class="btn-text">检测重复</span>
-        <span class="btn-badge" id="duplicate-badge" style="display: none;">0</span>
-      </button>
-      <button id="detect-invalid" class="btn btn-warning">
-        <span class="btn-icon">❌</span>
-        <span class="btn-text">检测失效</span>
-        <span class="btn-badge" id="invalid-badge" style="display: none;">0</span>
-      </button>
-      <button id="cleanup-bookmarks" class="btn btn-danger">
-        <span class="btn-icon">🧹</span>
-        <span class="btn-text">清理书签</span>
-      </button>
     </div>
 
-    <!-- 设置分类 -->
-    <div class="category">
-      <div class="category-title">
-        <span>⚙️</span>
-        <span>设置</span>
+    <!-- 设置 -->
+    <div class="popup-section">
+      <div class="popup-section-title">设置</div>
+      <div class="popup-section-grid">
+        <button id="personalization" class="popup-btn">
+          <span class="popup-btn-icon icon-purple" data-icon="settings" data-icon-size="16"></span>
+          <span class="popup-btn-text">个性化设置</span>
+        </button>
+        <button id="api-settings" class="popup-btn">
+          <span class="popup-btn-icon icon-blue" data-icon="key" data-icon-size="16"></span>
+          <span class="popup-btn-text">API 设置</span>
+        </button>
       </div>
-      <button id="personalization" class="btn btn-secondary">
-        <span class="btn-icon">🎨</span>
-        <span class="btn-text">个性化设置</span>
-      </button>
-      <button id="api-settings" class="btn btn-secondary">
-        <span class="btn-icon">🔑</span>
-        <span class="btn-text">API设置</span>
-      </button>
     </div>
 
-    <div class="dashboard">  
-      <div class="category-title">
-        <span>🔍</span>
-        <span>仪表盘</span>
-      </div>
-      <button id="dashboard" class="btn btn-secondary">
-        <span class="btn-icon">�</span>
-        <span class="btn-text">仪表盘</span>
-      </button>
-    </div>
-    
-    <div class="api-status" id="api-status-container">
-      <span class="api-status-icon"></span>
-      <span>API状态: <span id="api-status-text">检查中...</span></span>
-    </div>
-
-    
-    <div class="footer">
-      AI辅助书签整理工具 v1.0.0
+    <!-- Footer -->
+    <div class="popup-footer">
+      书签助手 v1.0 · AI辅助书签整理
     </div>
   </div>
 
+  <script src="styles/icons.js"></script>
   <script src="popup.js"></script>
 </body>
-</html> 
+
+</html>

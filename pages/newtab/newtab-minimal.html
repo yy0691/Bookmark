@@ -1,0 +1,371 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新标签页</title>
+  <meta name="description" content="简洁优雅的新标签页 - 书签管理中心" />
+  <link rel="icon" type="image/svg+xml" href="../../images/icon.svg">
+  <link rel="stylesheet" href="./apple-minimal.css" />
+</head>
+
+<body class="apple-minimal">
+  <div class="apple-container">
+    <!-- 时间显示 -->
+    <section class="apple-clock" aria-label="时间">
+      <div class="apple-clock-greeting" id="greeting">下午好</div>
+      <time class="apple-clock-time" id="clock-time">12:00</time>
+      <div class="apple-clock-date" id="clock-date">2024年1月1日 星期一</div>
+    </section>
+
+    <!-- 搜索栏 -->
+    <section class="apple-search" aria-label="搜索">
+      <div class="apple-search-container">
+        <input type="text" class="apple-search-input" id="search-input" placeholder="搜索书签、文件夹或网页..." autocomplete="off"
+          spellcheck="false" />
+        <svg class="apple-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </svg>
+
+        <!-- 搜索引擎切换按钮 -->
+        <button class="apple-engine-btn" id="engine-btn" type="button" title="切换搜索引擎">
+          <span class="engine-name" id="engine-label">Google</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6,9 12,15 18,9"></polyline>
+          </svg>
+        </button>
+
+        <button class="apple-search-clear" id="search-clear" type="button" aria-label="清除搜索">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+
+        <!-- 搜索引擎选择器 -->
+        <div class="apple-engine-popover hidden" id="engine-popover">
+          <div class="engine-popover-title">选择搜索引擎</div>
+          <div class="engine-options">
+            <button class="engine-option active" data-engine="google"
+              data-template="https://www.google.com/search?q={query}" data-home="https://www.google.com/">
+              <span class="engine-icon">G</span>
+              <span class="engine-info">
+                <span class="engine-name">Google</span>
+                <span class="engine-desc">全网综合搜索</span>
+              </span>
+            </button>
+            <button class="engine-option" data-engine="bing" data-template="https://www.bing.com/search?q={query}"
+              data-home="https://www.bing.com/">
+              <span class="engine-icon">B</span>
+              <span class="engine-info">
+                <span class="engine-name">Bing</span>
+                <span class="engine-desc">微软搜索</span>
+              </span>
+            </button>
+            <button class="engine-option" data-engine="duckduckgo" data-template="https://duckduckgo.com/?q={query}"
+              data-home="https://duckduckgo.com/">
+              <span class="engine-icon">D</span>
+              <span class="engine-info">
+                <span class="engine-name">DuckDuckGo</span>
+                <span class="engine-desc">隐私优先</span>
+              </span>
+            </button>
+            <button class="engine-option" data-engine="baidu" data-template="https://www.baidu.com/s?wd={query}"
+              data-home="https://www.baidu.com/">
+              <span class="engine-icon">百</span>
+              <span class="engine-info">
+                <span class="engine-name">百度</span>
+                <span class="engine-desc">中文搜索</span>
+              </span>
+            </button>
+            <button class="engine-option" data-engine="yahoo"
+              data-template="https://sg.search.yahoo.com/search?p={query}" data-home="https://sg.search.yahoo.com/">
+              <span class="engine-icon">Y</span>
+              <span class="engine-info">
+                <span class="engine-name">Yahoo</span>
+                <span class="engine-desc">综合门户</span>
+              </span>
+            </button>
+            <button class="engine-option" data-engine="sogou" data-template="https://www.sogou.com/web?query={query}"
+              data-home="https://www.sogou.com/">
+              <span class="engine-icon">搜</span>
+              <span class="engine-info">
+                <span class="engine-name">搜狗</span>
+                <span class="engine-desc">中文资讯</span>
+              </span>
+            </button>
+            <button class="engine-option" data-engine="weixin"
+              data-template="https://weixin.sogou.com/weixin?query={query}" data-home="https://weixin.sogou.com/">
+              <span class="engine-icon">微</span>
+              <span class="engine-info">
+                <span class="engine-name">微信搜索</span>
+                <span class="engine-desc">公众号文章</span>
+              </span>
+            </button>
+            <button class="engine-option" data-engine="wolfram"
+              data-template="https://www.wolframalpha.com/input?i={query}" data-home="https://www.wolframalpha.com/">
+              <span class="engine-icon">W</span>
+              <span class="engine-info">
+                <span class="engine-name">WolframAlpha</span>
+                <span class="engine-desc">计算知识引擎</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 搜索建议 -->
+        <div class="apple-search-suggestions" id="search-suggestions">
+          <!-- 动态填充 -->
+        </div>
+      </div>
+
+      <!-- 搜索语法提示 -->
+      <div class="apple-search-hints" id="search-hints">
+        <span class="hint-label">搜索语法：</span>
+        <button class="hint-chip" data-insert="&quot;&quot;" title="完全匹配">"" 精确</button>
+        <button class="hint-chip" data-insert="site:" title="指定站点">site:</button>
+        <button class="hint-chip" data-insert="intitle:" title="标题包含">intitle:</button>
+        <button class="hint-chip" data-insert="filetype:" title="文件类型">filetype:</button>
+        <button class="hint-chip" data-insert=" -" title="排除结果">- 排除</button>
+      </div>
+
+      <!-- 搜索提示 -->
+      <div class="apple-search-tip">
+        <span>Enter: 搜索书签</span>
+        <span class="tip-divider">·</span>
+        <span>Shift+Enter: Web搜索</span>
+        <span class="tip-divider">·</span>
+        <span>Tab: 切换引擎</span>
+      </div>
+    </section>
+
+    <!-- 快捷方式 -->
+    <section class="apple-shortcuts" id="shortcuts-grid" aria-label="快捷方式">
+      <!-- 动态填充 -->
+    </section>
+
+    <!-- 我的书签 -->
+    <section class="apple-bookmarks-section" id="bookmarks-section" aria-label="我的书签">
+      <div class="bookmarks-header">
+        <div class="bm-tabs" id="bm-folder-tabs">
+          <button class="bm-tab active" data-folder="recent">最近添加</button>
+          <button class="bm-tab" data-folder="pinned">我的置顶</button>
+          <!-- 用户收藏的文件夹将动态添加 -->
+          <button class="bm-tab bm-tab-add" id="bm-add-folder-btn" title="添加常用文件夹">＋</button>
+        </div>
+        <select class="bookmarks-select" id="bookmark-sort-select" title="排序方式">
+          <option value="dateDesc">最新优先</option>
+          <option value="dateAsc">最早优先</option>
+          <option value="nameAsc">按名称 A→Z</option>
+          <option value="nameDesc">按名称 Z→A</option>
+        </select>
+      </div>
+      <div class="bookmarks-icon-grid" id="bookmarks-grid">
+        <!-- 动态填充 -->
+      </div>
+    </section>
+
+    <!-- 文件夹选择器弹窗 -->
+    <div class="bm-folder-picker-overlay" id="folder-picker-overlay">
+      <div class="bm-folder-picker">
+        <div class="bm-picker-header">
+          <h3>选择常用文件夹</h3>
+          <button class="bm-picker-close" id="folder-picker-close">✕</button>
+        </div>
+        <div class="bm-picker-list" id="folder-picker-list">
+          <!-- 动态填充文件夹列表 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部按钮 -->
+  <footer class="apple-footer">
+    <button class="apple-footer-btn" id="analysis-center-btn" type="button" title="分析中心">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+        <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+      </svg>
+    </button>
+    <button class="apple-footer-btn" id="manager-btn" type="button" title="书签管理">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+      </svg>
+    </button>
+    <button class="apple-footer-btn" id="theme-btn" type="button" title="切换主题">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2"></path>
+        <path d="M12 20v2"></path>
+        <path d="m4.93 4.93 1.41 1.41"></path>
+        <path d="m17.66 17.66 1.41 1.41"></path>
+        <path d="M2 12h2"></path>
+        <path d="M20 12h2"></path>
+        <path d="m6.34 17.66-1.41 1.41"></path>
+        <path d="m19.07 4.93-1.41 1.41"></path>
+      </svg>
+    </button>
+    <button class="apple-footer-btn" id="settings-btn" type="button" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path
+          d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z">
+        </path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+    </button>
+  </footer>
+
+  <!-- 设置面板 -->
+  <div class="apple-modal-overlay" id="settings-modal">
+    <div class="apple-modal">
+      <div class="apple-modal-header">
+        <h2 class="apple-modal-title">设置</h2>
+        <button class="apple-modal-close" id="settings-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="apple-modal-body">
+        <!-- 外观设置 -->
+        <div class="apple-settings-section">
+          <div class="apple-settings-title">外观</div>
+          <div class="apple-theme-selector" id="theme-selector">
+            <button class="apple-theme-option" data-theme="light">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2"></path>
+                <path d="M12 20v2"></path>
+                <path d="m4.93 4.93 1.41 1.41"></path>
+                <path d="m17.66 17.66 1.41 1.41"></path>
+                <path d="M2 12h2"></path>
+                <path d="M20 12h2"></path>
+              </svg>
+              <span>浅色</span>
+            </button>
+            <button class="apple-theme-option active" data-theme="dark">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+              </svg>
+              <span>深色</span>
+            </button>
+            <button class="apple-theme-option" data-theme="auto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <span>自动</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 主题色 -->
+        <div class="apple-settings-section">
+          <div class="apple-settings-title">主题色</div>
+          <div class="apple-accent-colors" id="accent-colors">
+            <div class="apple-accent-color active" data-color="blue" style="background: #007AFF;"></div>
+            <div class="apple-accent-color" data-color="purple" style="background: #8B5CF6;"></div>
+            <div class="apple-accent-color" data-color="green" style="background: #34C759;"></div>
+            <div class="apple-accent-color" data-color="orange" style="background: #FF9500;"></div>
+            <div class="apple-accent-color" data-color="red" style="background: #FF3B30;"></div>
+            <div class="apple-accent-color" data-color="pink" style="background: #FF2D92;"></div>
+          </div>
+        </div>
+
+        <!-- 书签管理 -->
+        <div class="apple-settings-section">
+          <div class="apple-settings-title">书签管理</div>
+          <div class="apple-settings-actions">
+            <button class="apple-action-btn" id="export-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7,10 12,15 17,10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>导出书签</span>
+            </button>
+            <button class="apple-action-btn" id="import-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17,8 12,3 7,8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>导入书签</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 更多操作 -->
+        <div class="apple-settings-section">
+          <div class="apple-settings-title">更多</div>
+          <div class="apple-settings-actions">
+            <button class="apple-action-btn" id="reset-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1,4 1,10 7,10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+              <span>重置设置</span>
+            </button>
+            <button class="apple-action-btn" id="about-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 16v-4"></path>
+                <path d="M12 8h.01"></path>
+              </svg>
+              <span>关于</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加快捷方式弹窗 -->
+  <div class="apple-modal-overlay" id="add-shortcut-modal">
+    <div class="apple-modal">
+      <div class="apple-modal-header">
+        <h2 class="apple-modal-title">添加快捷方式</h2>
+        <button class="apple-modal-close" id="add-shortcut-close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="apple-modal-body">
+        <div class="apple-shortcut-form">
+          <div class="apple-form-group">
+            <label class="apple-form-label">名称</label>
+            <input type="text" class="apple-form-input" id="shortcut-name" placeholder="例如：GitHub">
+          </div>
+          <div class="apple-form-group">
+            <label class="apple-form-label">网址</label>
+            <input type="url" class="apple-form-input" id="shortcut-url" placeholder="https://github.com">
+          </div>
+          <div class="apple-form-actions">
+            <button class="apple-form-btn apple-form-btn-cancel" id="shortcut-cancel">取消</button>
+            <button class="apple-form-btn apple-form-btn-primary" id="shortcut-save">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 消息 -->
+  <div class="apple-toast" id="toast"></div>
+
+  <!-- 导入书签服务模块 -->
+  <script type="module" src="./newtab-minimal.js"></script>
+</body>
+
+</html>

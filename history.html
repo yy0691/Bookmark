@@ -1,183 +1,93 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN" data-theme="light">
+
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>书签分类历史版本</title>
+  <link rel="icon" type="image/svg+xml" href="images/icon.svg">
+  <link rel="stylesheet" href="styles/apple-design-system.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-      min-height: 100vh;
-      padding: 32px;
-      color: #1d1d1f;
-      line-height: 1.6;
+      padding: var(--apple-space-8);
     }
 
     .container {
-      max-width: 1000px;
+      max-width: 900px;
       margin: 0 auto;
     }
 
-    /* 头部区域 */
-    .header {
-      background: rgba(255, 255, 255, 0.3);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      border-radius: 24px;
-      padding: 32px;
-      margin-bottom: 32px;
+    /* Header */
+    .history-header {
       display: flex;
       align-items: center;
-      box-shadow: 0 10px 40px rgba(31, 38, 135, 0.3);
-      animation: fadeIn 0.6s ease-out;
+      justify-content: space-between;
+      margin-bottom: var(--apple-space-6);
+      padding-bottom: var(--apple-space-5);
+      border-bottom: 1px solid var(--apple-divider);
     }
 
-    .logo {
-      width: 56px;
-      height: 56px;
-      margin-right: 20px;
-      border-radius: 14px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-      transition: transform 0.3s ease;
+    .history-header-left {
+      display: flex;
+      align-items: center;
+      gap: var(--apple-space-4);
     }
 
-    .logo:hover {
-      transform: scale(1.05);
+    .history-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--apple-radius-md);
     }
 
-    h1 {
-      font-size: 32px;
+    .history-title {
+      font-size: 28px;
       font-weight: 700;
-      color: #1d1d1f;
+      color: var(--apple-text);
       letter-spacing: -0.5px;
     }
 
-    /* 区块样式 */
-    .section {
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 20px;
-      padding: 32px;
-      margin-bottom: 24px;
-      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
-      transition: all 0.3s ease;
-      position: relative;
-      animation: fadeIn 0.8s ease-out;
+    .history-header-actions {
+      display: flex;
+      gap: var(--apple-space-2);
     }
 
-    .section::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-    }
-
-    .section:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(31, 38, 135, 0.45);
-    }
-
-    h2 {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 24px;
-      color: #1d1d1f;
-      letter-spacing: -0.3px;
-    }
-
-    /* 按钮样式 */
-    .btn {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 12px;
-      padding: 12px 20px;
+    /* Status */
+    .history-status {
+      background: var(--apple-bg-tertiary);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-md);
+      padding: var(--apple-space-4) var(--apple-space-5);
+      margin-bottom: var(--apple-space-6);
       font-size: 14px;
+      color: var(--apple-text-secondary);
+    }
+
+    /* Section */
+    .history-section {
+      margin-bottom: var(--apple-space-8);
+    }
+
+    .history-section-title {
+      font-size: 20px;
       font-weight: 600;
-      color: #1d1d1f;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-right: 12px;
-      margin-bottom: 8px;
-      font-family: inherit;
+      color: var(--apple-text);
+      margin-bottom: var(--apple-space-4);
     }
 
-    .btn:hover {
-      background: rgba(255, 255, 255, 0.4);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-    }
-
-    #back-to-analyze {
-      background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
-      color: white;
-      border: none;
-    }
-
-    #back-to-analyze:hover {
-      background: linear-gradient(135deg, #0056b3 0%, #4a4bb8 100%);
-      box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
-    }
-
-    .btn-danger {
-      background: linear-gradient(135deg, #ff3b30 0%, #ff6b6b 100%);
-      color: white;
-      border: none;
-    }
-
-    .btn-danger:hover {
-      background: linear-gradient(135deg, #dc3545 0%, #e55a5a 100%);
-      box-shadow: 0 6px 20px rgba(255, 59, 48, 0.3);
-    }
-
-    /* 状态消息 */
-    .status {
-      background: rgba(255, 255, 255, 0.4);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      border-radius: 16px;
-      padding: 16px 20px;
-      margin-bottom: 24px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #1d1d1f;
-    }
-
-    /* 历史列表 */
+    /* History list */
     .history-list {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(15px);
-      -webkit-backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 16px;
+      background: var(--apple-bg-tertiary);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-md);
       overflow: hidden;
     }
 
     .history-item {
-      padding: 24px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      padding: var(--apple-space-5);
+      border-bottom: 1px solid var(--apple-divider);
       display: flex;
       align-items: center;
-      transition: all 0.3s ease;
-      background: rgba(255, 255, 255, 0.05);
+      transition: background var(--apple-duration-fast) var(--apple-ease);
     }
 
     .history-item:last-child {
@@ -185,89 +95,80 @@
     }
 
     .history-item:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateX(4px);
+      background: var(--apple-bg-hover);
     }
 
     .history-info {
-      flex-grow: 1;
+      flex: 1;
+      min-width: 0;
     }
 
     .history-date {
       font-weight: 600;
-      font-size: 16px;
-      margin-bottom: 6px;
-      color: #1d1d1f;
+      font-size: 15px;
+      color: var(--apple-text);
+      margin-bottom: 2px;
     }
 
     .history-desc {
-      color: #6e6e73;
-      font-size: 14px;
-      font-weight: 400;
+      color: var(--apple-text-secondary);
+      font-size: 13px;
     }
 
     .history-actions {
       display: flex;
-      gap: 8px;
+      gap: var(--apple-space-2);
+      flex-shrink: 0;
     }
 
     .history-action-btn {
-      background: rgba(255, 255, 255, 0.2);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 8px;
-      color: #007aff;
-      cursor: pointer;
+      padding: 6px 12px;
       font-size: 13px;
-      padding: 8px 12px;
       font-weight: 500;
-      transition: all 0.2s ease;
-      font-family: inherit;
+      font-family: var(--apple-font);
+      color: var(--apple-accent);
+      background: var(--apple-accent-bg);
+      border: none;
+      border-radius: var(--apple-radius-xs);
+      cursor: pointer;
+      transition: all var(--apple-duration-fast) var(--apple-ease);
     }
 
     .history-action-btn:hover {
-      background: rgba(0, 122, 255, 0.1);
-      border-color: rgba(0, 122, 255, 0.3);
-      transform: translateY(-1px);
+      background: var(--apple-accent-bg-hover);
     }
 
     .no-history {
-      padding: 60px 40px;
+      padding: var(--apple-space-12) var(--apple-space-8);
       text-align: center;
-      color: #8e8e93;
-      font-size: 16px;
-      font-weight: 500;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
+      color: var(--apple-text-tertiary);
+      font-size: 15px;
     }
 
-    /* 比较容器 */
+    /* Compare container */
     .compare-container {
       display: none;
-      background: rgba(255, 255, 255, 0.25);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 20px;
-      margin-top: 24px;
+      background: var(--apple-bg-tertiary);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-lg);
+      margin-top: var(--apple-space-6);
       overflow: hidden;
-      box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+      box-shadow: var(--apple-shadow-md);
     }
 
     .compare-header {
       display: flex;
-      background: rgba(255, 255, 255, 0.2);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 20px 24px;
       align-items: center;
+      padding: var(--apple-space-4) var(--apple-space-5);
+      border-bottom: 1px solid var(--apple-divider);
+      background: var(--apple-bg);
     }
 
     .compare-title {
-      flex-grow: 1;
+      flex: 1;
       font-weight: 600;
-      font-size: 18px;
-      color: #1d1d1f;
+      font-size: 17px;
+      color: var(--apple-text);
     }
 
     .compare-content {
@@ -276,129 +177,132 @@
 
     .compare-column {
       flex: 1;
-      padding: 24px;
+      padding: var(--apple-space-5);
       max-height: 500px;
       overflow-y: auto;
     }
 
     .compare-column:first-child {
-      border-right: 1px solid rgba(255, 255, 255, 0.3);
+      border-right: 1px solid var(--apple-divider);
     }
 
     .compare-column h3 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      margin-bottom: 16px;
-      color: #1d1d1f;
+      margin-bottom: var(--apple-space-4);
+      color: var(--apple-text);
     }
 
     .compare-category {
-      margin-bottom: 12px;
-      padding: 12px 16px;
-      border-radius: 12px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: var(--apple-space-3);
+      padding: var(--apple-space-3) var(--apple-space-4);
+      border-radius: var(--apple-radius-sm);
+      border: 1px solid var(--apple-border);
     }
 
     .compare-added {
-      background: rgba(52, 209, 88, 0.2);
-      border-color: rgba(52, 209, 88, 0.4);
+      background: var(--apple-success-bg);
+      border-color: var(--apple-success);
     }
 
     .compare-removed {
-      background: rgba(255, 59, 48, 0.2);
-      border-color: rgba(255, 59, 48, 0.4);
+      background: var(--apple-danger-bg);
+      border-color: var(--apple-danger);
     }
 
     .compare-unchanged {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.3);
+      background: var(--apple-bg);
     }
 
     .compare-category-name {
       font-weight: 600;
-      margin-bottom: 6px;
-      color: #1d1d1f;
+      font-size: 14px;
+      color: var(--apple-text);
+      margin-bottom: 2px;
     }
 
     .compare-bookmark-count {
       font-size: 12px;
-      color: #8e8e93;
-      font-weight: 500;
+      color: var(--apple-text-secondary);
     }
 
-    /* 工具类 */
+    .btn {
+      /* Legacy class for JS compat */
+      display: inline-flex;
+      align-items: center;
+      gap: var(--apple-space-2);
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: var(--apple-font);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-sm);
+      cursor: pointer;
+      background: var(--apple-bg-tertiary);
+      color: var(--apple-text);
+      transition: all var(--apple-duration-fast) var(--apple-ease);
+    }
+
+    .btn:hover {
+      background: var(--apple-bg-hover);
+      border-color: var(--apple-border-focus);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    #back-to-analyze {
+      background: var(--apple-accent);
+      border-color: transparent;
+      color: #fff;
+    }
+
+    #back-to-analyze:hover {
+      background: var(--apple-accent-hover);
+      border-color: transparent;
+    }
+
+    .btn-danger {
+      background: var(--apple-danger-bg);
+      border-color: transparent;
+      color: var(--apple-danger);
+    }
+
+    .btn-danger:hover {
+      background: var(--apple-danger);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .status {
+      /* Legacy for JS */
+      background: var(--apple-bg-tertiary);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-md);
+      padding: var(--apple-space-4) var(--apple-space-5);
+      font-size: 14px;
+      color: var(--apple-text-secondary);
+      margin-bottom: var(--apple-space-5);
+    }
+
     .hidden {
       display: none !important;
     }
 
-    /* 动画效果 */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* 滚动条样式 */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.5);
-    }
-
-    /* 响应式设计 */
     @media (max-width: 768px) {
       body {
-        padding: 16px;
+        padding: var(--apple-space-5);
       }
 
-      .header {
-        padding: 24px;
-        border-radius: 20px;
-      }
-
-      .header h1 {
-        font-size: 24px;
-      }
-
-      .logo {
-        width: 48px;
-        height: 48px;
-      }
-
-      .section {
-        padding: 24px;
-        border-radius: 16px;
+      .history-title {
+        font-size: 22px;
       }
 
       .history-item {
-        padding: 20px;
         flex-direction: column;
         align-items: flex-start;
-        gap: 16px;
-      }
-
-      .history-actions {
-        align-self: stretch;
-        justify-content: flex-end;
+        gap: var(--apple-space-3);
       }
 
       .compare-content {
@@ -407,26 +311,29 @@
 
       .compare-column:first-child {
         border-right: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        border-bottom: 1px solid var(--apple-divider);
       }
     }
   </style>
 </head>
+
 <body>
   <div class="container">
-    <div class="header">
-      <img src="images/icon.png" alt="书签助手" class="logo">
-      <h1>📚 书签分类历史版本</h1>
+    <div class="history-header">
+      <div class="history-header-left">
+        <img src="images/icon.svg" alt="书签助手" class="history-logo">
+        <span class="history-title">分类历史版本</span>
+      </div>
+      <div class="history-header-actions">
+        <button id="back-to-analyze" class="btn">← 返回分析</button>
+        <button id="delete-all-history" class="btn btn-danger">清空历史</button>
+      </div>
     </div>
 
-    <div class="section">
-      <div class="status" id="status">查看和管理您的书签分类历史版本，追踪每次分析的变化。</div>
-      <button id="back-to-analyze" class="btn">🔙 返回分析页面</button>
-      <button id="delete-all-history" class="btn btn-danger">🗑️ 清空历史记录</button>
-    </div>
+    <div id="status" class="status">查看和管理您的书签分类历史版本，追踪每次分析的变化。</div>
 
-    <div class="section">
-      <h2>🕐 历史版本</h2>
+    <div class="history-section">
+      <div class="history-section-title">历史版本</div>
       <div id="history-list" class="history-list">
         <div class="no-history">暂无历史版本记录</div>
       </div>
@@ -434,22 +341,24 @@
 
     <div id="compare-container" class="compare-container">
       <div class="compare-header">
-        <div class="compare-title">🔄 版本比较</div>
-        <button id="close-compare" class="history-action-btn">❌ 关闭</button>
+        <div class="compare-title">版本比较</div>
+        <button id="close-compare" class="history-action-btn">关闭</button>
       </div>
       <div class="compare-content">
         <div id="compare-old" class="compare-column">
-          <h3>📋 旧版本</h3>
+          <h3>旧版本</h3>
           <div id="compare-old-content"></div>
         </div>
         <div id="compare-new" class="compare-column">
-          <h3>✨ 新版本</h3>
+          <h3>新版本</h3>
           <div id="compare-new-content"></div>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="styles/icons.js"></script>
   <script src="history.js"></script>
 </body>
-</html> 
+
+</html>

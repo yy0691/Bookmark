@@ -1,656 +1,838 @@
 /**
- * 书签数据分析Dashboard - 智能分析中心
- * 基于设计文档要求实现的数据可视化页面
+ * 书签智能分析中心 — 统一 Dashboard
+ * 合并数据概览 + AI 分析 + 问题检测 + 数据管理
  */
 
-// 导入模块
 import { BookmarkService } from '../../modules/bookmarkService.js';
 import { VisualizationService } from '../../modules/visualizationService.js';
 import { ApiService } from '../../modules/apiService.js';
+import { DetectionService } from '../../modules/detectionService.js';
+import { ImportExportService } from '../../modules/importExportService.js';
 
 class Dashboard {
     constructor() {
+        // Services
         this.bookmarkService = new BookmarkService();
         this.visualizationService = new VisualizationService();
         this.apiService = new ApiService();
-        
+        this.detectionService = new DetectionService();
+        this.importExportService = new ImportExportService();
+
+        // State
         this.bookmarks = [];
-        this.categories = {};
         this.stats = {};
-        this.isLoading = true;
-        this.error = null;
-        
-        // 绑定方法
-        this.init = this.init.bind(this);
-        this.loadData = this.loadData.bind(this);
-        this.renderMetrics = this.renderMetrics.bind(this);
-        this.renderWordCloud = this.renderWordCloud.bind(this);
-        this.renderCategoryChart = this.renderCategoryChart.bind(this);
-        this.renderActivityHeatmap = this.renderActivityHeatmap.bind(this);
-        this.handleError = this.handleError.bind(this);
-        this.showTooltip = this.showTooltip.bind(this);
-        this.hideTooltip = this.hideTooltip.bind(this);
+        this.currentTab = 'overview';
+        this.analysisState = {
+            isProcessing: false,
+            progress: 0,
+            categories: {},
+            results: null
+        };
+        this.detectionState = {
+            duplicates: [],
+            deadLinks: [],
+            emptyFolders: [],
+            malformed: []
+        };
+        this.logs = [];
+        this.worker = null;
     }
-    
-    /**
-     * 初始化Dashboard
-     */
+
+    // ══════════════════════════════════════
+    //  Init
+    // ══════════════════════════════════════
+
     async init() {
+        this.addLog('初始化智能分析中心...', 'info');
+        this.bindEvents();
+        this.initWorker();
+
         try {
-            console.log('🚀 初始化书签数据分析Dashboard...');
-            
-            // 设置日志回调
-            this.bookmarkService.setLogCallback(this.log.bind(this));
-            this.visualizationService.setLogCallback(this.log.bind(this));
-            
-            // 初始化可视化服务
-            await this.visualizationService.initialize();
-            
-            // 加载数据
             await this.loadData();
-            
-            // 渲染所有组件
             this.renderMetrics();
             this.renderWordCloud();
             this.renderCategoryChart();
             this.renderActivityHeatmap();
-            
-            this.isLoading = false;
-            console.log('✅ Dashboard初始化完成');
-            
+            await this.checkApiStatus();
+            await this.loadBookmarkStats();
+            this.addLog('智能分析中心初始化完成', 'success');
         } catch (error) {
+            this.addLog(`初始化失败: ${error.message}`, 'error');
             this.handleError(error);
         }
     }
-    
-    /**
-     * 加载书签数据
-     */
+
+    // ══════════════════════════════════════
+    //  Event Binding
+    // ══════════════════════════════════════
+
+    bindEvents() {
+        // Tab navigation
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+        });
+
+        // Top bar
+        document.getElementById('btn-refresh')?.addEventListener('click', () => this.refreshData());
+        document.getElementById('btn-settings')?.addEventListener('click', () => this.openSettings());
+
+        // AI Analysis
+        document.getElementById('start-analysis-btn')?.addEventListener('click', () => this.startAnalysis());
+        document.getElementById('stop-analysis-btn')?.addEventListener('click', () => this.stopAnalysis());
+        document.getElementById('apply-btn')?.addEventListener('click', () => this.applyCategories());
+        document.getElementById('export-btn')?.addEventListener('click', () => this.exportResults());
+
+        // Detection
+        document.getElementById('detect-dup-card')?.addEventListener('click', () => this.detectDuplicates());
+        document.getElementById('detect-dead-card')?.addEventListener('click', () => this.detectDeadLinks());
+        document.getElementById('detect-empty-card')?.addEventListener('click', () => this.detectEmptyFolders());
+        document.getElementById('detect-malform-card')?.addEventListener('click', () => this.detectMalformed());
+        document.getElementById('run-full-detect')?.addEventListener('click', () => this.runFullDetection());
+
+        // Data management
+        document.getElementById('card-import')?.addEventListener('click', () => {
+            document.getElementById('import-file')?.click();
+        });
+        document.getElementById('import-file')?.addEventListener('change', (e) => this.importBookmarks(e));
+        document.getElementById('card-export')?.addEventListener('click', () => this.exportBookmarks());
+        document.getElementById('card-backup')?.addEventListener('click', () => this.createBackup());
+        document.getElementById('card-manager')?.addEventListener('click', () => this.openBookmarkManager());
+
+        // Log
+        document.getElementById('btn-clear-log')?.addEventListener('click', () => this.clearLog());
+    }
+
+    // ══════════════════════════════════════
+    //  Tab Switching
+    // ══════════════════════════════════════
+
+    switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+        const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+        const panel = document.getElementById(`panel-${tabName}`);
+
+        if (btn) btn.classList.add('active');
+        if (panel) panel.classList.add('active');
+        this.currentTab = tabName;
+    }
+
+    // ══════════════════════════════════════
+    //  Data Loading
+    // ══════════════════════════════════════
+
     async loadData() {
         try {
-            console.log('📊 开始加载书签数据...');
-            
-            // 获取所有书签
             this.bookmarks = await this.bookmarkService.getAllBookmarks();
-            console.log(`📚 获取到 ${this.bookmarks.length} 个书签`);
-            
-            if (this.bookmarks.length === 0) {
+            if (!this.bookmarks || this.bookmarks.length === 0) {
                 throw new Error('没有找到任何书签数据');
             }
-            
-            // 生成统计信息
-            this.stats = this.generateStats();
-            console.log('📈 统计信息生成完成:', this.stats);
-            
-            // 生成分类数据（使用预分类）
-            this.categories = this.bookmarkService.performPreCategorization(
-                this.bookmarks.map(b => ({
-                    title: b.title || '未命名书签',
-                    url: b.url || '',
-                    domain: this.extractDomain(b.url)
-                }))
-            );
-            console.log('🏷️ 分类数据生成完成:', Object.keys(this.categories).length, '个分类');
-            
+            this.generateStats();
+            this.addLog(`已加载 ${this.bookmarks.length} 个书签`, 'info');
         } catch (error) {
-            console.error('❌ 数据加载失败:', error);
+            this.addLog(`数据加载失败: ${error.message}`, 'error');
+            this.bookmarks = [];
+            this.stats = { total: 0, folders: 0, domains: 0, todayCount: 0 };
             throw error;
         }
     }
-    
-    /**
-     * 生成统计信息
-     */
+
     generateStats() {
-        const totalBookmarks = this.bookmarks.length;
+        const urls = new Set();
         const domains = new Set();
-        const urlSet = new Set();
-        let duplicateUrls = 0;
-        
-        // 统计域名和重复URL
-        this.bookmarks.forEach(bookmark => {
-            if (bookmark.url) {
-                if (urlSet.has(bookmark.url)) {
-                    duplicateUrls++;
-                } else {
-                    urlSet.add(bookmark.url);
-                }
-                
-                try {
-                    const domain = new URL(bookmark.url).hostname.replace(/^www\./, '');
-                    domains.add(domain);
-                } catch (e) {
-                    // 忽略无效URL
+        let folders = 0;
+        let todayCount = 0;
+        const today = new Date().toDateString();
+
+        const traverse = (nodes) => {
+            if (!nodes) return;
+            for (const node of nodes) {
+                if (node.url) {
+                    urls.add(node.url);
+                    try { domains.add(new URL(node.url).hostname); } catch { }
+                    if (node.dateAdded) {
+                        const d = new Date(node.dateAdded);
+                        if (d.toDateString() === today) todayCount++;
+                    }
+                } else if (node.children) {
+                    folders++;
+                    traverse(node.children);
                 }
             }
-        });
-        
-        // 计算分类统计
-        const categoryStats = Object.entries(this.categories).map(([name, items]) => ({
-            name,
-            count: items.length
-        })).sort((a, b) => b.count - a.count);
-        
-        const largestCategory = categoryStats[0] || { name: '无', count: 0 };
-        const avgBookmarksPerCategory = categoryStats.length > 0 
-            ? Math.round(totalBookmarks / categoryStats.length) 
-            : 0;
-        
-        return {
-            totalBookmarks,
-            totalCategories: categoryStats.length,
-            avgBookmarksPerCategory,
-            largestCategory,
-            uniqueDomains: domains.size,
-            duplicateUrls,
-            emptyFolders: 0, // 暂时设为0，后续可以扩展
-            deadLinks: 0 // 暂时设为0，后续可以扩展
+        };
+
+        if (Array.isArray(this.bookmarks)) {
+            if (this.bookmarks[0]?.children) {
+                traverse(this.bookmarks[0].children);
+            } else {
+                // Flat array
+                this.bookmarks.forEach(b => {
+                    if (b.url) {
+                        urls.add(b.url);
+                        try { domains.add(new URL(b.url).hostname); } catch { }
+                    } else {
+                        folders++;
+                    }
+                });
+            }
+        }
+
+        this.stats = {
+            total: urls.size || this.bookmarks.length,
+            folders,
+            domains: domains.size,
+            todayCount
         };
     }
-    
-    /**
-     * 渲染关键指标卡片
-     */
+
+    // ══════════════════════════════════════
+    //  Render: Metrics
+    // ══════════════════════════════════════
+
     renderMetrics() {
-        const metricsGrid = document.getElementById('metricsGrid');
-        if (!metricsGrid) return;
-        
-        const metrics = [
-            {
-                title: '书签总数',
-                value: this.stats.totalBookmarks,
-                icon: 'bookmark',
-                color: 'var(--accent-blue)',
-                trend: 'up',
-                trendValue: '+2.5%'
-            },
-            {
-                title: '分类数量',
-                value: this.stats.totalCategories,
-                icon: 'folder',
-                color: 'var(--accent-purple)',
-                trend: 'neutral',
-                trendValue: '0%'
-            },
-            {
-                title: '重复书签',
-                value: this.stats.duplicateUrls,
-                icon: 'copy',
-                color: 'var(--brand-warning)',
-                trend: 'up',
-                trendValue: '+0.8%'
-            },
-            {
-                title: '不同域名',
-                value: this.stats.uniqueDomains,
-                icon: 'globe',
-                color: 'var(--brand-success)',
-                trend: 'up',
-                trendValue: '+1.2%'
-            }
-        ];
-        
-        metricsGrid.innerHTML = metrics.map(metric => `
-            <a href="#" class="metric-card">
-                <div class="metric-header">
-                    <div class="metric-icon" style="background: ${metric.color}">
-                        <i data-lucide="${metric.icon}" width="22" height="22"></i>
-                    </div>
-                    <div class="metric-value-container">
-                        <span class="metric-value">${metric.value.toLocaleString()}</span>
-                        ${metric.trend !== 'neutral' ? `
-                            <div class="metric-trend trend-${metric.trend}">
-                                <i data-lucide="${metric.trend === 'up' ? 'trending-up' : 'trending-down'}" width="12" height="12"></i>
-                                <span>${metric.trendValue}</span>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-                <h3 class="metric-label">${metric.title}</h3>
-            </a>
-        `).join('');
-        
-        // 重新初始化图标
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-        
-        // 绑定智能分析中心链接事件
-        this.bindAnalysisLink();
+        this.setText('m-total', this.stats.total);
+        this.setText('m-folders', this.stats.folders);
+        this.setText('m-domains', this.stats.domains);
+        this.setText('m-today', this.stats.todayCount);
     }
-    
-    /**
-     * 绑定智能分析中心链接事件
-     */
-    bindAnalysisLink() {
-        const analysisLink = document.getElementById('analysis-link');
-        if (analysisLink) {
-            analysisLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.openAnalysisCenter();
-            });
-        }
-    }
-    
-    /**
-     * 打开智能分析中心
-     */
-    openAnalysisCenter() {
-        const analysisUrl = chrome.runtime.getURL('pages/newtab/analysis.html');
-        chrome.tabs.create({ url: analysisUrl });
-    }
-    
-    /**
-     * 渲染词云
-     */
+
+    // ══════════════════════════════════════
+    //  Render: Word Cloud
+    // ══════════════════════════════════════
+
     renderWordCloud() {
         const container = document.getElementById('wordCloudContainer');
         if (!container) return;
-        
+
         try {
-            // 生成词云数据
-            const wordCloudData = this.generateWordCloudData();
-            
-            if (wordCloudData.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i data-lucide="cloud" class="empty-icon"></i>
-                        <div class="empty-title">暂无词云数据</div>
-                        <div class="empty-description">书签数量不足，无法生成词云</div>
-                    </div>
-                `;
+            const words = this.generateWordCloudData();
+            if (words.length === 0) {
+                container.innerHTML = '<div class="state-msg"><div class="title">暂无数据</div><div class="desc">没有找到足够的关键词</div></div>';
                 return;
             }
-            
-            // 渲染词云
-            const wordCloudHtml = this.createWordCloudHtml(wordCloudData);
-            container.innerHTML = wordCloudHtml;
-            
-            // 更新徽章
+
             const badge = document.getElementById('wordCloudBadge');
-            if (badge) {
-                badge.textContent = `${wordCloudData.length} 个主题`;
-            }
-            
-            // 重新初始化图标
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-            
+            if (badge) badge.textContent = `${words.length} 个主题`;
+
+            const colors = ['#007aff', '#5856d6', '#af52de', '#ff2d55', '#ff9500', '#34c759', '#5ac8fa', '#ff6482'];
+            let html = '<div class="word-cloud">';
+            words.forEach((w, i) => {
+                const size = Math.max(13, Math.min(36, 13 + w.weight * 3));
+                const color = colors[i % colors.length];
+                const weight = w.weight > 6 ? 700 : w.weight > 3 ? 600 : 400;
+                const opacity = 0.65 + Math.min(w.weight / 10, 0.35);
+                html += `<span class="word-item" style="font-size:${size}px;color:${color};font-weight:${weight};opacity:${opacity}" title="${w.text}: ${w.count}次">${w.text}</span>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
         } catch (error) {
-            console.error('词云渲染失败:', error);
-            container.innerHTML = `
-                <div class="error-container">
-                    <i data-lucide="alert-circle" class="error-icon"></i>
-                    <div class="error-text">词云生成失败</div>
-                </div>
-            `;
+            container.innerHTML = `<div class="state-msg"><div class="title">数据加载失败</div><div class="desc">${error.message}</div></div>`;
         }
     }
-    
-    /**
-     * 生成词云数据
-     */
+
     generateWordCloudData() {
-        const wordMap = new Map();
-        
-        this.bookmarks.forEach(bookmark => {
-            const title = bookmark.title || '';
-            // 提取中文和英文单词
-            const words = title.match(/[\u4e00-\u9fa5]+|[a-zA-Z]+/g) || [];
-            
-            words.forEach(word => {
-                const cleanWord = word.toLowerCase().trim();
-                if (cleanWord.length > 1) {
-                    wordMap.set(cleanWord, (wordMap.get(cleanWord) || 0) + 1);
+        const wordMap = {};
+        const stopWords = new Set(['的', '了', '在', '是', '和', '与', '为', '有', '个', '一', '不', '人', '中', '上', '下', '大', '小', '这', '那', '我', '你', '他', '它', 'http', 'https', 'www', 'com', 'cn', 'org', 'html', 'htm']);
+        const flat = this.getFlatBookmarks();
+
+        flat.forEach(b => {
+            if (!b.title || !b.url) return;
+            const words = b.title.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, ' ').split(/\s+/);
+            words.forEach(w => {
+                w = w.toLowerCase().trim();
+                if (w.length >= 2 && !stopWords.has(w)) {
+                    wordMap[w] = (wordMap[w] || 0) + 1;
                 }
             });
         });
-        
-        // 取前30个高频词
-        return Array.from(wordMap.entries())
+
+        return Object.entries(wordMap)
+            .filter(([, c]) => c >= 2)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 30)
-            .map(([text, value]) => ({ text, value }));
+            .slice(0, 40)
+            .map(([text, count]) => ({ text, count, weight: Math.min(count, 12) }));
     }
-    
-    /**
-     * 创建词云HTML
-     */
-    createWordCloudHtml(words) {
-        const maxValue = Math.max(...words.map(w => w.value));
-        const minValue = Math.min(...words.map(w => w.value));
-        const range = maxValue - minValue;
-        
-        // 使用更丰富的颜色调色板
-        const colors = [
-            'rgb(59, 130, 246)',   // blue-500
-            'rgb(99, 102, 241)',   // indigo-500
-            'rgb(139, 92, 246)',    // violet-500
-            'rgb(168, 85, 247)',    // purple-500
-            'rgb(217, 70, 239)'     // fuchsia-500
-        ];
-        
-        // 计算旋转角度
-        const rotations = [0, 0, 0, -15, 15, -30, 30];
-        
-        return `
-            <div class="word-cloud">
-                ${words.map((word, index) => {
-                    const fontSize = Math.max(12, (word.value / maxValue) * 24 + 12);
-                    const colorIndex = Math.min(Math.floor((word.value - minValue) / range * colors.length), colors.length - 1);
-                    const color = colors[colorIndex];
-                    const rotation = rotations[index % rotations.length];
-                    const fontWeight = word.value > (minValue + maxValue) / 2 ? 600 : 400;
-                    
-                    return `
-                        <span class="word-item ${fontWeight === 600 ? 'highlight' : ''}" 
-                              style="font-size: ${fontSize}px; color: ${color}; transform: rotate(${rotation}deg);"
-                              title="${word.text}: ${word.value}个书签"
-                              data-word="${word.text}"
-                              data-count="${word.value}">
-                            ${word.text}
-                        </span>
-                    `;
-                }).join('')}
-            </div>
-        `;
-    }
-    
-    /**
-     * 渲染分类统计图
-     */
+
+    // ══════════════════════════════════════
+    //  Render: Category Chart
+    // ══════════════════════════════════════
+
     renderCategoryChart() {
         const container = document.getElementById('categoryChartContainer');
         if (!container) return;
-        
+
         try {
-            const categoryData = Object.entries(this.categories)
-                .map(([name, items]) => ({ name, count: items.length }))
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 10); // 只显示前10个分类
-            
-            if (categoryData.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i data-lucide="folder" class="empty-icon"></i>
-                        <div class="empty-title">暂无分类数据</div>
-                        <div class="empty-description">没有找到可显示的分类信息</div>
-                    </div>
-                `;
+            const categories = {};
+            const flat = this.getFlatBookmarks();
+
+            flat.forEach(b => {
+                if (!b.url) return;
+                const domain = this.extractDomain(b.url);
+                const cat = this.categorizeDomain(domain);
+                categories[cat] = (categories[cat] || 0) + 1;
+            });
+
+            const sorted = Object.entries(categories).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            if (sorted.length === 0) {
+                container.innerHTML = '<div class="state-msg"><div class="title">暂无数据</div></div>';
                 return;
             }
-            
-            const maxCount = Math.max(...categoryData.map(d => d.count));
-            
-            const chartHtml = `
-                <div class="category-chart">
-                    ${categoryData.map(item => {
-                        const percentage = (item.count / maxCount) * 100;
-                        return `
-                            <div class="category-item" 
-                                 data-category="${item.name}"
-                                 data-count="${item.count}">
-                                <div class="category-label">${item.name}</div>
-                                <div class="category-bar">
-                                    <div class="category-fill" style="width: ${percentage}%"></div>
-                                </div>
-                                <div class="category-count">${item.count}</div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-            
-            container.innerHTML = chartHtml;
-            
-            // 重新初始化图标
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-            
+
+            const max = sorted[0][1];
+            let html = '<div class="category-list">';
+            sorted.forEach(([name, count]) => {
+                const pct = Math.round((count / max) * 100);
+                html += `
+          <div class="category-row">
+            <span class="category-name">${name}</span>
+            <div class="category-bar-track"><div class="category-bar-fill" style="width:${pct}%"></div></div>
+            <span class="category-count">${count}</span>
+          </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
         } catch (error) {
-            console.error('分类统计图渲染失败:', error);
-            container.innerHTML = `
-                <div class="error-container">
-                    <i data-lucide="alert-circle" class="error-icon"></i>
-                    <div class="error-text">分类统计图生成失败</div>
-                </div>
-            `;
+            container.innerHTML = `<div class="state-msg"><div class="title">数据加载失败</div><div class="desc">${error.message}</div></div>`;
         }
     }
-    
-    /**
-     * 渲染活跃度热力图
-     */
+
+    categorizeDomain(domain) {
+        const map = {
+            'github.com': '开发工具', 'stackoverflow.com': '开发工具', 'npmjs.com': '开发工具',
+            'gitlab.com': '开发工具', 'developer.mozilla.org': '开发工具', 'codepen.io': '开发工具',
+            'youtube.com': '视频娱乐', 'bilibili.com': '视频娱乐', 'netflix.com': '视频娱乐',
+            'twitter.com': '社交媒体', 'x.com': '社交媒体', 'weibo.com': '社交媒体', 'zhihu.com': '社交媒体',
+            'google.com': '搜索引擎', 'baidu.com': '搜索引擎', 'bing.com': '搜索引擎',
+            'amazon.com': '购物', 'taobao.com': '购物', 'jd.com': '购物',
+            'wikipedia.org': '知识百科', 'medium.com': '知识百科',
+            'docs.google.com': '办公工具', 'notion.so': '办公工具', 'figma.com': '设计工具',
+        };
+        for (const [d, cat] of Object.entries(map)) {
+            if (domain.includes(d)) return cat;
+        }
+        return '其他';
+    }
+
+    // ══════════════════════════════════════
+    //  Render: Heatmap
+    // ══════════════════════════════════════
+
     renderActivityHeatmap() {
         const container = document.getElementById('activityHeatmapContainer');
         if (!container) return;
-        
+
         try {
-            // 生成模拟的活跃度数据
-            const activityData = this.generateActivityData();
-            
-            const heatmapHtml = this.createActivityHeatmapHtml(activityData);
-            container.innerHTML = heatmapHtml;
-            
+            const data = this.generateActivityData();
+            const html = this.createHeatmapHtml(data);
+            container.innerHTML = html;
         } catch (error) {
-            console.error('活跃度热力图渲染失败:', error);
-            container.innerHTML = `
-                <div class="error-container">
-                    <i data-lucide="alert-circle" class="error-icon"></i>
-                    <div class="error-text">活跃度热力图生成失败</div>
-                </div>
-            `;
+            container.innerHTML = `<div class="state-msg"><div class="title">数据加载失败</div><div class="desc">${error.message}</div></div>`;
         }
     }
-    
-    /**
-     * 生成活跃度数据
-     */
+
     generateActivityData() {
-        const data = [];
-        const today = new Date();
-        
-        // 生成过去365天的数据
-        for (let i = 364; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            
-            // 模拟活跃度数据（0-4个书签）
-            const count = Math.floor(Math.random() * 5);
-            
-            data.push({
-                date: date.toISOString().split('T')[0],
-                count: count
-            });
-        }
-        
-        return data;
-    }
-    
-    /**
-     * 创建活跃度热力图HTML
-     */
-    createActivityHeatmapHtml(data) {
-        const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-        
-        // 处理数据为网格格式
-        const grid = [];
-        const today = new Date();
-        const startDate = new Date();
-        startDate.setDate(today.getDate() - 364);
-        
-        // 创建数据映射
-        const dataMap = new Map(data.map(item => [item.date, item.count]));
-        
-        // 生成网格
-        for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
-            const dayOfWeek = d.getDay();
-            const weekOffset = Math.floor((d.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
-            
-            if (!grid[weekOffset]) {
-                grid[weekOffset] = [];
-            }
-            
-            grid[weekOffset][dayOfWeek] = {
-                date: dateStr,
-                count: dataMap.get(dateStr) || 0
-            };
-        }
-        
-        return `
-            <div class="activity-heatmap">
-                <div class="heatmap-container">
-                    <div class="heatmap-header">
-                        <div class="heatmap-title">收藏活跃度热力图</div>
-                        <div class="heatmap-legend">
-                            <span>活跃度:</span>
-                            <div class="legend-item">
-                                <div class="legend-color" style="background: #ebedf0;"></div>
-                                <span>无</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color" style="background: #c6e48b;"></div>
-                                <span>少</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color" style="background: #7bc96f;"></div>
-                                <span>中</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-color" style="background: #239a3b;"></div>
-                                <span>多</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="heatmap-grid">
-                        <div class="heatmap-days">
-                            ${days.map(day => `<div>${day}</div>`).join('')}
-                        </div>
-                        <div class="heatmap-squares">
-                            ${grid.map((week, weekIndex) => 
-                                week.map((day, dayIndex) => {
-                                    if (!day) return '<div></div>';
-                                    
-                                    const color = this.getHeatmapColor(day.count);
-                                    return `
-                                        <div class="heatmap-square" 
-                                             style="background: ${color};"
-                                             data-date="${day.date}"
-                                             data-count="${day.count}"
-                                             title="${day.date}: ${day.count}个书签">
-                                        </div>
-                                    `;
-                                }).join('')
-                            ).join('')}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    /**
-     * 获取热力图颜色
-     */
-    getHeatmapColor(count) {
-        const colors = ['#ebedf0', '#c6e48b', '#7bc96f', '#239a3b', '#196127'];
-        return colors[Math.min(count, colors.length - 1)];
-    }
-    
-    /**
-     * 提取域名
-     */
-    extractDomain(url) {
-        try {
-            if (url) {
-                const urlObj = new URL(url);
-                return urlObj.hostname.replace(/^www\./, '');
-            }
-        } catch (e) {
-            // URL解析失败，忽略
-        }
-        return '';
-    }
-    
-    /**
-     * 显示工具提示
-     */
-    showTooltip(event, content) {
-        const tooltip = document.getElementById('tooltip');
-        if (!tooltip) return;
-        
-        tooltip.innerHTML = content;
-        tooltip.classList.add('show');
-        
-        const rect = event.target.getBoundingClientRect();
-        tooltip.style.left = rect.left + rect.width / 2 + 'px';
-        tooltip.style.top = rect.top - 10 + 'px';
-        tooltip.style.transform = 'translateX(-50%)';
-    }
-    
-    /**
-     * 隐藏工具提示
-     */
-    hideTooltip() {
-        const tooltip = document.getElementById('tooltip');
-        if (tooltip) {
-            tooltip.classList.remove('show');
-        }
-    }
-    
-    /**
-     * 处理错误
-     */
-    handleError(error) {
-        console.error('❌ Dashboard错误:', error);
-        this.error = error;
-        this.isLoading = false;
-        
-        // 显示错误状态
-        const containers = [
-            'metricsGrid',
-            'wordCloudContainer', 
-            'categoryChartContainer',
-            'activityHeatmapContainer'
-        ];
-        
-        containers.forEach(containerId => {
-            const container = document.getElementById(containerId);
-            if (container) {
-                container.innerHTML = `
-                    <div class="error-container">
-                        <i data-lucide="alert-circle" class="error-icon"></i>
-                        <div class="error-text">数据加载失败: ${error.message}</div>
-                    </div>
-                `;
+        const dayData = {};
+        const flat = this.getFlatBookmarks();
+
+        flat.forEach(b => {
+            if (b.dateAdded) {
+                const d = new Date(b.dateAdded);
+                const key = d.toISOString().split('T')[0];
+                dayData[key] = (dayData[key] || 0) + 1;
             }
         });
-        
-        // 重新初始化图标
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
+
+        const weeks = [];
+        const now = new Date();
+        for (let i = 364; i >= 0; i--) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - i);
+            const key = d.toISOString().split('T')[0];
+            const weekIdx = Math.floor((364 - i) / 7);
+            if (!weeks[weekIdx]) weeks[weekIdx] = [];
+            weeks[weekIdx].push({ date: key, count: dayData[key] || 0, day: d.getDay() });
+        }
+        return weeks;
+    }
+
+    createHeatmapHtml(weeks) {
+        const colors = ['rgba(0,0,0,0.04)', 'rgba(0,122,255,0.2)', 'rgba(0,122,255,0.4)', 'rgba(0,122,255,0.6)', 'rgba(0,122,255,0.85)'];
+        const getColor = (c) => c === 0 ? colors[0] : c <= 2 ? colors[1] : c <= 5 ? colors[2] : c <= 10 ? colors[3] : colors[4];
+        const dayLabels = ['', '周一', '', '周三', '', '周五', ''];
+
+        let html = `<div class="heatmap-wrap">
+      <div class="heatmap-title-row">
+        <span></span>
+        <div class="heatmap-legend">
+          <span>少</span>
+          ${colors.map(c => `<span class="legend-block" style="background:${c}"></span>`).join('')}
+          <span>多</span>
+        </div>
+      </div>
+      <div class="heatmap-grid">
+        <div class="heatmap-days">${dayLabels.map(l => `<div style="height:11px;line-height:11px">${l}</div>`).join('')}</div>
+        <div class="heatmap-squares">`;
+
+        weeks.forEach(week => {
+            week.forEach(day => {
+                html += `<div class="heatmap-cell" style="background:${getColor(day.count)}" title="${day.date}: ${day.count}个书签"></div>`;
+            });
+        });
+
+        html += '</div></div></div>';
+        return html;
+    }
+
+    // ══════════════════════════════════════
+    //  AI Analysis
+    // ══════════════════════════════════════
+
+    async checkApiStatus() {
+        try {
+            const status = await this.apiService.checkApiStatus();
+            const el = document.getElementById('api-status');
+            if (!el) return;
+
+            if (status.connected) {
+                el.textContent = status.provider;
+                el.style.color = '#34c759';
+            } else {
+                el.textContent = '未配置';
+                el.style.color = '#ff3b30';
+                this.addLog('API 未配置，请先在设置中配置 API 密钥', 'warning');
+            }
+        } catch (error) {
+            this.setText('api-status', '错误');
         }
     }
-    
-    /**
-     * 日志记录
-     */
-    log(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
-        const prefix = type === 'error' ? '❌' : type === 'warning' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
-        console.log(`${prefix} [${timestamp}] ${message}`);
+
+    async loadBookmarkStats() {
+        try {
+            const flat = this.getFlatBookmarks();
+            this.setText('bookmark-count', flat.length);
+        } catch { }
+    }
+
+    async startAnalysis() {
+        if (this.analysisState.isProcessing) return;
+
+        try {
+            this.analysisState.isProcessing = true;
+            this.setText('analysis-status', '分析中...');
+            this.showProgress('analysis-progress', true);
+            this.updateProgress('progress-fill', 'progress-text', 0, 100, '准备分析...');
+
+            document.getElementById('start-analysis-btn')?.classList.add('hidden');
+            document.getElementById('stop-analysis-btn')?.classList.remove('hidden');
+
+            const settings = await this.apiService.getApiSettings();
+            if (!settings.apiKey) throw new Error('请先配置 API 密钥');
+
+            this.updateProgress('progress-fill', 'progress-text', 10, 100, '获取书签数据...');
+            const bookmarks = await this.bookmarkService.getAllBookmarks();
+            if (!bookmarks || bookmarks.length === 0) throw new Error('没有找到书签');
+
+            this.addLog(`开始分析 ${bookmarks.length} 个书签`, 'info');
+
+            this.updateProgress('progress-fill', 'progress-text', 20, 100, 'AI 分析中...');
+            const categories = await this.bookmarkService.categorizeBookmarks(
+                bookmarks, settings, this.apiService,
+                (progress, message) => this.updateProgress('progress-fill', 'progress-text', 20 + progress * 0.7, 100, message)
+            );
+
+            this.analysisState.categories = categories;
+            this.analysisState.results = categories;
+
+            this.updateProgress('progress-fill', 'progress-text', 100, 100, '分析完成');
+            this.displayAnalysisResults(categories);
+            this.setText('category-count', Object.keys(categories).length);
+
+            document.getElementById('apply-btn')?.classList.remove('hidden');
+            this.addLog(`分析完成！共分为 ${Object.keys(categories).length} 个分类`, 'success');
+            this.setText('analysis-status', '已完成');
+
+        } catch (error) {
+            this.addLog(`分析失败: ${error.message}`, 'error');
+            this.setText('analysis-status', '分析失败');
+        } finally {
+            this.analysisState.isProcessing = false;
+            this.showProgress('analysis-progress', false);
+            document.getElementById('start-analysis-btn')?.classList.remove('hidden');
+            document.getElementById('stop-analysis-btn')?.classList.add('hidden');
+        }
+    }
+
+    stopAnalysis() {
+        if (this.worker) {
+            this.worker.terminate();
+            this.initWorker();
+        }
+        this.analysisState.isProcessing = false;
+        this.showProgress('analysis-progress', false);
+        this.setText('analysis-status', '已停止');
+        document.getElementById('start-analysis-btn')?.classList.remove('hidden');
+        document.getElementById('stop-analysis-btn')?.classList.add('hidden');
+        this.addLog('分析已停止', 'warning');
+    }
+
+    async applyCategories() {
+        if (!this.analysisState.results) return;
+
+        try {
+            this.showProgress('analysis-progress', true);
+            this.updateProgress('progress-fill', 'progress-text', 0, 100, '应用分类结果...');
+
+            const categories = this.analysisState.results;
+            const mainFolder = await this.bookmarkService.createBookmarkFolder('AI分类书签', '1');
+            let count = 0;
+            const total = Object.keys(categories).length;
+
+            for (const [name, items] of Object.entries(categories)) {
+                const pct = 10 + ((count / total) * 80);
+                this.updateProgress('progress-fill', 'progress-text', pct, 100, `整理: ${name}`);
+                const folder = await this.bookmarkService.createBookmarkFolder(name, mainFolder.id);
+
+                for (const bm of items) {
+                    const match = this.getFlatBookmarks().find(b => b.url === bm.url && b.title === bm.title);
+                    if (match) await this.bookmarkService.moveBookmark(match.id, folder.id);
+                }
+                count++;
+                this.addLog(`已整理分类 "${name}": ${items.length}个书签`, 'info');
+            }
+
+            this.updateProgress('progress-fill', 'progress-text', 100, 100, '完成');
+            this.addLog('分类应用完成！', 'success');
+        } catch (error) {
+            this.addLog(`应用失败: ${error.message}`, 'error');
+        } finally {
+            this.showProgress('analysis-progress', false);
+        }
+    }
+
+    async exportResults() {
+        try {
+            if (this.analysisState.results) {
+                await this.importExportService.exportCategoriesAsCsv(this.analysisState.results);
+                this.addLog('分析结果已导出', 'success');
+            } else {
+                await this.importExportService.exportBookmarksAsJson();
+                this.addLog('书签数据已导出', 'success');
+            }
+        } catch (error) {
+            this.addLog(`导出失败: ${error.message}`, 'error');
+        }
+    }
+
+    displayAnalysisResults(categories) {
+        const wrap = document.getElementById('analysis-results');
+        const content = document.getElementById('results-content');
+        if (!wrap || !content) return;
+
+        wrap.classList.remove('hidden');
+        let html = '<div class="feature-grid">';
+        for (const [name, items] of Object.entries(categories)) {
+            html += `
+        <div class="feature-card" style="cursor:default">
+          <div class="feature-name">${name}</div>
+          <div class="feature-desc">${items.length} 个书签</div>
+        </div>`;
+        }
+        html += '</div>';
+        content.innerHTML = html;
+    }
+
+    // ══════════════════════════════════════
+    //  Detection
+    // ══════════════════════════════════════
+
+    async detectDuplicates() {
+        try {
+            this.addLog('开始检测重复书签...', 'info');
+            this.showProgress('detection-progress', true);
+            const result = await this.detectionService.detectDuplicateBookmarks();
+            this.setText('dup-count', `${result.urlDuplicateCount} URL / ${result.titleDuplicateCount} 标题`);
+            this.addLog(`重复检测完成: ${result.urlDuplicateCount} URL重复, ${result.titleDuplicateCount} 标题重复`, 'success');
+        } catch (error) {
+            this.addLog(`重复检测失败: ${error.message}`, 'error');
+        } finally {
+            this.showProgress('detection-progress', false);
+        }
+    }
+
+    async detectDeadLinks() {
+        try {
+            this.addLog('开始检测失效链接...', 'info');
+            this.showProgress('detection-progress', true);
+            const result = await this.detectionService.detectInvalidBookmarks();
+            this.setText('dead-count', result.invalid);
+            this.addLog(`失效检测完成: ${result.valid}个有效, ${result.invalid}个失效`, 'success');
+        } catch (error) {
+            this.addLog(`失效检测失败: ${error.message}`, 'error');
+        } finally {
+            this.showProgress('detection-progress', false);
+        }
+    }
+
+    async detectEmptyFolders() {
+        try {
+            this.addLog('开始检测空文件夹...', 'info');
+            this.showProgress('detection-progress', true);
+            const result = await this.detectionService.detectEmptyFolders();
+            this.setText('empty-count', result.count);
+            this.addLog(`空文件夹检测完成: 发现${result.count}个`, 'success');
+        } catch (error) {
+            this.addLog(`空文件夹检测失败: ${error.message}`, 'error');
+        } finally {
+            this.showProgress('detection-progress', false);
+        }
+    }
+
+    async detectMalformed() {
+        try {
+            this.addLog('开始检测格式异常...', 'info');
+            this.showProgress('detection-progress', true);
+
+            const bookmarks = this.getFlatBookmarks();
+            const malformed = [];
+            bookmarks.forEach(b => {
+                if (!b.title || b.title.trim() === '') malformed.push({ ...b, issue: '标题为空' });
+                if (b.url && !this.isValidUrl(b.url)) malformed.push({ ...b, issue: 'URL格式异常' });
+            });
+
+            this.setText('malform-count', malformed.length);
+            this.addLog(`格式检测完成: 发现${malformed.length}个异常`, 'success');
+        } catch (error) {
+            this.addLog(`格式检测失败: ${error.message}`, 'error');
+        } finally {
+            this.showProgress('detection-progress', false);
+        }
+    }
+
+    async runFullDetection() {
+        this.addLog('开始全面检测...', 'info');
+        await this.detectDuplicates();
+        await this.detectEmptyFolders();
+        await this.detectMalformed();
+        // Dead link detection is slow, run last
+        await this.detectDeadLinks();
+        this.addLog('全面检测完成', 'success');
+    }
+
+    // ══════════════════════════════════════
+    //  Data Management
+    // ══════════════════════════════════════
+
+    async importBookmarks(event) {
+        const file = event?.target?.files?.[0];
+        if (!file) return;
+
+        try {
+            this.addLog(`开始导入文件: ${file.name}`, 'info');
+            const text = await file.text();
+            let result;
+            if (file.name.endsWith('.json')) result = await this.importExportService.importBookmarksFromJson(text);
+            else if (file.name.endsWith('.html')) result = await this.importExportService.importBookmarksFromHtml(text);
+            else if (file.name.endsWith('.csv')) result = await this.importExportService.importBookmarksFromCsv(text);
+            else throw new Error('不支持的文件格式');
+
+            if (result.success) {
+                this.addLog(`导入完成: ${result.importedCount}个书签`, 'success');
+                this.setText('last-import', new Date().toLocaleString());
+                await this.refreshData();
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error) {
+            this.addLog(`导入失败: ${error.message}`, 'error');
+        } finally {
+            if (event?.target) event.target.value = '';
+        }
+    }
+
+    async exportBookmarks() {
+        try {
+            this.addLog('开始导出书签...', 'info');
+            await this.importExportService.exportBookmarksAsJson();
+            this.addLog('书签导出完成', 'success');
+            this.setText('last-export', new Date().toLocaleString());
+        } catch (error) {
+            this.addLog(`导出失败: ${error.message}`, 'error');
+        }
+    }
+
+    async createBackup() {
+        try {
+            this.addLog('开始创建备份...', 'info');
+            const bookmarks = await this.bookmarkService.getAllBookmarks();
+            const data = {
+                timestamp: new Date().toISOString(),
+                version: '1.0',
+                bookmarkCount: this.getFlatBookmarks().length,
+                bookmarks,
+                categories: this.analysisState.categories || {},
+                metadata: { userAgent: navigator.userAgent, source: '智能分析中心' }
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `书签备份_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            this.addLog('备份创建完成', 'success');
+            this.setText('last-backup', new Date().toLocaleString());
+        } catch (error) {
+            this.addLog(`备份失败: ${error.message}`, 'error');
+        }
+    }
+
+    openBookmarkManager() {
+        try {
+            if (chrome?.tabs) {
+                chrome.tabs.create({ url: chrome.runtime.getURL('enhanced-bookmark-manager.html') });
+            } else {
+                window.open('../../enhanced-bookmark-manager.html', '_blank');
+            }
+        } catch (error) {
+            this.addLog(`打开管理器失败: ${error.message}`, 'error');
+        }
+    }
+
+    // ══════════════════════════════════════
+    //  Utilities
+    // ══════════════════════════════════════
+
+    getFlatBookmarks() {
+        const flat = [];
+        const traverse = (nodes) => {
+            if (!nodes) return;
+            for (const n of nodes) {
+                if (n.url) flat.push(n);
+                if (n.children) traverse(n.children);
+            }
+        };
+
+        if (Array.isArray(this.bookmarks)) {
+            if (this.bookmarks[0]?.children) {
+                traverse(this.bookmarks);
+            } else {
+                return this.bookmarks.filter(b => b.url);
+            }
+        }
+        return flat;
+    }
+
+    extractDomain(url) {
+        try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'unknown'; }
+    }
+
+    isValidUrl(url) {
+        try { new URL(url); return true; } catch { return false; }
+    }
+
+    setText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    }
+
+    initWorker() {
+        try {
+            this.worker = new Worker('../../bookmarkProcessor.js');
+            this.worker.onerror = () => { };
+        } catch { }
+    }
+
+    async refreshData() {
+        this.addLog('刷新数据...', 'info');
+        try {
+            await this.loadData();
+            this.renderMetrics();
+            this.renderWordCloud();
+            this.renderCategoryChart();
+            this.renderActivityHeatmap();
+            await this.checkApiStatus();
+            await this.loadBookmarkStats();
+            this.addLog('数据刷新完成', 'success');
+        } catch (error) {
+            this.addLog(`刷新失败: ${error.message}`, 'error');
+        }
+    }
+
+    openSettings() {
+        try {
+            if (chrome?.runtime) chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+            else window.open('../../options.html', '_blank');
+        } catch { }
+    }
+
+    handleError(error) {
+        const containers = ['wordCloudContainer', 'categoryChartContainer', 'activityHeatmapContainer'];
+        containers.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = `<div class="state-msg"><div class="title">数据加载失败</div><div class="desc">${error.message}</div></div>`;
+        });
+    }
+
+    // ── Progress helpers ──
+
+    showProgress(id, show) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('visible', show);
+    }
+
+    updateProgress(fillId, textId, current, total, message) {
+        const fill = document.getElementById(fillId);
+        const text = document.getElementById(textId);
+        const pct = Math.round((current / total) * 100);
+        if (fill) fill.style.width = `${pct}%`;
+        if (text) text.textContent = `${message} (${pct}%)`;
+    }
+
+    // ── Log System ──
+
+    addLog(message, type = 'info') {
+        const ts = new Date().toLocaleTimeString();
+        this.logs.push({ ts, message, type });
+
+        const container = document.getElementById('log-content');
+        if (!container) return;
+
+        const el = document.createElement('div');
+        el.className = `log-entry ${type}`;
+        el.textContent = `[${ts}] ${message}`;
+        container.appendChild(el);
+        container.scrollTop = container.scrollHeight;
+
+        if (this.logs.length > 500) {
+            this.logs = this.logs.slice(-250);
+            while (container.children.length > 250) container.removeChild(container.firstChild);
+        }
+    }
+
+    clearLog() {
+        this.logs = [];
+        const el = document.getElementById('log-content');
+        if (el) el.innerHTML = '';
+        this.addLog('日志已清空', 'info');
     }
 }
 
-// 页面加载完成后初始化Dashboard
+// ══════════════════════════════════════
+//  Bootstrap
+// ══════════════════════════════════════
+
 document.addEventListener('DOMContentLoaded', () => {
     const dashboard = new Dashboard();
     dashboard.init();
+
+    // Support hash-based tab switching (e.g. #ai-analysis)
+    const hash = window.location.hash.replace('#', '');
+    if (hash) dashboard.switchTab(hash);
 });
 
-// 导出Dashboard类供其他模块使用
 export { Dashboard };

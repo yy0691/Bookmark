@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>智能书签管理器 - 书签助手</title>
   <link rel="icon" type="image/svg+xml" href="images/icon.svg">
+  <link rel="stylesheet" href="styles/apple-design-system.css">
   <style>
     * {
       margin: 0;
@@ -13,10 +15,10 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      font-family: var(--apple-font);
+      background: var(--apple-bg);
       min-height: 100vh;
-      color: #1d1d1f;
+      color: var(--apple-text);
       line-height: 1.6;
     }
 
@@ -29,17 +31,15 @@
     /* 侧边栏 */
     .sidebar {
       width: 300px;
-      background: rgba(255, 255, 255, 0.25);
-      -webkit-backdrop-filter: blur(20px);
-      backdrop-filter: blur(20px);
-      border-right: 1px solid rgba(255, 255, 255, 0.3);
+      background: var(--apple-bg-tertiary);
+      border-right: 1px solid var(--apple-border);
       display: flex;
       flex-direction: column;
     }
 
     .sidebar-header {
       padding: 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      border-bottom: 1px solid var(--apple-divider);
     }
 
     .sidebar-title {
@@ -51,23 +51,20 @@
 
     .search-box {
       width: 100%;
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.4);
-      -webkit-backdrop-filter: blur(10px);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      border-radius: 12px;
+      padding: 10px 14px;
+      background: var(--apple-bg);
+      border: 1px solid var(--apple-border);
+      border-radius: var(--apple-radius-sm);
       font-size: 14px;
       font-family: inherit;
-      color: #1d1d1f;
+      color: var(--apple-text);
       transition: all 0.2s ease;
+      outline: none;
     }
 
     .search-box:focus {
-      outline: none;
-      border-color: #007aff;
-      background: rgba(255, 255, 255, 0.6);
-      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+      border-color: var(--apple-accent);
+      box-shadow: var(--apple-shadow-glow);
     }
 
     .sidebar-content {
@@ -511,7 +508,9 @@
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     /* 响应式设计 */
@@ -545,6 +544,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="manager-container">
     <!-- 侧边栏 -->
@@ -616,6 +616,8 @@
     </div>
   </div>
 
+  <script src="styles/icons.js"></script>
   <script type="module" src="enhanced-bookmark-manager.js"></script>
 </body>
+
 </html>

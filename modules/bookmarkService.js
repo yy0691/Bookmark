@@ -53,13 +53,13 @@ export class BookmarkService {
       this.bookmarks = mockBookmarks;
       return Promise.resolve(mockBookmarks);
     }
-    
+
     return new Promise((resolve) => {
       chrome.bookmarks.getTree((bookmarkTreeNodes) => {
         const bookmarks = [];
-        
+
         this.log(`开始获取书签树...`, 'info');
-        
+
         // 递归函数，遍历书签树
         const processNode = (node) => {
           if (node.url) {
@@ -74,33 +74,34 @@ export class BookmarkService {
                 processedTitle = node.title || '未命名书签';
               }
             }
-            
+
             bookmarks.push({
               id: node.id,
               title: processedTitle,
               url: node.url,
               parentId: node.parentId,
-              originalTitle: node.title
+              originalTitle: node.title,
+              dateAdded: node.dateAdded
             });
           }
-          
+
           if (node.children) {
             for (const child of node.children) {
               processNode(child);
             }
           }
         };
-        
+
         // 从根节点开始处理
         for (const node of bookmarkTreeNodes) {
           processNode(node);
         }
-        
+
         // 统计信息
         const emptyTitles = bookmarks.filter(b => !b.title).length;
         const numericTitles = bookmarks.filter(b => /^\d+$/.test(b.title)).length;
         this.log(`书签获取完成: 总计${bookmarks.length}个书签, ${emptyTitles}个空标题, ${numericTitles}个纯数字标题`, 'info');
-        
+
         // 域名统计
         const domainMap = {};
         bookmarks.forEach(bookmark => {
@@ -112,20 +113,57 @@ export class BookmarkService {
             // 忽略无效URL
           }
         });
-        
+
         const topDomains = Object.entries(domainMap)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 10);
-        
+
         if (topDomains.length > 0) {
           this.log(`最常见的域名:`, 'info');
           topDomains.forEach(([domain, count]) => {
             this.log(`  - ${domain}: ${count}个书签`, 'info');
           });
         }
-        
+
         this.bookmarks = bookmarks;
         resolve(bookmarks);
+      });
+    });
+  }
+
+  // 获取所有书签（扁平化数组，包含文件夹）
+  async getAllBookmarksFlat() {
+    if (!this.isExtensionContext) {
+      return this.getMockBookmarks();
+    }
+
+    return new Promise((resolve) => {
+      chrome.bookmarks.getTree((bookmarkTreeNodes) => {
+        const items = [];
+
+        const processNode = (node) => {
+          if (node.id !== '0') { // 跳过根节点
+            items.push({
+              id: node.id,
+              title: node.title || '未命名',
+              url: node.url || '',
+              parentId: node.parentId,
+              dateAdded: node.dateAdded,
+              isFolder: !node.url && !!node.children
+            });
+          }
+          if (node.children) {
+            for (const child of node.children) {
+              processNode(child);
+            }
+          }
+        };
+
+        for (const node of bookmarkTreeNodes) {
+          processNode(node);
+        }
+
+        resolve(items);
       });
     });
   }
@@ -133,12 +171,12 @@ export class BookmarkService {
   // 使用AI对书签进行分类
   async categorizeBookmarks(bookmarks, settings, apiService) {
     this.log(`开始预处理书签数据...`, 'info');
-    
+
     // 如果不在扩展环境中，使用模拟分类结果
     if (!this.isExtensionContext) {
       return this.getMockCategorizedResults(bookmarks);
     }
-    
+
     // 检查网络连接
     this.log(`检查网络连接状态...`, 'info');
     try {
@@ -146,13 +184,13 @@ export class BookmarkService {
       if (!networkConnected) {
         this.log(`网络连接检测失败，将使用预分类作为备用方案`, 'warning');
         this.log(`备用方案说明：基于域名和常见关键词进行智能预分类`, 'info');
-        
+
         const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
           title: b.title || '未命名书签',
           url: b.url || '',
           domain: this.extractDomain(b.url)
         })));
-        
+
         this.log(`预分类完成，共生成${Object.keys(preCategorized).length}个分类`, 'success');
         return preCategorized;
       } else {
@@ -161,17 +199,17 @@ export class BookmarkService {
     } catch (networkError) {
       this.log(`网络连接检测异常: ${networkError.message}`, 'error');
       this.log(`将使用预分类作为备用方案`, 'info');
-      
+
       const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
         title: b.title || '未命名书签',
         url: b.url || '',
         domain: this.extractDomain(b.url)
       })));
-      
+
       this.log(`预分类完成，共生成${Object.keys(preCategorized).length}个分类`, 'success');
       return preCategorized;
     }
-    
+
     // 验证API密钥格式
     const keyValidation = apiService.validateApiKey(settings.apiKey, settings.provider);
     if (!keyValidation.valid) {
@@ -184,14 +222,14 @@ export class BookmarkService {
       })));
       return preCategorized;
     }
-    
+
     // 统计有效书签数量
     const validBookmarks = bookmarks.filter(b => b.title && b.url).length;
     const totalBookmarks = bookmarks.length;
     if (validBookmarks < totalBookmarks) {
       this.log(`警告: 检测到${totalBookmarks - validBookmarks}个无效书签 (无标题或URL)`, 'warning');
     }
-    
+
     // 预处理：创建更友好的数据集
     const bookmarkData = bookmarks.map(b => {
       let domain = '';
@@ -203,25 +241,25 @@ export class BookmarkService {
       } catch (e) {
         // URL解析失败，忽略
       }
-      
+
       return {
         title: b.title || domain || '未命名书签',
         url: b.url || '',
         domain: domain
       };
     });
-    
+
     // 预分类
     const preCategorized = this.performPreCategorization(bookmarkData);
-    
+
     // 构建提示词
     const prompt = this.buildCategorizePrompt(bookmarkData, preCategorized);
-    
+
     // 根据API提供商选择合适的处理方法
     let categoryResult;
     try {
       this.log(`开始调用AI进行书签分类...`, 'info');
-      
+
       switch (settings.provider) {
         case 'gemini':
           categoryResult = await apiService.callGeminiApi(prompt, settings.apiKey, settings.model);
@@ -235,13 +273,13 @@ export class BookmarkService {
         default:
           throw new Error('不支持的API提供商');
       }
-      
+
       this.log(`AI分类完成，获得${Object.keys(categoryResult).length}个分类`, 'success');
-      
+
       // 如果API返回空结果，使用预分类结果
       if (!categoryResult || Object.keys(categoryResult).length === 0) {
         this.log('API返回的分类结果为空，尝试使用预分类结果', 'warning');
-        
+
         if (Object.keys(preCategorized).length > 0) {
           categoryResult = preCategorized;
           this.log(`使用预分类结果: ${Object.keys(preCategorized).length}个分类`, 'info');
@@ -250,34 +288,34 @@ export class BookmarkService {
           this.log(`无法获取有效分类，所有书签归为"未分类"`, 'error');
         }
       }
-      
+
       // 验证并优化分类结果
       return this.validateAndOptimizeCategories(categoryResult, bookmarks.length);
     } catch (error) {
       this.log(`分类处理失败: ${error.message}，尝试使用备用方案`, 'error');
-      
+
       // 出错时使用预分类作为备用方案
       if (Object.keys(preCategorized).length > 0) {
         const uncategorized = bookmarkData.filter(bookmark => {
-          return !Object.values(preCategorized).some(items => 
+          return !Object.values(preCategorized).some(items =>
             items.some(item => item.url === bookmark.url)
           );
         });
-        
+
         if (uncategorized.length > 0) {
           preCategorized["其他"] = uncategorized;
         }
-        
+
         this.log(`使用预分类作为备用方案: ${Object.keys(preCategorized).length}个分类`, 'info');
         return preCategorized;
       }
-      
+
       // 如果没有预分类，使用基本分类
       const basicCategories = {
         "常用网站": bookmarkData.slice(0, Math.min(20, bookmarkData.length)),
         "其他书签": bookmarkData.slice(Math.min(20, bookmarkData.length))
       };
-      
+
       this.log(`无法进行分类，使用基本分类方案`, 'warning');
       return basicCategories;
     }
@@ -286,7 +324,7 @@ export class BookmarkService {
   // 执行预分类
   performPreCategorization(bookmarkData) {
     const preCategorized = {};
-    
+
     // 域名模式匹配
     const domainPatterns = {
       'AI工具': [/gemini\.google\.com/, /openai\.com/, /chat\.openai\.com/, /perplexity\.ai/, /claude\.ai/, /poe\.com/],
@@ -299,7 +337,7 @@ export class BookmarkService {
       '电商购物': [/taobao\.com/, /jd\.com/, /amazon\.com/, /tmall\.com/, /pinduoduo\.com/],
       '新闻资讯': [/news\./, /sina\.com/, /qq\.com/, /163\.com/, /bbc\./, /cnn\./]
     };
-    
+
     // 基于书签标题的关键词匹配
     const titleKeywords = {
       'AI工具教程': ['AI教程', 'ChatGPT教程', 'Gemini使用', '人工智能教程', 'AI学习', 'machine learning'],
@@ -309,11 +347,11 @@ export class BookmarkService {
       '前端开发': ['前端', 'frontend', 'Vue', 'React', 'Angular', 'JavaScript'],
       '后端开发': ['后端', 'backend', 'API', 'Node.js', 'Python', 'Java']
     };
-    
+
     // 尝试预分类
     bookmarkData.forEach(bookmark => {
       let categorized = false;
-      
+
       // 首先尝试域名匹配
       for (const [category, patterns] of Object.entries(domainPatterns)) {
         if (patterns.some(pattern => pattern.test(bookmark.domain || bookmark.url))) {
@@ -325,7 +363,7 @@ export class BookmarkService {
           break;
         }
       }
-      
+
       // 如果域名没有匹配到，尝试标题关键词匹配
       if (!categorized && bookmark.title) {
         const title = bookmark.title.toLowerCase();
@@ -340,17 +378,17 @@ export class BookmarkService {
         }
       }
     });
-    
+
     // 输出预分类结果
     this.log(`预分类结果:`, 'info');
     Object.entries(preCategorized).forEach(([category, items]) => {
       this.log(`  - ${category}: ${items.length}个书签`, 'info');
     });
-    
+
     const preCategorizedCount = Object.values(preCategorized).reduce((sum, items) => sum + items.length, 0);
     const uncategorizedCount = bookmarkData.length - preCategorizedCount;
-    this.log(`预分类统计: 已分类${preCategorizedCount}个 (${((preCategorizedCount/bookmarkData.length)*100).toFixed(1)}%), 未分类${uncategorizedCount}个`, 'info');
-    
+    this.log(`预分类统计: 已分类${preCategorizedCount}个 (${((preCategorizedCount / bookmarkData.length) * 100).toFixed(1)}%), 未分类${uncategorizedCount}个`, 'info');
+
     return preCategorized;
   }
 
@@ -359,7 +397,7 @@ export class BookmarkService {
     const preCategorizedInfo = Object.entries(preCategorized)
       .map(([category, items]) => `- ${category}: ${items.length}个书签，例如: ${items.slice(0, 3).map(b => b.title).join(', ')}...`)
       .join('\n');
-    
+
     return `# 角色
 你是一名高级数字信息管理员和分类策略专家。你擅长分析大量无序的信息（如浏览器书签），并根据其核心内容和潜在用途，设计出逻辑清晰、分类精细且命名专业的层级结构。
 
@@ -409,31 +447,31 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
   validateAndOptimizeCategories(categories, totalBookmarks) {
     const MAX_CATEGORIES = 30;
     let categoriesCount = Object.keys(categories).length;
-    
+
     // 只有在分类数量严重超标时才进行合并
     if (categoriesCount > MAX_CATEGORIES) {
       this.log(`分类数量(${categoriesCount})超过最大限制(${MAX_CATEGORIES})，正在适度优化...`, 'warning');
-      
+
       const categoriesWithCount = Object.entries(categories)
         .map(([name, items]) => ({ name, count: items.length }))
         .sort((a, b) => b.count - a.count);
-      
+
       const mainCategories = categoriesWithCount.slice(0, MAX_CATEGORIES - 5);
       const smallCategories = categoriesWithCount.slice(MAX_CATEGORIES - 5);
-      
+
       const verySmallCategories = smallCategories.filter(cat => cat.count <= 1);
       const keepCategories = smallCategories.filter(cat => cat.count > 1);
-      
+
       const optimizedCategories = {};
-      
+
       mainCategories.forEach(cat => {
         optimizedCategories[cat.name] = categories[cat.name];
       });
-      
+
       keepCategories.forEach(cat => {
         optimizedCategories[cat.name] = categories[cat.name];
       });
-      
+
       if (verySmallCategories.length > 0) {
         optimizedCategories["其他"] = optimizedCategories["其他"] || [];
         verySmallCategories.forEach(cat => {
@@ -441,30 +479,30 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
         });
         this.log(`已将${verySmallCategories.length}个单书签分类合并到"其他"`, 'info');
       }
-      
+
       return optimizedCategories;
     }
-    
+
     // 验证分类名称，修复纯数字或无意义的分类名
     const optimizedCategories = {};
     const numericPattern = /^[\d]+$/;
-    
+
     Object.entries(categories).forEach(([categoryName, items]) => {
       let newName = categoryName;
-      
+
       if (numericPattern.test(categoryName) || categoryName.length < 2) {
         newName = this.inferCategoryName(items) || "其他";
         this.log(`已修正无效的分类名"${categoryName}"为"${newName}"`, 'warning');
       }
-      
+
       if (!optimizedCategories[newName]) {
         optimizedCategories[newName] = [];
       }
       optimizedCategories[newName] = optimizedCategories[newName].concat(items);
     });
-    
+
     this.log(`分类验证完成，保留${Object.keys(optimizedCategories).length}个分类`, 'success');
-    
+
     return optimizedCategories;
   }
 
@@ -483,7 +521,7 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
       'docs.google.com': '在线办公',
       'notion.so': '在线办公'
     };
-    
+
     const domains = bookmarks.map(bm => {
       try {
         if (!bm.url) return '';
@@ -493,9 +531,9 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
         return '';
       }
     }).filter(Boolean);
-    
+
     const categoryMatches = {};
-    
+
     domains.forEach(domain => {
       for (const [pattern, category] of Object.entries(domainCategories)) {
         if (domain.includes(pattern)) {
@@ -503,21 +541,21 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
         }
       }
     });
-    
+
     let bestCategory = null;
     let maxMatches = 0;
-    
+
     for (const [category, matches] of Object.entries(categoryMatches)) {
       if (matches > maxMatches) {
         maxMatches = matches;
         bestCategory = category;
       }
     }
-    
+
     if (bestCategory && maxMatches >= domains.length * 0.2) {
       return bestCategory;
     }
-    
+
     return null;
   }
 
@@ -544,7 +582,7 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
         parentId: "0"
       },
       {
-        id: "2", 
+        id: "2",
         title: "ChatGPT",
         url: "https://chat.openai.com",
         parentId: "0"
@@ -603,7 +641,7 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
   // 获取模拟分类结果用于浏览器测试
   getMockCategorizedResults(bookmarks) {
     this.log('浏览器测试模式: 使用模拟AI分类结果', 'info');
-    
+
     // 模拟AI分类结果
     const categories = {
       "AI工具": [
@@ -657,10 +695,10 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
   async createBookmarkFolder(title, parentId) {
     return new Promise((resolve, reject) => {
       chrome.bookmarks.getChildren(parentId, (children) => {
-        const existingFolder = children.find(child => 
+        const existingFolder = children.find(child =>
           child.title === title && !child.url
         );
-        
+
         if (existingFolder) {
           resolve(existingFolder);
         } else {
@@ -696,8 +734,8 @@ ${JSON.stringify(bookmarkData, null, 2)}`;
   extractDomain(url) {
     try {
       if (url) {
-      const urlObj = new URL(url);
-      return urlObj.hostname.replace(/^www\./, '');
+        const urlObj = new URL(url);
+        return urlObj.hostname.replace(/^www\./, '');
       }
     } catch (e) {
       // URL解析失败，忽略
