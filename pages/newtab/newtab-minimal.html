@@ -204,26 +204,93 @@
       </section>
     </main>
 
-    <section class="apple-section-block apple-section-bottom" aria-label="最近访问">
+    <section class="apple-section-block apple-section-bookmarks" aria-label="书签管理">
       <div class="apple-section-header">
-        <h2>最近访问</h2>
-        <span>支持置顶 / 编辑 / 删除</span>
+        <h2>书签管理</h2>
+        <span id="bm-stats">0 个书签</span>
       </div>
 
       <section class="apple-bookmarks-section" id="bookmarks-section" aria-label="我的书签">
+        <!-- 文件夹 Tabs -->
         <div class="bookmarks-header">
           <div class="bm-tabs" id="bm-folder-tabs">
             <button class="bm-tab active" data-folder="recent">最近添加</button>
             <button class="bm-tab" data-folder="pinned">我的置顶</button>
             <button class="bm-tab bm-tab-add" id="bm-add-folder-btn" title="添加常用文件夹">＋</button>
           </div>
-          <select class="bookmarks-select" id="bookmark-sort-select" title="排序方式">
-            <option value="dateDesc">最新优先</option>
-            <option value="dateAsc">最早优先</option>
-            <option value="nameAsc">按名称 A→Z</option>
-            <option value="nameDesc">按名称 Z→A</option>
-          </select>
         </div>
+
+        <!-- 面包屑导航 -->
+        <nav class="bm-breadcrumb" id="bm-breadcrumb" style="display:none">
+          <button class="bm-crumb" data-id="root">📁 全部书签</button>
+        </nav>
+
+        <!-- 工具栏 -->
+        <div class="bm-toolbar">
+          <div class="bm-toolbar-left">
+            <div class="bm-search-filter">
+              <svg class="bm-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                width="14" height="14">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+              <input type="text" class="bm-filter-input" id="bm-filter-input" placeholder="筛选当前书签...">
+            </div>
+          </div>
+          <div class="bm-toolbar-right">
+            <select class="bm-sort-select" id="bookmark-sort-select" title="排序方式">
+              <option value="dateDesc">最新优先</option>
+              <option value="dateAsc">最早优先</option>
+              <option value="nameAsc">名称 A→Z</option>
+              <option value="nameDesc">名称 Z→A</option>
+            </select>
+            <div class="bm-view-toggle" id="bm-view-toggle">
+              <button class="bm-view-btn active" data-view="grid" title="网格视图">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                </svg>
+              </button>
+              <button class="bm-view-btn" data-view="list" title="列表视图">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                  <line x1="8" y1="6" x2="21" y2="6"></line>
+                  <line x1="8" y1="12" x2="21" y2="12"></line>
+                  <line x1="8" y1="18" x2="21" y2="18"></line>
+                  <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                  <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                  <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <button class="bm-toolbar-btn" id="bm-select-mode-btn" title="批量选择">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </svg>
+            </button>
+            <button class="bm-toolbar-btn" id="bm-new-btn" title="新建">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 批量操作栏 -->
+        <div class="bm-batch-bar hidden" id="bm-batch-bar">
+          <span class="bm-batch-count" id="bm-batch-count">已选 0 项</span>
+          <div class="bm-batch-actions">
+            <button class="bm-batch-btn" id="bm-batch-select-all">全选</button>
+            <button class="bm-batch-btn bm-batch-danger" id="bm-batch-delete">删除</button>
+            <button class="bm-batch-btn" id="bm-batch-move">移动到...</button>
+            <button class="bm-batch-btn" id="bm-batch-cancel">取消</button>
+          </div>
+        </div>
+
+        <!-- 书签网格 / 列表 -->
         <div class="bookmarks-icon-grid" id="bookmarks-grid">
           <!-- 动态填充 -->
         </div>
@@ -234,13 +301,32 @@
     <div class="bm-folder-picker-overlay" id="folder-picker-overlay">
       <div class="bm-folder-picker">
         <div class="bm-picker-header">
-          <h3>选择常用文件夹</h3>
+          <h3 id="folder-picker-title">选择常用文件夹</h3>
           <button class="bm-picker-close" id="folder-picker-close">✕</button>
         </div>
         <div class="bm-picker-list" id="folder-picker-list">
           <!-- 动态填充文件夹列表 -->
         </div>
       </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div class="bm-context-menu hidden" id="bm-context-menu">
+      <button class="bm-ctx-item" data-action="open">打开</button>
+      <button class="bm-ctx-item" data-action="open-new">在新标签页打开</button>
+      <div class="bm-ctx-divider"></div>
+      <button class="bm-ctx-item" data-action="pin">置顶 / 取消置顶</button>
+      <button class="bm-ctx-item" data-action="edit">编辑</button>
+      <button class="bm-ctx-item" data-action="move">移动到...</button>
+      <div class="bm-ctx-divider"></div>
+      <button class="bm-ctx-item" data-action="copy-url">复制链接</button>
+      <button class="bm-ctx-item bm-ctx-danger" data-action="delete">删除</button>
+    </div>
+
+    <!-- 新建弹窗 -->
+    <div class="bm-new-menu hidden" id="bm-new-menu">
+      <button class="bm-ctx-item" data-action="new-bookmark">新建书签</button>
+      <button class="bm-ctx-item" data-action="new-folder">新建文件夹</button>
     </div>
   </div>
 
@@ -370,7 +456,8 @@
             </label>
             <label class="apple-settings-field">
               <span>AI 建议条数</span>
-              <input class="apple-form-input" id="ai-suggest-limit-input" type="number" min="4" max="20" step="1" value="8">
+              <input class="apple-form-input" id="ai-suggest-limit-input" type="number" min="4" max="20" step="1"
+                value="8">
             </label>
             <label class="apple-settings-field">
               <span>背景图 URL</span>

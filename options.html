@@ -412,35 +412,27 @@
         <div class="info-text">当书签数量较多时，系统会自动分批处理。建议设置为 30-100 之间</div>
       </div>
 
+      <div class="form-group">
+        <label for="auto-categorize"
+          style="display: flex; align-items: center; cursor: pointer; color: var(--apple-text);">
+          <input type="checkbox" id="auto-categorize" style="width: auto; margin-right: 8px; cursor: pointer;">
+          自动分类新书签
+        </label>
+        <div class="info-text">开启后，添加新书签时将自动调用 AI 进行分类整理并移动（可能会有几秒钟的延迟）</div>
+      </div>
+
       <button id="save-category-settings">保存分类设置</button>
+
+      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--apple-border);">
+        <button id="view-bg-logs"
+          style="background-color: var(--apple-secondary); color: var(--apple-text);">查看后台运行日志</button>
+        <div id="bg-logs-container"
+          style="display: none; margin-top: 10px; padding: 10px; background: #000; color: #0f0; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">
+        </div>
+      </div>
     </div>
 
-    <div id="custom-api-section" class="api-section" style="display:none;">
-      <div class="form-group">
-        <label for="custom-api-key">自定义 API 密钥</label>
-        <input type="password" id="custom-api-key" placeholder="输入您的自定义 API 密钥">
-      </div>
-      <div class="form-group">
-        <label for="custom-api-url">自定义 API URL</label>
-        <input type="text" id="custom-api-url" placeholder="输入您的自定义 API URL">
-      </div>
-      <div class="form-group">
-        <label for="custom-model">模型名称</label>
-        <input type="text" id="custom-model" placeholder="输入模型名称">
-      </div>
-      <button id="test-custom-api">测试自定义 API 连接</button>
-      <div class="form-description">
-        <p><strong>自定义 API 格式说明：</strong></p>
-        <p>使用自定义 API 时，扩展会尝试以多种格式发送请求，支持如下字段：</p>
-        <ul>
-          <li><code>model</code>: 模型名称</li>
-          <li><code>prompt</code>: 提示文本</li>
-          <li><code>messages</code>: OpenAI 格式消息数组</li>
-          <li><code>content</code>: 内容文本</li>
-          <li><code>input</code>: 输入文本</li>
-        </ul>
-      </div>
-    </div>
+    <!-- custom-api-section 已合并到上方主表单中 -->
   </div>
 
   <script src="styles/icons.js"></script>

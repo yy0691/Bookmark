@@ -34,14 +34,14 @@ export class ApiService {
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-          
+
           const response = await fetch(url, {
             method: 'HEAD',
             mode: 'no-cors',
             cache: 'no-cache',
             signal: controller.signal
           });
-          
+
           clearTimeout(timeoutId);
           this.log(`网络连接检测成功: ${url}`, 'success');
           return true;
@@ -84,7 +84,7 @@ export class ApiService {
     if (!apiKey || apiKey.trim() === '') {
       return { valid: false, error: 'API密钥不能为空' };
     }
-    
+
     switch (provider) {
       case 'gemini':
         // Gemini API密钥通常是39个字符的字符串
@@ -99,7 +99,7 @@ export class ApiService {
         }
         break;
     }
-    
+
     return { valid: true };
   }
 
@@ -131,21 +131,21 @@ export class ApiService {
       this.log('浏览器测试模式: 使用模拟API设置', 'info');
       return Promise.resolve(mockSettings);
     }
-    
+
     return new Promise((resolve) => {
       chrome.storage.sync.get([
-        'apiProvider', 
-        'apiKey', 
-        'customApiUrl', 
-        'geminiModel', 
-        'openaiModel', 
-        'customModel', 
-        'defaultCategories', 
+        'apiProvider',
+        'apiKey',
+        'customApiUrl',
+        'geminiModel',
+        'openaiModel',
+        'customModel',
+        'defaultCategories',
         'batchSize'
       ], (result) => {
         const apiProvider = result.apiProvider || 'gemini';
         let model = '';
-        
+
         switch (apiProvider) {
           case 'gemini':
             model = result.geminiModel || 'gemini-2.0-flash';
@@ -157,7 +157,7 @@ export class ApiService {
             model = result.customModel || '';
             break;
         }
-        
+
         resolve({
           provider: apiProvider,
           apiKey: result.apiKey || '',
@@ -174,14 +174,14 @@ export class ApiService {
   async callGeminiApi(prompt, apiKey, model) {
     const maxRetries = 3;
     let lastError = null;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const apiVersion = model.startsWith('gemini-1.5') ? 'v1' : 'v1beta';
         const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
-        
+
         this.log(`正在调用Gemini API，模型: ${model} (第${attempt}次尝试)`, 'info');
-        
+
         const requestData = {
           contents: [{
             parts: [{
@@ -190,14 +190,14 @@ export class ApiService {
           }],
           generationConfig: {
             temperature: 0.2,
-            maxOutputTokens: 2048
+            maxOutputTokens: 8192
           }
         };
-        
+
         // 添加超时控制
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
-        
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
+
         try {
           const response = await fetch(url, {
             method: 'POST',
@@ -207,42 +207,42 @@ export class ApiService {
             body: JSON.stringify(requestData),
             signal: controller.signal
           });
-          
+
           clearTimeout(timeoutId);
-          
+
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             this.log(`Gemini API错误: ${response.status} ${response.statusText}`, 'error');
             throw new Error(`API错误: ${response.status} ${response.statusText}`);
           }
-          
+
           const data = await response.json();
-          
+
           if (!data.candidates || data.candidates.length === 0) {
             this.log(`Gemini API返回无效数据，没有candidates`, 'error');
             throw new Error('API返回数据无效，没有candidates');
           }
-          
+
           const responseText = data.candidates[0].content.parts[0].text;
           this.log(`成功获取API响应，内容长度: ${responseText.length}字符`, 'success');
-          
+
           return this.parseJsonResponse(responseText);
-          
+
         } catch (fetchError) {
           clearTimeout(timeoutId);
-          
+
           if (fetchError.name === 'AbortError') {
-            throw new Error('请求超时 (30秒)');
+            throw new Error('请求超时 (60秒)');
           }
-          
+
           // 重新抛出其他fetch错误
           throw fetchError;
         }
-        
+
       } catch (error) {
         lastError = error;
         this.log(`Gemini API调用失败 (第${attempt}次): ${error.message}`, 'error');
-        
+
         // 如果不是最后一次尝试，等待后重试
         if (attempt < maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 指数退避，最大5秒
@@ -251,10 +251,10 @@ export class ApiService {
         }
       }
     }
-    
+
     // 所有重试都失败了
     this.log(`Gemini API调用失败，已重试${maxRetries}次`, 'error');
-    
+
     // 提供更详细的错误信息
     if (lastError.message.includes('Failed to fetch')) {
       throw new Error(`网络连接失败: ${lastError.message}。请检查网络连接、防火墙设置或API密钥是否正确。`);
@@ -286,18 +286,19 @@ export class ApiService {
               content: prompt
             }
           ],
-          temperature: 0.3
+          temperature: 0.3,
+          max_tokens: 8192
         })
       });
-      
+
       if (!response.ok) {
         throw new Error(`API错误: ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       const responseText = data.choices[0].message.content;
       this.log(`成功获取OpenAI API响应，内容长度: ${responseText.length}字符`, 'success');
-      
+
       return this.parseJsonResponse(responseText);
     } catch (error) {
       this.log(`OpenAI API调用失败: ${error.message}`, 'error');
@@ -309,17 +310,39 @@ export class ApiService {
   async callCustomApi(apiKey, customApiUrl, model, prompt) {
     try {
       this.log(`正在调用自定义API，模型: ${model}`, 'info');
-      
-      const requestData = {
-        model: model,
-        prompt: prompt,
-        message: prompt,
-        messages: [
-          { role: "user", content: prompt }
-        ],
-        content: prompt,
-        input: prompt
-      };
+
+      // 检测是否为 OpenAI 兼容格式（url 包含 /chat/completions）
+      const isOpenAICompat = customApiUrl.includes('/chat/completions');
+
+      let requestData;
+      if (isOpenAICompat) {
+        // OpenAI 兼容格式：只发 model + messages
+        requestData = {
+          model: model,
+          messages: [
+            { role: "user", content: prompt }
+          ],
+          max_tokens: 8192,
+          temperature: 0.2
+        };
+        this.log(`使用 OpenAI 兼容格式发送请求`, 'info');
+      } else {
+        // 通用格式：多字段兼容
+        requestData = {
+          model: model,
+          prompt: prompt,
+          messages: [
+            { role: "user", content: prompt }
+          ],
+          content: prompt,
+          input: prompt
+        };
+        this.log(`使用通用格式发送请求`, 'info');
+      }
+
+      // 添加超时控制
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
 
       const response = await fetch(customApiUrl, {
         method: 'POST',
@@ -327,26 +350,42 @@ export class ApiService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify(requestData),
+        signal: controller.signal
       });
 
-      const responseData = await response.json();
+      clearTimeout(timeoutId);
+
+      // 先读取响应文本，防止非 JSON 响应导致解析错误
+      const responseText = await response.text();
+
       if (!response.ok) {
         this.log(`自定义API错误: ${response.status} ${response.statusText}`, 'error');
-        throw new Error(`API响应错误: ${response.status} - ${JSON.stringify(responseData)}`);
+        this.log(`响应内容: ${responseText.substring(0, 200)}`, 'error');
+        throw new Error(`API响应错误: ${response.status} ${response.statusText}`);
+      }
+
+      // 尝试解析 JSON
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        this.log(`响应不是有效JSON，前100字符: ${responseText.substring(0, 100)}`, 'error');
+        throw new Error(`API返回非JSON响应（可能是HTML错误页面），请检查API URL是否正确`);
       }
 
       this.log(`自定义API请求成功，正在处理响应...`, 'info');
 
       // 处理不同格式的API响应
       let resultText = '';
-      
-      if (typeof responseData === 'string') {
+
+      if (responseData.choices && responseData.choices.length > 0) {
+        // OpenAI 格式（最常见）
+        resultText = responseData.choices[0].text || responseData.choices[0].message?.content;
+      } else if (typeof responseData === 'string') {
         resultText = responseData;
       } else if (responseData.text || responseData.content || responseData.message || responseData.response) {
         resultText = responseData.text || responseData.content || responseData.message || responseData.response;
-      } else if (responseData.choices && responseData.choices.length > 0) {
-        resultText = responseData.choices[0].text || responseData.choices[0].message?.content;
       } else if (responseData.result) {
         if (typeof responseData.result === 'string') {
           resultText = responseData.result;
@@ -366,6 +405,10 @@ export class ApiService {
       this.log(`成功获取API响应，内容长度: ${resultText.length}字符`, 'success');
       return this.parseJsonResponse(resultText);
     } catch (error) {
+      if (error.name === 'AbortError') {
+        this.log(`自定义API请求超时 (60秒)`, 'error');
+        throw new Error('自定义API请求超时 (60秒)');
+      }
       this.log(`自定义API调用失败: ${error.message}`, 'error');
       throw new Error(`自定义API调用失败: ${error.message}`);
     }
@@ -380,13 +423,13 @@ export class ApiService {
   // 从文本中提取JSON
   extractJsonFromText(responseText) {
     this.log(`正在从响应中提取JSON数据...`, 'info');
-    
+
     let jsonText = '';
-    
+
     // 寻找完整的JSON代码块
-    const codeBlockMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || 
-                           responseText.match(/```\s*([\s\S]*?)\s*```/);
-    
+    const codeBlockMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
+      responseText.match(/```\s*([\s\S]*?)\s*```/);
+
     if (codeBlockMatch) {
       jsonText = codeBlockMatch[1].trim();
       this.log(`从代码块中提取JSON，长度: ${jsonText.length}字符`, 'success');
@@ -401,7 +444,7 @@ export class ApiService {
         this.log(`未找到JSON格式标记，使用整个响应作为JSON`, 'warning');
       }
     }
-    
+
     return jsonText;
   }
 
@@ -411,31 +454,31 @@ export class ApiService {
       return JSON.parse(jsonStr);
     } catch (firstError) {
       this.log(`初次JSON解析失败: ${firstError.message}`, 'warning');
-      
+
       let fixedJson = jsonStr;
-      
+
       // 步骤1: 提取最外层的JSON对象
       const cleanMatch = fixedJson.match(/{[\s\S]*}/);
       if (cleanMatch) {
         fixedJson = cleanMatch[0];
       }
-      
+
       // 步骤2: 修复常见的JSON格式问题
       // 移除多余的逗号
       fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1');
-      
+
       // 修复属性名缺少引号的问题
       fixedJson = fixedJson.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');
-      
+
       // 修复字符串值缺少引号的问题（但要避免影响已有的引号）
       fixedJson = fixedJson.replace(/:\s*([^",\[\]{}][^,\[\]{}]*?)(\s*[,}\]])/g, ': "$1"$2');
-      
+
       // 步骤3: 处理不完整的JSON结构
       const openBraces = (fixedJson.match(/{/g) || []).length;
       const closeBraces = (fixedJson.match(/}/g) || []).length;
       const openBrackets = (fixedJson.match(/\[/g) || []).length;
       const closeBrackets = (fixedJson.match(/]/g) || []).length;
-      
+
       // 补全缺失的闭合符号
       for (let i = 0; i < openBraces - closeBraces; i++) {
         fixedJson += '}';
@@ -443,22 +486,22 @@ export class ApiService {
       for (let i = 0; i < openBrackets - closeBrackets; i++) {
         fixedJson += ']';
       }
-      
+
       // 步骤4: 处理数组中的格式问题
       // 修复数组元素间缺少逗号的问题
       fixedJson = fixedJson.replace(/}\s*{/g, '}, {');
       fixedJson = fixedJson.replace(/]\s*\[/g, '], [');
-      
+
       // 步骤5: 清理多余的空白字符
       fixedJson = fixedJson.replace(/\s+/g, ' ').trim();
-      
+
       try {
         const result = JSON.parse(fixedJson);
         this.log(`JSON修复成功`, 'success');
         return result;
       } catch (secondError) {
         this.log(`JSON修复后仍然解析失败: ${secondError.message}`, 'error');
-        
+
         // 最后的尝试：截断到最后一个有效的JSON结构
         try {
           const truncatedJson = this.truncateToValidJson(fixedJson);
@@ -470,7 +513,7 @@ export class ApiService {
         } catch (truncateError) {
           this.log(`截断修复也失败: ${truncateError.message}`, 'error');
         }
-        
+
         throw new Error(`JSON解析失败，已尝试多种修复方案: ${firstError.message}`);
       }
     }
@@ -481,7 +524,7 @@ export class ApiService {
     // 尝试找到最后一个完整的对象
     let braceCount = 0;
     let lastValidIndex = -1;
-    
+
     for (let i = 0; i < jsonStr.length; i++) {
       const char = jsonStr[i];
       if (char === '{') {
@@ -493,11 +536,11 @@ export class ApiService {
         }
       }
     }
-    
+
     if (lastValidIndex > 0) {
       return jsonStr.substring(0, lastValidIndex + 1);
     }
-    
+
     return null;
   }
 }

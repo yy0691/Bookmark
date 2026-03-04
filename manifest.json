@@ -9,7 +9,8 @@
     "tabs",
     "activeTab",
     "favicon",
-    "history"
+    "history",
+    "notifications"
   ],
   "host_permissions": [
     "https://*/*",

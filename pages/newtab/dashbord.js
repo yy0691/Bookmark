@@ -18,6 +18,10 @@ class Dashboard {
         this.detectionService = new DetectionService();
         this.importExportService = new ImportExportService();
 
+        // 连接日志回调，让内部日志可见
+        this.bookmarkService.setLogCallback((msg, type) => this.addLog(`[书签] ${msg}`, type));
+        this.apiService.setLogCallback((msg, type) => this.addLog(`[API] ${msg}`, type));
+
         // State
         this.bookmarks = [];
         this.stats = {};
@@ -55,11 +59,49 @@ class Dashboard {
             this.renderActivityHeatmap();
             await this.checkApiStatus();
             await this.loadBookmarkStats();
+            await this.loadAnalysisCache();
+            await this.loadAnalysisPreferences();
             this.addLog('智能分析中心初始化完成', 'success');
         } catch (error) {
             this.addLog(`初始化失败: ${error.message}`, 'error');
             this.handleError(error);
         }
+    }
+
+    // ── Analysis Preferences ──
+
+    getAnalysisPreferences() {
+        return {
+            granularity: document.getElementById('pref-granularity')?.value || 'medium',
+            customCategories: document.getElementById('pref-categories')?.value || '',
+            language: document.getElementById('pref-language')?.value || 'zh',
+            useExistingFolders: document.getElementById('pref-use-existing')?.checked || false
+        };
+    }
+
+    async loadAnalysisPreferences() {
+        try {
+            if (!chrome?.storage?.local) return;
+            const result = await chrome.storage.local.get('analysisPreferences');
+            const prefs = result?.analysisPreferences;
+            if (!prefs) return;
+
+            const granEl = document.getElementById('pref-granularity');
+            const catEl = document.getElementById('pref-categories');
+            const langEl = document.getElementById('pref-language');
+            if (granEl && prefs.granularity) granEl.value = prefs.granularity;
+            if (catEl && prefs.customCategories) catEl.value = prefs.customCategories;
+            if (langEl && prefs.language) langEl.value = prefs.language;
+            const existEl = document.getElementById('pref-use-existing');
+            if (existEl) existEl.checked = !!prefs.useExistingFolders;
+        } catch (e) { /* ignore */ }
+    }
+
+    async saveAnalysisPreferences() {
+        try {
+            if (!chrome?.storage?.local) return;
+            await chrome.storage.local.set({ analysisPreferences: this.getAnalysisPreferences() });
+        } catch (e) { /* ignore */ }
     }
 
     // ══════════════════════════════════════
@@ -81,6 +123,13 @@ class Dashboard {
         document.getElementById('stop-analysis-btn')?.addEventListener('click', () => this.stopAnalysis());
         document.getElementById('apply-btn')?.addEventListener('click', () => this.applyCategories());
         document.getElementById('export-btn')?.addEventListener('click', () => this.exportResults());
+        document.getElementById('clear-cache-btn')?.addEventListener('click', () => this.clearAnalysisCache());
+
+        // Preference auto-save
+        ['pref-granularity', 'pref-categories', 'pref-language', 'pref-use-existing'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => this.saveAnalysisPreferences());
+        });
+        document.getElementById('pref-categories')?.addEventListener('blur', () => this.saveAnalysisPreferences());
 
         // Detection
         document.getElementById('detect-dup-card')?.addEventListener('click', () => this.detectDuplicates());
@@ -88,6 +137,7 @@ class Dashboard {
         document.getElementById('detect-empty-card')?.addEventListener('click', () => this.detectEmptyFolders());
         document.getElementById('detect-malform-card')?.addEventListener('click', () => this.detectMalformed());
         document.getElementById('run-full-detect')?.addEventListener('click', () => this.runFullDetection());
+        document.getElementById('delete-all-detected')?.addEventListener('click', () => this.deleteAllDetected());
 
         // Data management
         document.getElementById('card-import')?.addEventListener('click', () => {
@@ -392,15 +442,24 @@ class Dashboard {
         try {
             const status = await this.apiService.checkApiStatus();
             const el = document.getElementById('api-status');
+            const modeEl = document.getElementById('analysis-mode');
             if (!el) return;
 
             if (status.connected) {
                 el.textContent = status.provider;
                 el.style.color = '#34c759';
+                if (modeEl) {
+                    modeEl.textContent = '🤖 AI 分析';
+                    modeEl.style.color = '#34c759';
+                }
             } else {
                 el.textContent = '未配置';
                 el.style.color = '#ff3b30';
-                this.addLog('API 未配置，请先在设置中配置 API 密钥', 'warning');
+                if (modeEl) {
+                    modeEl.textContent = '📦 本地模式';
+                    modeEl.style.color = '#ff9500';
+                }
+                this.addLog('API 未配置，将使用本地域名匹配分类。请在设置中配置 API 密钥以启用 AI 分析', 'warning');
             }
         } catch (error) {
             this.setText('api-status', '错误');
@@ -419,6 +478,7 @@ class Dashboard {
 
         try {
             this.analysisState.isProcessing = true;
+            this._abortController = new AbortController();
             this.setText('analysis-status', '分析中...');
             this.showProgress('analysis-progress', true);
             this.updateProgress('progress-fill', 'progress-text', 0, 100, '准备分析...');
@@ -435,10 +495,16 @@ class Dashboard {
 
             this.addLog(`开始分析 ${bookmarks.length} 个书签`, 'info');
 
+            // 读取用户偏好
+            const preferences = this.getAnalysisPreferences();
+            this.addLog(`分类偏好: 粒度=${preferences.granularity}, 语言=${preferences.language}${preferences.customCategories ? ', 自定义=' + preferences.customCategories : ''}`, 'info');
+
             this.updateProgress('progress-fill', 'progress-text', 20, 100, 'AI 分析中...');
             const categories = await this.bookmarkService.categorizeBookmarks(
                 bookmarks, settings, this.apiService,
-                (progress, message) => this.updateProgress('progress-fill', 'progress-text', 20 + progress * 0.7, 100, message)
+                (progress, message) => this.updateProgress('progress-fill', 'progress-text', 20 + progress * 0.7, 100, message),
+                this._abortController.signal,
+                preferences
             );
 
             this.analysisState.categories = categories;
@@ -449,8 +515,10 @@ class Dashboard {
             this.setText('category-count', Object.keys(categories).length);
 
             document.getElementById('apply-btn')?.classList.remove('hidden');
+            document.getElementById('apply-target')?.classList.remove('hidden');
             this.addLog(`分析完成！共分为 ${Object.keys(categories).length} 个分类`, 'success');
             this.setText('analysis-status', '已完成');
+            await this.saveAnalysisCache(categories);
 
         } catch (error) {
             this.addLog(`分析失败: ${error.message}`, 'error');
@@ -464,6 +532,9 @@ class Dashboard {
     }
 
     stopAnalysis() {
+        if (this._abortController) {
+            this._abortController.abort();
+        }
         if (this.worker) {
             this.worker.terminate();
             this.initWorker();
@@ -484,14 +555,27 @@ class Dashboard {
             this.updateProgress('progress-fill', 'progress-text', 0, 100, '应用分类结果...');
 
             const categories = this.analysisState.results;
-            const mainFolder = await this.bookmarkService.createBookmarkFolder('AI分类书签', '1');
+            const targetSelect = document.getElementById('apply-target');
+            let targetValue = targetSelect?.value || '1';
+            let parentId;
+
+            if (targetValue === 'new') {
+                // 新建文件夹
+                const folderName = prompt('请输入文件夹名称:', 'AI分类书签') || 'AI分类书签';
+                const folder = await this.bookmarkService.createBookmarkFolder(folderName, '1');
+                parentId = folder.id;
+                this.addLog(`已创建文件夹: ${folderName}`, 'info');
+            } else {
+                parentId = targetValue; // '1' = 书签栏, '2' = 其他书签
+            }
+
             let count = 0;
             const total = Object.keys(categories).length;
 
             for (const [name, items] of Object.entries(categories)) {
                 const pct = 10 + ((count / total) * 80);
                 this.updateProgress('progress-fill', 'progress-text', pct, 100, `整理: ${name}`);
-                const folder = await this.bookmarkService.createBookmarkFolder(name, mainFolder.id);
+                const folder = await this.bookmarkService.createBookmarkFolder(name, parentId);
 
                 for (const bm of items) {
                     const match = this.getFlatBookmarks().find(b => b.url === bm.url && b.title === bm.title);
@@ -503,6 +587,7 @@ class Dashboard {
 
             this.updateProgress('progress-fill', 'progress-text', 100, 100, '完成');
             this.addLog('分类应用完成！', 'success');
+            this.showToast(`已将 ${total} 个分类应用到书签`, 'success');
         } catch (error) {
             this.addLog(`应用失败: ${error.message}`, 'error');
         } finally {
@@ -530,15 +615,31 @@ class Dashboard {
         if (!wrap || !content) return;
 
         wrap.classList.remove('hidden');
-        let html = '<div class="feature-grid">';
+
+        // 计算总数
+        const totalBookmarks = Object.values(categories).reduce((sum, items) => sum + items.length, 0);
+        let html = `<div style="font-size:12px;color:var(--apple-text-tertiary);margin-bottom:12px">共 ${Object.keys(categories).length} 个分类，${totalBookmarks} 个书签</div>`;
+
         for (const [name, items] of Object.entries(categories)) {
+            const itemsHtml = items.slice(0, 15).map(bm =>
+                `<div class="cat-card-item">
+                    <span>•</span>
+                    ${bm.url ? `<a href="${this._escHtml(bm.url)}" target="_blank" title="${this._escHtml(bm.url)}">${this._escHtml(bm.title || '未命名')}</a>` : `<span>${this._escHtml(bm.title || '未命名')}</span>`}
+                </div>`
+            ).join('');
+            const moreHint = items.length > 15 ? `<div class="cat-card-item" style="color:var(--apple-text-tertiary)">… 还有 ${items.length - 15} 个</div>` : '';
+
             html += `
-        <div class="feature-card" style="cursor:default">
-          <div class="feature-name">${name}</div>
-          <div class="feature-desc">${items.length} 个书签</div>
-        </div>`;
+            <div class="cat-card" onclick="this.classList.toggle('expanded')">
+                <div class="cat-card-header">
+                    <span class="cat-card-name">${this._escHtml(name)}</span>
+                    <span class="cat-card-count">${items.length} 个</span>
+                </div>
+                <div class="cat-card-body">
+                    ${itemsHtml}${moreHint}
+                </div>
+            </div>`;
         }
-        html += '</div>';
         content.innerHTML = html;
     }
 
@@ -551,8 +652,26 @@ class Dashboard {
             this.addLog('开始检测重复书签...', 'info');
             this.showProgress('detection-progress', true);
             const result = await this.detectionService.detectDuplicateBookmarks();
-            this.setText('dup-count', `${result.urlDuplicateCount} URL / ${result.titleDuplicateCount} 标题`);
-            this.addLog(`重复检测完成: ${result.urlDuplicateCount} URL重复, ${result.titleDuplicateCount} 标题重复`, 'success');
+            // Collect all duplicate items into a flat array
+            const items = [];
+            if (result.duplicatesByUrl) {
+                result.duplicatesByUrl.forEach(group => {
+                    group.bookmarks.slice(1).forEach(b => items.push({ ...b, issue: 'URL 重复' }));
+                });
+            }
+            if (result.duplicatesByTitle) {
+                result.duplicatesByTitle.forEach(group => {
+                    group.bookmarks.slice(1).forEach(b => {
+                        if (!items.find(i => i.id === b.id)) {
+                            items.push({ ...b, issue: '标题重复' });
+                        }
+                    });
+                });
+            }
+            this.detectionState.duplicates = items;
+            this.setText('dup-count', items.length);
+            this.addLog(`重复检测完成: 发现 ${items.length} 个重复书签`, 'success');
+            this.showDetectionResults('dup', items);
         } catch (error) {
             this.addLog(`重复检测失败: ${error.message}`, 'error');
         } finally {
@@ -565,8 +684,11 @@ class Dashboard {
             this.addLog('开始检测失效链接...', 'info');
             this.showProgress('detection-progress', true);
             const result = await this.detectionService.detectInvalidBookmarks();
-            this.setText('dead-count', result.invalid);
-            this.addLog(`失效检测完成: ${result.valid}个有效, ${result.invalid}个失效`, 'success');
+            const items = (result.invalidBookmarks || []).map(b => ({ ...b, issue: b.error || '链接失效' }));
+            this.detectionState.deadLinks = items;
+            this.setText('dead-count', items.length);
+            this.addLog(`失效检测完成: ${result.valid || 0}个有效, ${items.length}个失效`, 'success');
+            this.showDetectionResults('dead', items);
         } catch (error) {
             this.addLog(`失效检测失败: ${error.message}`, 'error');
         } finally {
@@ -579,8 +701,11 @@ class Dashboard {
             this.addLog('开始检测空文件夹...', 'info');
             this.showProgress('detection-progress', true);
             const result = await this.detectionService.detectEmptyFolders();
-            this.setText('empty-count', result.count);
-            this.addLog(`空文件夹检测完成: 发现${result.count}个`, 'success');
+            const items = (result.emptyFolders || []).map(f => ({ id: f.id, title: f.title, issue: '空文件夹' }));
+            this.detectionState.emptyFolders = items;
+            this.setText('empty-count', items.length);
+            this.addLog(`空文件夹检测完成: 发现${items.length}个`, 'success');
+            this.showDetectionResults('empty', items);
         } catch (error) {
             this.addLog(`空文件夹检测失败: ${error.message}`, 'error');
         } finally {
@@ -597,11 +722,13 @@ class Dashboard {
             const malformed = [];
             bookmarks.forEach(b => {
                 if (!b.title || b.title.trim() === '') malformed.push({ ...b, issue: '标题为空' });
-                if (b.url && !this.isValidUrl(b.url)) malformed.push({ ...b, issue: 'URL格式异常' });
+                else if (b.url && !this.isValidUrl(b.url)) malformed.push({ ...b, issue: 'URL格式异常' });
             });
 
+            this.detectionState.malformed = malformed;
             this.setText('malform-count', malformed.length);
             this.addLog(`格式检测完成: 发现${malformed.length}个异常`, 'success');
+            this.showDetectionResults('malform', malformed);
         } catch (error) {
             this.addLog(`格式检测失败: ${error.message}`, 'error');
         } finally {
@@ -617,6 +744,130 @@ class Dashboard {
         // Dead link detection is slow, run last
         await this.detectDeadLinks();
         this.addLog('全面检测完成', 'success');
+    }
+
+    // ── Detection Result Details ──
+
+    showDetectionResults(type, items) {
+        const section = document.getElementById('detection-results-section');
+        const list = document.getElementById('detection-results-list');
+        const title = document.getElementById('detection-results-title');
+        const deleteAllBtn = document.getElementById('delete-all-detected');
+        if (!section || !list) return;
+
+        const typeNames = { dup: '重复书签', dead: '失效链接', empty: '空文件夹', malform: '格式异常' };
+        if (title) title.textContent = `${typeNames[type] || '检测结果'} (${items.length})`;
+
+        // Store current type for delete-all
+        this._currentDetectionType = type;
+
+        if (items.length === 0) {
+            section.classList.remove('hidden');
+            list.innerHTML = '<div class="detection-empty-msg">🎉 未发现问题，书签状态良好！</div>';
+            if (deleteAllBtn) deleteAllBtn.classList.add('hidden');
+            return;
+        }
+
+        section.classList.remove('hidden');
+        if (deleteAllBtn) deleteAllBtn.classList.remove('hidden');
+
+        list.innerHTML = items.map(item => `
+            <div class="detection-item" data-id="${item.id || ''}" data-type="${type}">
+                <div class="detection-item-icon ${type}">
+                    ${type === 'dup' ? '📋' : type === 'dead' ? '🔗' : type === 'empty' ? '📁' : '⚠️'}
+                </div>
+                <div class="detection-item-info">
+                    <div class="detection-item-title">${this._escHtml(item.title || '未命名')}</div>
+                    ${item.url ? `<div class="detection-item-url">${this._escHtml(item.url)}</div>` : ''}
+                    <div class="detection-item-issue">${this._escHtml(item.issue || '')}</div>
+                </div>
+                <div class="detection-item-actions">
+                    ${item.id ? `<button class="btn-icon" title="删除" onclick="window._dashboard.deleteDetectedItem('${type}', '${item.id}', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        // Scroll to results
+        section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async deleteDetectedItem(type, id, btnEl) {
+        if (!id) return;
+        const confirmed = await this.showConfirmDialog('确认删除', '确定要删除这个书签吗？此操作不可撤销。');
+        if (!confirmed) return;
+
+        try {
+            await this.detectionService.removeBookmark(id);
+            // Remove from state
+            const stateKey = { dup: 'duplicates', dead: 'deadLinks', empty: 'emptyFolders', malform: 'malformed' }[type];
+            if (stateKey) {
+                this.detectionState[stateKey] = this.detectionState[stateKey].filter(i => i.id !== id);
+            }
+            // Remove DOM node
+            const row = btnEl?.closest('.detection-item');
+            if (row) {
+                row.style.transition = 'all 0.3s';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(20px)';
+                setTimeout(() => row.remove(), 300);
+            }
+            // Update count
+            const countId = { dup: 'dup-count', dead: 'dead-count', empty: 'empty-count', malform: 'malform-count' }[type];
+            if (countId && stateKey) this.setText(countId, this.detectionState[stateKey].length);
+            // Update title
+            const titleEl = document.getElementById('detection-results-title');
+            const typeNames = { dup: '重复书签', dead: '失效链接', empty: '空文件夹', malform: '格式异常' };
+            if (titleEl && stateKey) titleEl.textContent = `${typeNames[type]} (${this.detectionState[stateKey].length})`;
+
+            this.showToast('已删除', 'success');
+            this.addLog(`已删除书签 (ID: ${id})`, 'info');
+        } catch (error) {
+            this.showToast(`删除失败: ${error.message}`, 'error');
+            this.addLog(`删除失败: ${error.message}`, 'error');
+        }
+    }
+
+    async deleteAllDetected() {
+        const type = this._currentDetectionType;
+        if (!type) return;
+
+        const stateKey = { dup: 'duplicates', dead: 'deadLinks', empty: 'emptyFolders', malform: 'malformed' }[type];
+        const items = stateKey ? this.detectionState[stateKey] : [];
+        if (items.length === 0) {
+            this.showToast('没有可清理的项目', 'info');
+            return;
+        }
+
+        const typeNames = { dup: '重复书签', dead: '失效链接', empty: '空文件夹', malform: '格式异常' };
+        const confirmed = await this.showConfirmDialog(
+            '批量清理',
+            `确定要删除全部 ${items.length} 个${typeNames[type]}吗？此操作不可撤销。`
+        );
+        if (!confirmed) return;
+
+        let deleted = 0;
+        for (const item of items) {
+            if (!item.id) continue;
+            try {
+                await this.detectionService.removeBookmark(item.id);
+                deleted++;
+            } catch (e) {
+                this.addLog(`删除失败 (${item.title}): ${e.message}`, 'error');
+            }
+        }
+
+        this.detectionState[stateKey] = [];
+        const countId = { dup: 'dup-count', dead: 'dead-count', empty: 'empty-count', malform: 'malform-count' }[type];
+        if (countId) this.setText(countId, 0);
+        this.showDetectionResults(type, []);
+        this.showToast(`已清理 ${deleted} 个${typeNames[type]}`, 'success');
+        this.addLog(`批量清理完成: 删除了 ${deleted} 个${typeNames[type]}`, 'success');
+    }
+
+    _escHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     // ══════════════════════════════════════
@@ -820,6 +1071,118 @@ class Dashboard {
         if (el) el.innerHTML = '';
         this.addLog('日志已清空', 'info');
     }
+    // ── Confirm Dialog ──
+
+    showConfirmDialog(title, message) {
+        return new Promise(resolve => {
+            const overlay = document.createElement('div');
+            overlay.className = 'confirm-overlay';
+            overlay.innerHTML = `
+                <div class="confirm-dialog">
+                    <div class="confirm-dialog-title">${title}</div>
+                    <div class="confirm-dialog-msg">${message}</div>
+                    <div class="confirm-dialog-actions">
+                        <button class="btn btn-secondary" id="confirm-cancel">取消</button>
+                        <button class="btn btn-danger" id="confirm-ok">确认删除</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('visible'));
+
+            const close = (result) => {
+                overlay.classList.remove('visible');
+                setTimeout(() => overlay.remove(), 250);
+                resolve(result);
+            };
+
+            overlay.querySelector('#confirm-cancel').addEventListener('click', () => close(false));
+            overlay.querySelector('#confirm-ok').addEventListener('click', () => close(true));
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+        });
+    }
+
+    // ── Toast ──
+
+    showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('visible'));
+
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 350);
+        }, 2500);
+    }
+
+    // ── AI Analysis Cache ──
+
+    async saveAnalysisCache(categories) {
+        try {
+            if (!chrome?.storage?.local) return;
+            const data = {
+                categories,
+                timestamp: Date.now(),
+                bookmarkCount: this.getFlatBookmarks().length
+            };
+            await chrome.storage.local.set({ aiAnalysisCache: data });
+            this.setText('last-analysis-time', new Date().toLocaleString());
+            this.addLog('分析结果已缓存', 'info');
+        } catch (e) {
+            this.addLog(`缓存保存失败: ${e.message}`, 'error');
+        }
+    }
+
+    async loadAnalysisCache() {
+        try {
+            if (!chrome?.storage?.local) return;
+            const result = await chrome.storage.local.get('aiAnalysisCache');
+            const cache = result?.aiAnalysisCache;
+            if (!cache || !cache.categories) return;
+
+            // Check expiry: 24 hours
+            const age = Date.now() - cache.timestamp;
+            if (age > 24 * 60 * 60 * 1000) {
+                this.addLog('缓存已过期(>24h)，已忽略', 'info');
+                return;
+            }
+
+            this.analysisState.categories = cache.categories;
+            this.analysisState.results = cache.categories;
+            this.displayAnalysisResults(cache.categories);
+            this.setText('category-count', Object.keys(cache.categories).length);
+            this.setText('analysis-status', '已缓存');
+            this.setText('last-analysis-time', new Date(cache.timestamp).toLocaleString());
+            document.getElementById('apply-btn')?.classList.remove('hidden');
+            this.addLog(`已加载缓存分析结果 (${Object.keys(cache.categories).length} 个分类)`, 'info');
+        } catch (e) {
+            this.addLog(`缓存加载失败: ${e.message}`, 'error');
+        }
+    }
+
+    async clearAnalysisCache() {
+        try {
+            if (!chrome?.storage?.local) return;
+            await chrome.storage.local.remove('aiAnalysisCache');
+            this.analysisState.categories = {};
+            this.analysisState.results = null;
+            this.setText('category-count', '-');
+            this.setText('analysis-status', '待开始');
+            this.setText('last-analysis-time', '从未分析');
+            document.getElementById('apply-btn')?.classList.add('hidden');
+            const wrap = document.getElementById('analysis-results');
+            if (wrap) wrap.classList.add('hidden');
+            this.showToast('缓存已清除', 'success');
+            this.addLog('AI 分析缓存已清除', 'info');
+        } catch (e) {
+            this.addLog(`缓存清除失败: ${e.message}`, 'error');
+        }
+    }
 }
 
 // ══════════════════════════════════════
@@ -828,6 +1191,7 @@ class Dashboard {
 
 document.addEventListener('DOMContentLoaded', () => {
     const dashboard = new Dashboard();
+    window._dashboard = dashboard; // For inline onclick handlers
     dashboard.init();
 
     // Support hash-based tab switching (e.g. #ai-analysis)

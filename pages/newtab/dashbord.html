@@ -769,6 +769,397 @@
             }
         }
 
+        /* ── Detection Results List ── */
+        .detection-results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .detection-results-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 6px 14px;
+            font-size: 12px;
+        }
+
+        .detection-results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detection-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--apple-bg-secondary);
+            border: 0.5px solid var(--apple-border);
+            border-radius: 12px;
+            transition: all 0.2s;
+            gap: 12px;
+        }
+
+        .detection-item:hover {
+            border-color: var(--apple-accent);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .detection-item-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .detection-item-icon.dup {
+            background: var(--apple-accent-bg);
+            color: var(--apple-accent);
+        }
+
+        .detection-item-icon.dead {
+            background: rgba(255, 149, 0, 0.12);
+            color: #ff9500;
+        }
+
+        .detection-item-icon.empty {
+            background: rgba(52, 199, 89, 0.12);
+            color: #34c759;
+        }
+
+        .detection-item-icon.malform {
+            background: rgba(255, 59, 48, 0.12);
+            color: #ff3b30;
+        }
+
+        .detection-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .detection-item-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--apple-text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .detection-item-url {
+            font-size: 11px;
+            color: var(--apple-text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        .detection-item-issue {
+            font-size: 11px;
+            color: #ff9500;
+            margin-top: 2px;
+        }
+
+        .detection-item-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            background: var(--apple-bg-hover);
+            color: var(--apple-text-secondary);
+        }
+
+        .btn-icon:hover {
+            background: rgba(255, 59, 48, 0.12);
+            color: #ff3b30;
+        }
+
+        .btn-icon svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .detection-empty-msg {
+            text-align: center;
+            padding: 32px;
+            color: var(--apple-text-tertiary);
+            font-size: 13px;
+        }
+
+        /* ── Confirm Dialog ── */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .confirm-overlay.visible {
+            opacity: 1;
+        }
+
+        .confirm-dialog {
+            background: var(--apple-bg-tertiary);
+            border: 0.5px solid var(--apple-border);
+            border-radius: 16px;
+            padding: 28px;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        }
+
+        .confirm-dialog-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--apple-text);
+            margin-bottom: 8px;
+        }
+
+        .confirm-dialog-msg {
+            font-size: 13px;
+            color: var(--apple-text-secondary);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .confirm-dialog-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .confirm-dialog-actions .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+        /* ── Toast ── */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transform: translateX(120%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: var(--apple-font);
+        }
+
+        .toast.visible {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            background: #34c759;
+        }
+
+        .toast.error {
+            background: #ff3b30;
+        }
+
+        .toast.info {
+            background: var(--apple-accent);
+        }
+
+        /* ── Cache Badge ── */
+        .cache-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 100px;
+            background: rgba(52, 199, 89, 0.12);
+            color: #34c759;
+        }
+
+        /* ── Preference Panel ── */
+        .pref-panel {
+            background: var(--apple-bg-secondary);
+            border: 0.5px solid var(--apple-border);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .pref-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--apple-text-secondary);
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pref-row {
+            margin-bottom: 12px;
+        }
+
+        .pref-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .pref-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--apple-text-tertiary);
+            margin-bottom: 6px;
+        }
+
+        .pref-select,
+        .pref-input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-family: var(--apple-font);
+            color: var(--apple-text);
+            background: var(--apple-bg);
+            border: 0.5px solid var(--apple-border);
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .pref-select:focus,
+        .pref-input:focus {
+            border-color: var(--apple-accent);
+        }
+
+        .pref-hint {
+            font-size: 11px;
+            color: var(--apple-text-tertiary);
+            margin-top: 4px;
+        }
+
+        /* ── Folder Selector ── */
+        .folder-select {
+            padding: 8px 12px;
+            font-size: 13px;
+            font-family: var(--apple-font);
+            color: var(--apple-text);
+            background: var(--apple-bg-secondary);
+            border: 0.5px solid var(--apple-border);
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .folder-select:focus {
+            border-color: var(--apple-accent);
+        }
+
+        /* ── Expandable Category Card ── */
+        .cat-card {
+            background: var(--apple-bg-secondary);
+            border: 0.5px solid var(--apple-border);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .cat-card:hover {
+            border-color: var(--apple-accent);
+        }
+
+        .cat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .cat-card-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--apple-text);
+        }
+
+        .cat-card-count {
+            font-size: 12px;
+            color: var(--apple-text-tertiary);
+            background: var(--apple-bg);
+            padding: 2px 10px;
+            border-radius: 100px;
+        }
+
+        .cat-card-body {
+            display: none;
+            padding: 0 16px 12px;
+            border-top: 0.5px solid var(--apple-border);
+        }
+
+        .cat-card.expanded .cat-card-body {
+            display: block;
+        }
+
+        .cat-card-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 12px;
+            color: var(--apple-text-secondary);
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.04);
+        }
+
+        .cat-card-item:last-child {
+            border-bottom: none;
+        }
+
+        .cat-card-item a {
+            color: var(--apple-accent);
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         /* ── Responsive ── */
         @media (max-width: 960px) {
             .metrics {
@@ -836,12 +1227,6 @@
 
     <!-- ══ Page ══ -->
     <main class="page">
-
-        <!-- Page Header -->
-        <div class="page-header">
-            <h1 class="page-title">智能分析中心</h1>
-            <p class="page-subtitle">全方位管理和分析您的书签数据</p>
-        </div>
 
         <!-- Tab Navigation -->
         <nav class="tab-nav" id="tabNav">
@@ -971,6 +1356,45 @@
                         <div class="status-label">API 状态</div>
                         <div class="status-value" id="api-status">检查中...</div>
                     </div>
+                    <div class="status-item">
+                        <div class="status-label">分析模式</div>
+                        <div class="status-value" id="analysis-mode">检测中...</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">上次分析</div>
+                        <div class="status-value" id="last-analysis-time">从未分析</div>
+                    </div>
+                </div>
+
+                <!-- Preference Panel -->
+                <div class="pref-panel" id="pref-panel">
+                    <div class="pref-title">分类偏好设置</div>
+                    <div class="pref-row">
+                        <label class="pref-label">分类粒度</label>
+                        <select class="pref-select" id="pref-granularity">
+                            <option value="fine">精细 (15-30 类)</option>
+                            <option value="medium" selected>适中 (10-20 类)</option>
+                            <option value="coarse">简洁 (5-12 类)</option>
+                        </select>
+                    </div>
+                    <div class="pref-row">
+                        <label class="pref-label">自定义分类</label>
+                        <input type="text" class="pref-input" id="pref-categories" placeholder="例如：AI工具, 前端开发, 设计资源...">
+                        <div class="pref-hint">用逗号分隔，AI 会优先使用这些分类名</div>
+                    </div>
+                    <div class="pref-row">
+                        <label class="pref-label">分类语言</label>
+                        <select class="pref-select" id="pref-language">
+                            <option value="zh" selected>中文</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <div class="pref-row" style="display:flex;align-items:center;gap:8px">
+                        <input type="checkbox" id="pref-use-existing" style="width:auto">
+                        <label class="pref-label" for="pref-use-existing"
+                            style="margin-bottom:0;cursor:pointer">复用浏览器已有的文件夹名称</label>
+                    </div>
+                    <div class="pref-hint" style="margin-top:-4px">勾选后 AI 会优先将书签归入你已有的文件夹分类</div>
                 </div>
 
                 <div class="progress-wrap" id="analysis-progress">
@@ -993,9 +1417,18 @@
                         <span data-icon="sparkles" data-icon-size="15"></span>
                         应用分类结果
                     </button>
+                    <select class="folder-select hidden" id="apply-target">
+                        <option value="1">⭐ 书签栏根目录</option>
+                        <option value="2">📁 其他书签根目录</option>
+                        <option value="new">➕ 新建文件夹...</option>
+                    </select>
                     <button class="btn btn-secondary" id="export-btn">
                         <span data-icon="download" data-icon-size="15"></span>
                         导出结果
+                    </button>
+                    <button class="btn btn-secondary" id="clear-cache-btn">
+                        <span data-icon="trash" data-icon-size="15"></span>
+                        清除缓存
                     </button>
                 </div>
             </div>
@@ -1183,6 +1616,9 @@
         </div>
 
     </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
 
     <script src="../../styles/icons.js"></script>
     <script type="module" src="dashbord.js"></script>

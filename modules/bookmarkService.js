@@ -168,8 +168,33 @@ export class BookmarkService {
     });
   }
 
-  // 使用AI对书签进行分类
-  async categorizeBookmarks(bookmarks, settings, apiService) {
+  // 读取浏览器已有的书签文件夹名（顶层2级）
+  async getExistingFolderNames() {
+    if (!this.isExtensionContext) return [];
+    return new Promise((resolve) => {
+      chrome.bookmarks.getTree((tree) => {
+        const folderNames = [];
+        const systemIds = new Set(['0', '1', '2']); // 根节点、书签栏、其他书签
+
+        const walk = (nodes, depth) => {
+          if (depth > 2) return; // 只读前2层
+          for (const node of nodes) {
+            // 跳过系统根节点，只收集用户创建的文件夹
+            if (!node.url && node.children && !systemIds.has(node.id)) {
+              folderNames.push(node.title);
+            }
+            if (node.children) walk(node.children, depth + 1);
+          }
+        };
+
+        walk(tree, 0);
+        resolve(folderNames);
+      });
+    });
+  }
+
+  // 使用AI对书签进行分类（支持分批处理）
+  async categorizeBookmarks(bookmarks, settings, apiService, progressCallback, abortSignal, preferences = {}) {
     this.log(`开始预处理书签数据...`, 'info');
 
     // 如果不在扩展环境中，使用模拟分类结果
@@ -183,14 +208,9 @@ export class BookmarkService {
       const networkConnected = await apiService.checkNetworkConnection();
       if (!networkConnected) {
         this.log(`网络连接检测失败，将使用预分类作为备用方案`, 'warning');
-        this.log(`备用方案说明：基于域名和常见关键词进行智能预分类`, 'info');
-
         const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
-          title: b.title || '未命名书签',
-          url: b.url || '',
-          domain: this.extractDomain(b.url)
+          title: b.title || '未命名书签', url: b.url || '', domain: this.extractDomain(b.url)
         })));
-
         this.log(`预分类完成，共生成${Object.keys(preCategorized).length}个分类`, 'success');
         return preCategorized;
       } else {
@@ -198,14 +218,9 @@ export class BookmarkService {
       }
     } catch (networkError) {
       this.log(`网络连接检测异常: ${networkError.message}`, 'error');
-      this.log(`将使用预分类作为备用方案`, 'info');
-
       const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
-        title: b.title || '未命名书签',
-        url: b.url || '',
-        domain: this.extractDomain(b.url)
+        title: b.title || '未命名书签', url: b.url || '', domain: this.extractDomain(b.url)
       })));
-
       this.log(`预分类完成，共生成${Object.keys(preCategorized).length}个分类`, 'success');
       return preCategorized;
     }
@@ -214,112 +229,235 @@ export class BookmarkService {
     const keyValidation = apiService.validateApiKey(settings.apiKey, settings.provider);
     if (!keyValidation.valid) {
       this.log(`API密钥验证失败: ${keyValidation.error}`, 'error');
-      this.log(`将使用预分类作为备用方案`, 'info');
       const preCategorized = this.performPreCategorization(bookmarks.map(b => ({
-        title: b.title || '未命名书签',
-        url: b.url || '',
-        domain: this.extractDomain(b.url)
+        title: b.title || '未命名书签', url: b.url || '', domain: this.extractDomain(b.url)
       })));
       return preCategorized;
     }
 
     // 统计有效书签数量
     const validBookmarks = bookmarks.filter(b => b.title && b.url).length;
-    const totalBookmarks = bookmarks.length;
-    if (validBookmarks < totalBookmarks) {
-      this.log(`警告: 检测到${totalBookmarks - validBookmarks}个无效书签 (无标题或URL)`, 'warning');
+    if (validBookmarks < bookmarks.length) {
+      this.log(`警告: 检测到${bookmarks.length - validBookmarks}个无效书签 (无标题或URL)`, 'warning');
     }
 
     // 预处理：创建更友好的数据集
     const bookmarkData = bookmarks.map(b => {
       let domain = '';
       try {
-        if (b.url) {
-          const urlObj = new URL(b.url);
-          domain = urlObj.hostname.replace(/^www\./, '');
-        }
-      } catch (e) {
-        // URL解析失败，忽略
-      }
-
-      return {
-        title: b.title || domain || '未命名书签',
-        url: b.url || '',
-        domain: domain
-      };
+        if (b.url) { domain = new URL(b.url).hostname.replace(/^www\./, ''); }
+      } catch (e) { /* ignore */ }
+      return { title: b.title || domain || '未命名书签', url: b.url || '', domain };
     });
 
     // 预分类
     const preCategorized = this.performPreCategorization(bookmarkData);
 
-    // 构建提示词
-    const prompt = this.buildCategorizePrompt(bookmarkData, preCategorized);
+    // 读取浏览器已有的文件夹名作为初始分类种子（仅用户勾选时）
+    let existingFolderNames = [];
+    if (preferences.useExistingFolders) {
+      try {
+        existingFolderNames = await this.getExistingFolderNames();
+        if (existingFolderNames.length > 0) {
+          this.log(`读取到 ${existingFolderNames.length} 个已有文件夹: ${existingFolderNames.join(', ')}`, 'info');
+        }
+      } catch (e) {
+        this.log(`读取已有文件夹失败: ${e.message}`, 'warning');
+      }
+    }
 
-    // 根据API提供商选择合适的处理方法
+    // ── 分批处理逻辑 ──
+    const BATCH_SIZE = 50;
+    const needsBatching = bookmarkData.length > BATCH_SIZE;
+
+    if (needsBatching) {
+      this.log(`书签数量 ${bookmarkData.length} > ${BATCH_SIZE}，启用分批分析`, 'info');
+      return this._batchCategorize(bookmarkData, preCategorized, settings, apiService, progressCallback, abortSignal, preferences, existingFolderNames);
+    }
+
+    // ── 单批处理（≤50 条） ──
+    return this._singleCategorize(bookmarkData, preCategorized, settings, apiService, progressCallback, preferences, existingFolderNames);
+  }
+
+  // 单批 AI 分类
+  async _singleCategorize(bookmarkData, preCategorized, settings, apiService, progressCallback, preferences = {}, existingFolderNames = []) {
+    const prompt = this.buildCategorizePrompt(bookmarkData, preCategorized, preferences, existingFolderNames);
+
     let categoryResult;
     try {
       this.log(`开始调用AI进行书签分类...`, 'info');
+      if (progressCallback) progressCallback(30, 'AI 分析中...');
 
+      categoryResult = await this._callAi(prompt, settings, apiService);
+
+      this.log(`AI分类完成，获得${Object.keys(categoryResult).length}个分类`, 'success');
+      if (progressCallback) progressCallback(90, '验证结果...');
+
+      if (!categoryResult || Object.keys(categoryResult).length === 0) {
+        this.log('API返回的分类结果为空，尝试使用预分类结果', 'warning');
+        categoryResult = Object.keys(preCategorized).length > 0 ? preCategorized : { "未分类": bookmarkData };
+      }
+
+      return this.validateAndOptimizeCategories(categoryResult, bookmarkData.length);
+    } catch (error) {
+      this.log(`分类处理失败: ${error.message}，使用备用方案`, 'error');
+      return this._fallbackCategorize(bookmarkData, preCategorized);
+    }
+  }
+
+  // 分批 AI 分类
+  async _batchCategorize(bookmarkData, preCategorized, settings, apiService, progressCallback, abortSignal, preferences = {}, existingFolderNames = []) {
+    const BATCH_SIZE = 50;
+    const batches = [];
+    for (let i = 0; i < bookmarkData.length; i += BATCH_SIZE) {
+      batches.push(bookmarkData.slice(i, i + BATCH_SIZE));
+    }
+
+    this.log(`共 ${bookmarkData.length} 条书签，分为 ${batches.length} 批处理（每批 ${BATCH_SIZE} 条）`, 'info');
+    const mergedCategories = {};
+
+    // 处理单个批次的辅助函数（支持重试拆分）
+    const processBatch = async (batch, label, existingCats = []) => {
+      const batchPreCat = this.performPreCategorization(batch);
+      const prompt = this.buildCategorizePrompt(batch, batchPreCat, preferences, existingCats);
+      const batchResult = await this._callAi(prompt, settings, apiService);
+      return batchResult;
+    };
+
+    // 将结果合并到主结果
+    const mergeResult = (result) => {
+      for (const [cat, items] of Object.entries(result)) {
+        if (!mergedCategories[cat]) mergedCategories[cat] = [];
+        mergedCategories[cat] = mergedCategories[cat].concat(items);
+      }
+    };
+
+    // 失败时回退到预分类
+    const fallbackBatch = (batch) => {
+      const batchPreCat = this.performPreCategorization(batch);
+      mergeResult(batchPreCat);
+      const categorized = new Set(Object.values(batchPreCat).flat().map(i => i.url));
+      const uncategorized = batch.filter(b => !categorized.has(b.url));
+      if (uncategorized.length > 0) {
+        if (!mergedCategories["其他"]) mergedCategories["其他"] = [];
+        mergedCategories["其他"] = mergedCategories["其他"].concat(uncategorized);
+      }
+    };
+
+    // 跨批次累积的分类名列表（以已有文件夹名为种子）
+    let accumulatedCategoryNames = [...existingFolderNames];
+
+    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+      if (abortSignal?.aborted) {
+        this.log('分析已被用户中断', 'warning');
+        break;
+      }
+
+      const batch = batches[batchIdx];
+      const batchNum = batchIdx + 1;
+      const pct = Math.round((batchIdx / batches.length) * 100);
+
+      this.log(`处理第 ${batchNum}/${batches.length} 批 (${batch.length} 条)...`, 'info');
+      if (progressCallback) progressCallback(pct, `分析第 ${batchNum}/${batches.length} 批...`);
+
+      try {
+        // 第一次尝试
+        const result = await processBatch(batch, `${batchNum}`, accumulatedCategoryNames);
+        mergeResult(result);
+        // 累积本批次的分类名
+        const newCats = Object.keys(result).filter(c => !accumulatedCategoryNames.includes(c));
+        accumulatedCategoryNames = accumulatedCategoryNames.concat(newCats);
+        this.log(`第 ${batchNum} 批完成: ${Object.keys(result).length} 个分类 (累计 ${accumulatedCategoryNames.length} 个)`, 'success');
+      } catch (error) {
+        this.log(`第 ${batchNum} 批失败: ${error.message}，尝试拆分重试...`, 'warning');
+
+        // 拆分成两半重试
+        const mid = Math.ceil(batch.length / 2);
+        const halfA = batch.slice(0, mid);
+        const halfB = batch.slice(mid);
+        let anySuccess = false;
+
+        for (const [idx, half] of [[0, halfA], [1, halfB]]) {
+          try {
+            const result = await processBatch(half, `${batchNum}-${idx + 1}`, accumulatedCategoryNames);
+            mergeResult(result);
+            const newCats = Object.keys(result).filter(c => !accumulatedCategoryNames.includes(c));
+            accumulatedCategoryNames = accumulatedCategoryNames.concat(newCats);
+            this.log(`第 ${batchNum} 批拆分 ${idx + 1}/2 成功: ${Object.keys(result).length} 个分类`, 'success');
+            anySuccess = true;
+          } catch (retryErr) {
+            this.log(`第 ${batchNum} 批拆分 ${idx + 1}/2 也失败: ${retryErr.message}，使用预分类`, 'warning');
+            fallbackBatch(half);
+          }
+          // 拆分之间短暂延迟
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+
+      // 批次间延迟避免限速
+      if (batchIdx < batches.length - 1) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    if (progressCallback) progressCallback(95, '验证合并结果...');
+
+    if (Object.keys(mergedCategories).length === 0) {
+      return this._fallbackCategorize(bookmarkData, preCategorized);
+    }
+
+    return this.validateAndOptimizeCategories(mergedCategories, bookmarkData.length);
+  }
+
+  async _callAi(prompt, settings, apiService) {
+    this.log(`▶ 调用 AI API: provider=${settings.provider}, model=${settings.model}, prompt长度=${prompt.length}字符`, 'info');
+    this.log(`▶ API Key: ${settings.apiKey ? (settings.apiKey.substring(0, 6) + '...已设置') : '❌ 未设置!'}`, 'info');
+    if (settings.provider === 'custom') {
+      this.log(`▶ 自定义 API URL: ${settings.customApiUrl || '❌ 未设置!'}`, 'info');
+    }
+    const startTime = Date.now();
+    try {
+      let result;
       switch (settings.provider) {
         case 'gemini':
-          categoryResult = await apiService.callGeminiApi(prompt, settings.apiKey, settings.model);
+          result = await apiService.callGeminiApi(prompt, settings.apiKey, settings.model);
           break;
         case 'openai':
-          categoryResult = await apiService.callOpenAiApi(prompt, settings.apiKey, settings.model);
+          result = await apiService.callOpenAiApi(prompt, settings.apiKey, settings.model);
           break;
         case 'custom':
-          categoryResult = await apiService.callCustomApi(settings.apiKey, settings.customApiUrl, settings.model, prompt);
+          result = await apiService.callCustomApi(settings.apiKey, settings.customApiUrl, settings.model, prompt);
           break;
         default:
           throw new Error('不支持的API提供商');
       }
-
-      this.log(`AI分类完成，获得${Object.keys(categoryResult).length}个分类`, 'success');
-
-      // 如果API返回空结果，使用预分类结果
-      if (!categoryResult || Object.keys(categoryResult).length === 0) {
-        this.log('API返回的分类结果为空，尝试使用预分类结果', 'warning');
-
-        if (Object.keys(preCategorized).length > 0) {
-          categoryResult = preCategorized;
-          this.log(`使用预分类结果: ${Object.keys(preCategorized).length}个分类`, 'info');
-        } else {
-          categoryResult = { "未分类": bookmarkData };
-          this.log(`无法获取有效分类，所有书签归为"未分类"`, 'error');
-        }
-      }
-
-      // 验证并优化分类结果
-      return this.validateAndOptimizeCategories(categoryResult, bookmarks.length);
-    } catch (error) {
-      this.log(`分类处理失败: ${error.message}，尝试使用备用方案`, 'error');
-
-      // 出错时使用预分类作为备用方案
-      if (Object.keys(preCategorized).length > 0) {
-        const uncategorized = bookmarkData.filter(bookmark => {
-          return !Object.values(preCategorized).some(items =>
-            items.some(item => item.url === bookmark.url)
-          );
-        });
-
-        if (uncategorized.length > 0) {
-          preCategorized["其他"] = uncategorized;
-        }
-
-        this.log(`使用预分类作为备用方案: ${Object.keys(preCategorized).length}个分类`, 'info');
-        return preCategorized;
-      }
-
-      // 如果没有预分类，使用基本分类
-      const basicCategories = {
-        "常用网站": bookmarkData.slice(0, Math.min(20, bookmarkData.length)),
-        "其他书签": bookmarkData.slice(Math.min(20, bookmarkData.length))
-      };
-
-      this.log(`无法进行分类，使用基本分类方案`, 'warning');
-      return basicCategories;
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      this.log(`✅ AI 返回成功 (${elapsed}秒): ${Object.keys(result).length} 个分类`, 'success');
+      return result;
+    } catch (err) {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      this.log(`❌ AI 调用失败 (${elapsed}秒): ${err.message}`, 'error');
+      throw err;
     }
   }
+
+  // 备用分类方案
+  _fallbackCategorize(bookmarkData, preCategorized) {
+    if (Object.keys(preCategorized).length > 0) {
+      const uncategorized = bookmarkData.filter(b =>
+        !Object.values(preCategorized).some(items => items.some(item => item.url === b.url))
+      );
+      if (uncategorized.length > 0) preCategorized["其他"] = uncategorized;
+      this.log(`使用预分类作为备用方案: ${Object.keys(preCategorized).length}个分类`, 'info');
+      return preCategorized;
+    }
+    this.log(`无法进行分类，使用基本分类方案`, 'warning');
+    return {
+      "常用网站": bookmarkData.slice(0, Math.min(20, bookmarkData.length)),
+      "其他书签": bookmarkData.slice(Math.min(20, bookmarkData.length))
+    };
+  }
+
 
   // 执行预分类
   performPreCategorization(bookmarkData) {
@@ -392,11 +530,41 @@ export class BookmarkService {
     return preCategorized;
   }
 
-  // 构建分类提示词
-  buildCategorizePrompt(bookmarkData, preCategorized) {
+  // 构建分类提示词（支持用户偏好）
+  buildCategorizePrompt(bookmarkData, preCategorized, preferences = {}, existingCategories = []) {
     const preCategorizedInfo = Object.entries(preCategorized)
       .map(([category, items]) => `- ${category}: ${items.length}个书签，例如: ${items.slice(0, 3).map(b => b.title).join(', ')}...`)
       .join('\n');
+
+    // 根据粒度设置分类数量
+    const granularity = preferences.granularity || 'medium';
+    const granularityMap = {
+      fine: { min: 15, max: 30, desc: '精细分类，创建尽可能多的具体分类' },
+      medium: { min: 10, max: 20, desc: '适中分类，平衡分类数量与粒度' },
+      coarse: { min: 5, max: 12, desc: '简洁分类，合并相似类别为更大的分组' }
+    };
+    const g = granularityMap[granularity] || granularityMap.medium;
+
+    // 用户自定义分类
+    const userCategories = preferences.customCategories || '';
+    const userCatSection = userCategories.trim()
+      ? `\n## 用户指定的分类（请优先使用这些分类名，但可以根据实际内容增补新分类）\n${userCategories.split(/[,，、]/).map(c => `- ${c.trim()}`).join('\n')}\n`
+      : '';
+
+    // 语言
+    const lang = preferences.language || 'zh';
+    const langInstruction = lang === 'en'
+      ? '所有分类名请使用英文。'
+      : '所有分类名请使用简洁的中文词汇。';
+
+    // 已有分类约束（跨批次）
+    const existingCatSection = existingCategories.length > 0
+      ? `
+## ⚠️ 已有分类（必须优先使用）
+以下是之前批次已建立的 ${existingCategories.length} 个分类名。**你必须将书签归入这些已有分类中**，只有当某个书签确实与所有已有分类都不相关时，才可以创建新分类。新分类名不可与已有分类含义重复。
+${existingCategories.map(c => `- ${c}`).join('\n')}
+`
+      : '';
 
     return `# 角色
 你是一名高级数字信息管理员和分类策略专家。你擅长分析大量无序的信息（如浏览器书签），并根据其核心内容和潜在用途，设计出逻辑清晰、分类精细且命名专业的层级结构。
@@ -404,27 +572,39 @@ export class BookmarkService {
 # 核心目标
 你的任务是接收一个包含多个书签的JSON数组，并将其智能地、自动地分类。最终输出一个结构化的JSON对象，其中键（key）是分类名称，值（value）是属于该分类的书签对象数组。
 
+# ⚠️ 重要约束
+- **必须将所有书签都分配到合适的分类中**，不要遗漏任何书签
+- **严禁创建"其他"或"未分类"之类的兜底分类**，每个书签都应该有明确的归属
+- 如果某个书签实在难以归类，将它放入最接近的现有分类中
+
 # 关键指令与工作流程
 1. **分析内容**: 仔细阅读每个书签的title和url，深刻理解其代表的核心主题、领域和用途。
 2. **确定分类策略**: 
-   * **分类粒度**: 优先创建具体、细致的专业分类，而不是宽泛的大类。例如，将"技术教程"进一步细分为"前端开发教程"、"AI模型训练教程"等。总分类数建议在10到25个之间，具体视内容丰富度而定。
-   * **合并同类**: 将语义上高度相似或关联紧密的书签（如多个AI对话工具）合并到同一分类下。避免为单个书签创建分类，也避免过度细分导致分类冗余。
+   * **分类粒度**: ${g.desc}。总分类数建议在 ${g.min} 到 ${g.max} 个之间。
+   * **合并同类**: 将语义上高度相似或关联紧密的书签合并到同一分类下。避免为单个书签创建分类。
+   * **确保覆盖**: 确保每个书签都被分到某个分类中，不要遗漏。
 3. **命名规范 (分类标签)**:
-   * **专业准确**: 使用简洁、专业、且能精确概括组内所有书签内容的中文词汇作为分类名。
-   * **格式限制**: 分类名中严禁使用任何数字、字母或特殊符号。
+   * ${langInstruction}
+   * 使用简洁、专业、且能精确概括组内书签内容的词汇作为分类名。
 4. **生成输出**:
    * 严格按照指定的JSON格式输出结果。
    * 除了JSON代码块本身，不要添加任何额外的解释、注释或说明性文字。
 
 # 参考信息
+${existingCatSection}
 ${preCategorizedInfo ? `## 可选的预分类参考 (你可以基于此进行调整或细分)\n${preCategorizedInfo}\n` : ''}
-
-## 分类示例 (用于理解期望的分类风格)
-- **AI工具**: 通用AI工具、AI开发平台、AI笔记工具、AI工具教程
-- **设计**: UI设计工具、原型设计、UI设计教程、UI设计素材、设计案例、Figma教程
-- **开发**: 代码托管、技术教程、前端开发、后端开发、技术问答
-- **实用工具**: 翻译工具、图片工具、在线办公
-- **学习资源**: 在线课程、技术文档、设计学习
+${userCatSection}
+## 分类示例 (示范分类风格和命名规范)
+- **AI与智能工具**: AI对话工具、AI开发平台、AI图像生成、AI写作工具
+- **设计与创意**: UI设计工具、设计素材、设计灵感、原型工具、配色字体
+- **软件开发**: 代码托管、前端框架、后端技术、数据库工具、API文档
+- **技术学习**: 技术博客、在线课程、技术文档、编程教程、技术社区
+- **效率工具**: 笔记应用、项目管理、在线办公、时间管理、团队协作
+- **媒体娱乐**: 视频平台、音乐平台、游戏、在线阅读、播客
+- **社交传播**: 社交媒体、论坛社区、即时通讯、个人博客
+- **商业金融**: 电商购物、在线支付、投资理财、商业资讯
+- **新闻资讯**: 科技新闻、行业资讯、综合新闻、数据统计
+- **生活服务**: 地图导航、外卖餐饮、旅行住宿、健康医疗
 
 # 最终输出格式 (必须严格遵守)
 \`\`\`json
@@ -439,7 +619,7 @@ ${preCategorizedInfo ? `## 可选的预分类参考 (你可以基于此进行调
 }
 \`\`\`
 
-# 待分类的书签数据
+# 待分类的书签数据 (共 ${bookmarkData.length} 个)
 ${JSON.stringify(bookmarkData, null, 2)}`;
   }
 
